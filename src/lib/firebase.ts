@@ -31,7 +31,7 @@ function createAuth(firebaseApp: FirebaseApp): Auth {
   }
 
   try {
-    const getReactNativePersistence = (firebaseAuth as any).getReactNativePersistence;
+    const getReactNativePersistence = (firebaseAuth as any)['getReactNativePersistence'];
     return initializeAuth(firebaseApp, {
       persistence: getReactNativePersistence(AsyncStorage),
     });

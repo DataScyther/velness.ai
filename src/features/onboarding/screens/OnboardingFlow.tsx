@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Sparkles } from 'lucide-react-native';
 import { Button } from '@/shared/components/Button';
+import { useTheme } from '@/hooks/useTheme';
 import { TextField } from '@/shared/components/TextField';
 import { ProgressRing } from '@/shared/components/ProgressRing';
 import { analyticsService } from '@/services/analytics';
@@ -127,16 +128,19 @@ export default function OnboardingFlow() {
     }
   };
 
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
+
   if (saving) {
     return (
-      <SafeAreaView className="flex-1 bg-app-dark">
-        <StatusBar style="light" />
+      <SafeAreaView className="flex-1 bg-background-primary">
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View className="flex-1 items-center justify-center">
           <ProgressRing progress={progress} size={120} strokeWidth={6} />
-          <Text className="text-white text-xl font-semibold mt-8">
+          <Text className="text-text-primary text-xl font-semibold mt-8">
             {ONBOARDING_STRINGS.PREPARING_TITLE}
           </Text>
-          <Text className="text-white/50 mt-2">
+          <Text className="text-text-secondary mt-2">
             {ONBOARDING_STRINGS.PREPARING_SUBTITLE}
           </Text>
         </View>
@@ -145,8 +149,8 @@ export default function OnboardingFlow() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-app-dark">
-      <StatusBar style="light" />
+    <SafeAreaView className="flex-1 bg-background-primary">
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -166,23 +170,23 @@ export default function OnboardingFlow() {
                 entering={FadeIn.duration(400)}
                 className="items-center justify-center mt-10"
               >
-                <View className="w-32 h-32 rounded-full bg-gradient-to-br from-neeva-purple-600/30 to-neeva-cyan-600/20 items-center justify-center mb-8">
-                  <Sparkles size={56} color="#8B5CF6" />
+                <View className="w-32 h-32 rounded-full bg-brand-primary/10 border border-border-default/50 items-center justify-center mb-8">
+                  <Sparkles size={56} color={colors.brand.primary} />
                 </View>
-                <Text className="text-white text-3xl font-bold mb-4">
+                <Text className="text-text-primary text-3xl font-bold mb-4">
                   {ONBOARDING_STRINGS.WELCOME_TITLE}
                 </Text>
-                <Text className="text-white/60 text-center leading-6 max-w-[300px]">
+                <Text className="text-text-secondary text-center leading-6 max-w-[300px]">
                   {ONBOARDING_STRINGS.WELCOME_DESCRIPTION}
                 </Text>
               </AnimatedView>
             )}
             {step === 'goals' && (
               <AnimatedView entering={FadeIn.duration(400)}>
-                <Text className="text-white text-2xl font-semibold mb-2">
+                <Text className="text-text-primary text-2xl font-semibold mb-2">
                   {ONBOARDING_STRINGS.GOALS_TITLE}
                 </Text>
-                <Text className="text-white/50 mb-6">
+                <Text className="text-text-secondary mb-6">
                   {ONBOARDING_STRINGS.GOALS_SUBTITLE}
                 </Text>
                 <ScrollView showsVerticalScrollIndicator={false} className="max-h-[350px]">
@@ -195,15 +199,15 @@ export default function OnboardingFlow() {
                           onPress={() => toggleGoal(g.value)}
                           className={`px-4 py-3 rounded-2xl border ${
                             active
-                              ? 'bg-neeva-purple-600/30 border-neeva-purple-500/60'
-                              : 'bg-neeva-glass-dark/30 border border-neeva-glass-border'
+                              ? 'bg-brand-primary/10 border-brand-primary'
+                              : 'bg-surface-primary border border-border-default'
                           }`}
                         >
                           <View className="flex-row items-center gap-2">
                             <Text className="text-2xl">{g.emoji}</Text>
                             <Text
                               className={`font-medium text-sm ${
-                                active ? 'text-white' : 'text-white/70'
+                                active ? 'text-brand-primary' : 'text-text-secondary'
                               }`}
                             >
                               {g.label}
@@ -218,10 +222,10 @@ export default function OnboardingFlow() {
             )}
             {step === 'mood' && (
               <AnimatedView entering={FadeIn.duration(400)}>
-                <Text className="text-white text-2xl font-semibold mb-2">
+                <Text className="text-text-primary text-2xl font-semibold mb-2">
                   {ONBOARDING_STRINGS.MOOD_TITLE}
                 </Text>
-                <Text className="text-white/50 mb-6">
+                <Text className="text-text-secondary mb-6">
                   {ONBOARDING_STRINGS.MOOD_SUBTITLE}
                 </Text>
                 <View className="flex-row flex-wrap gap-3">
@@ -233,15 +237,15 @@ export default function OnboardingFlow() {
                         onPress={() => setMood(m.value)}
                         className={`px-4 py-3 rounded-2xl border ${
                           active
-                            ? 'bg-neeva-purple-600/30 border-neeva-purple-500/60'
-                            : 'bg-neeva-glass-dark/30 border border-neeva-glass-border'
+                            ? 'bg-brand-primary/10 border-brand-primary'
+                            : 'bg-surface-primary border border-border-default'
                         }`}
                       >
                         <View className="items-center">
                           <Text className="text-2xl mb-1">{m.emoji}</Text>
                           <Text
                             className={`font-medium text-sm ${
-                              active ? 'text-white' : 'text-white/70'
+                              active ? 'text-brand-primary' : 'text-text-secondary'
                             }`}
                           >
                             {m.label}
@@ -255,10 +259,10 @@ export default function OnboardingFlow() {
             )}
             {step === 'displayName' && (
               <AnimatedView entering={FadeIn.duration(400)}>
-                <Text className="text-white text-2xl font-semibold mb-2">
+                <Text className="text-text-primary text-2xl font-semibold mb-2">
                   {ONBOARDING_STRINGS.NAME_TITLE}
                 </Text>
-                <Text className="text-white/50 mb-6">
+                <Text className="text-text-secondary mb-6">
                   {ONBOARDING_STRINGS.NAME_SUBTITLE}
                 </Text>
                 <TextField
@@ -274,10 +278,10 @@ export default function OnboardingFlow() {
             )}
             {step === 'reminder' && (
               <AnimatedView entering={FadeIn.duration(400)}>
-                <Text className="text-white text-2xl font-semibold mb-2">
+                <Text className="text-text-primary text-2xl font-semibold mb-2">
                   {ONBOARDING_STRINGS.REMINDER_TITLE}
                 </Text>
-                <Text className="text-white/50 mb-6">
+                <Text className="text-text-secondary mb-6">
                   {ONBOARDING_STRINGS.REMINDER_SUBTITLE}
                 </Text>
                 <ScrollView showsVerticalScrollIndicator={false} className="max-h-[350px]">
@@ -290,21 +294,21 @@ export default function OnboardingFlow() {
                           onPress={() => setReminder(opt.value)}
                           className={`p-4 rounded-2xl border ${
                             active
-                              ? 'bg-neeva-purple-600/30 border-neeva-purple-500/60'
-                              : 'bg-neeva-glass-dark/30 border border-neeva-glass-border'
+                              ? 'bg-brand-primary/10 border-brand-primary'
+                              : 'bg-surface-primary border border-border-default'
                           }`}
                         >
                           <View className="flex-row items-center gap-3">
                             <Text className="text-2xl">{opt.emoji}</Text>
                             <View className="flex-1">
                               <Text
-                                className={`font-medium ${
-                                  active ? 'text-white' : 'text-white/70'
+                                className={`font-semibold text-body-sm ${
+                                  active ? 'text-brand-primary' : 'text-text-primary'
                                 }`}
                               >
                                 {opt.label}
                               </Text>
-                              <Text className="text-white/40 text-body-sm">
+                              <Text className="text-text-secondary text-caption mt-0.5">
                                 {opt.description}
                               </Text>
                             </View>
@@ -321,13 +325,13 @@ export default function OnboardingFlow() {
                 entering={FadeIn.duration(400)}
                 className="items-center justify-center mt-10"
               >
-                <View className="w-24 h-24 rounded-full bg-neeva-purple-600/20 items-center justify-center mb-6">
+                <View className="w-24 h-24 rounded-full bg-brand-primary/10 border border-border-default/50 items-center justify-center mb-6">
                   <Text className="text-4xl">🔔</Text>
                 </View>
-                <Text className="text-white text-2xl font-semibold mb-2 text-center">
+                <Text className="text-text-primary text-2xl font-semibold mb-2 text-center">
                   {ONBOARDING_STRINGS.PERMISSION_TITLE}
                 </Text>
-                <Text className="text-white/50 text-center leading-7 mb-8 max-w-[300px]">
+                <Text className="text-text-secondary text-center leading-7 mb-8 max-w-[300px]">
                   {ONBOARDING_STRINGS.PERMISSION_SUBTITLE}
                 </Text>
                 <Button
@@ -338,9 +342,9 @@ export default function OnboardingFlow() {
                 />
                 <Pressable
                   onPress={() => setNotifications(false)}
-                  className="mt-4"
+                  className="mt-4 py-2"
                 >
-                  <Text className="text-white/50 text-body-sm">
+                  <Text className="text-text-secondary text-body-sm font-semibold underline">
                     {ONBOARDING_STRINGS.PERMISSION_SKIP}
                   </Text>
                 </Pressable>
@@ -348,10 +352,10 @@ export default function OnboardingFlow() {
             )}
             {step === 'privacy' && (
               <AnimatedView entering={FadeIn.duration(400)}>
-                <Text className="text-white text-2xl font-semibold mb-2">
+                <Text className="text-text-primary text-2xl font-semibold mb-2">
                   {ONBOARDING_STRINGS.PRIVACY_TITLE}
                 </Text>
-                <Text className="text-white/50 leading-7 mb-6">
+                <Text className="text-text-secondary leading-7 mb-6">
                   {ONBOARDING_STRINGS.PRIVACY_SUBTITLE}
                 </Text>
               </AnimatedView>
@@ -359,17 +363,17 @@ export default function OnboardingFlow() {
           </View>
           <View className="pb-8 pt-4">
             {error && (
-              <View className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-4">
-                <Text className="text-red-400 text-body-sm">{error}</Text>
+              <View className="bg-danger/10 border border-danger/25 rounded-2xl px-4 py-3 mb-4">
+                <Text className="text-danger text-body-sm font-medium">{error}</Text>
               </View>
             )}
             <View className="flex-row gap-3">
               {step !== 'welcome' && (
                 <Pressable
                   onPress={back}
-                  className="px-6 py-4 rounded-2xl border border-neeva-glass-border bg-neeva-glass-dark/30"
+                  className="px-6 py-4 rounded-2xl border border-border-default bg-surface-secondary active:bg-surface-primary"
                 >
-                  <Text className="text-white/70 font-medium">
+                  <Text className="text-text-secondary font-medium">
                     {ONBOARDING_STRINGS.BACK}
                   </Text>
                 </Pressable>

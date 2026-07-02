@@ -35,7 +35,7 @@ export const lightTheme: ThemeTokens = {
   },
   text: {
     primary: '#111827',
-    secondary: '#6B7280',
+    secondary: '#4B5563',
   },
   border: {
     default: '#E5E7EB',

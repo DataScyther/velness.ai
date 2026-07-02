@@ -73,64 +73,64 @@
 
 [data-theme="dark"] {
   /* Shadcn semantic colors */
-  --background: 248 250 255;
-  --foreground: 15 23 42;
-  --card: 255 255 255;
-  --card-foreground: 15 23 42;
-  --popover: 255 255 255;
-  --popover-foreground: 15 23 42;
+  --background: 11 11 18;
+  --foreground: 255 255 255;
+  --card: 22 22 34;
+  --card-foreground: 255 255 255;
+  --popover: 22 22 34;
+  --popover-foreground: 255 255 255;
   --primary: 139 92 246;
   --primary-foreground: 255 255 255;
-  --secondary: 241 245 249;
-  --secondary-foreground: 30 41 59;
-  --muted: 241 245 249;
-  --muted-foreground: 100 116 139;
-  --accent: 241 245 249;
-  --accent-foreground: 30 41 59;
+  --secondary: 18 18 26;
+  --secondary-foreground: 255 255 255;
+  --muted: 18 18 26;
+  --muted-foreground: 156 163 175;
+  --accent: 18 18 26;
+  --accent-foreground: 255 255 255;
   --destructive: 239 68 68;
   --destructive-foreground: 255 255 255;
-  --border: 226 232 240;
-  --input: 226 232 240;
+  --border: 255 255 255 / 0.08;
+  --input: 255 255 255 / 0.08;
   --ring: 139 92 246;
 
   /* App-specific color tokens */
-  --color-bg: #F8F9FC;
-  --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: #F1F4F9;
-  --color-text: #111827;
-  --color-text-secondary: #6B7280;
-  --color-text-tertiary: #9CA3AF;
-  --color-border: #E5E7EB;
-  --color-border-hover: #D1D5DB;
-  --color-primary: #6C4CF1;
-  --color-primary-hover: #8B5CF6;
+  --color-bg: #0B0B12;
+  --color-bg-secondary: #12121A;
+  --color-bg-tertiary: #161622;
+  --color-text: #FFFFFF;
+  --color-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-text-tertiary: rgba(255, 255, 255, 0.4);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
+  --color-primary: #8B5CF6;
+  --color-primary-hover: #A78BFA;
   --color-primary-foreground: #FFFFFF;
   --color-danger: #EF4444;
   --color-danger-hover: #DC2626;
-  --color-success: #22C55E;
+  --color-success: #10B981;
   --color-warning: #F59E0B;
   --color-overlay: rgba(0, 0, 0, 0.4);
 
   /* Semantic theme variables */
-  --background-primary: #F8F9FC;
-  --background-secondary: #F1F4F9;
-  --surface-primary: #FFFFFF;
-  --surface-secondary: #F8FAFC;
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --border-default: #E5E7EB;
-  --brand-primary: #6C4CF1;
-  --brand-secondary: #8B5CF6;
+  --background-primary: #0B0B12;
+  --background-secondary: #12121A;
+  --surface-primary: #161622;
+  --surface-secondary: #1C1C2A;
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --brand-primary: #8B5CF6;
+  --brand-secondary: #A78BFA;
   --brand-contrastText: #FFFFFF;
-  --success: #22C55E;
+  --success: #10B981;
   --warning: #F59E0B;
   --danger: #EF4444;
 
-  /* Shadows for light theme */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  /* Shadows for dark theme */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
 }
 
 @tailwind base;

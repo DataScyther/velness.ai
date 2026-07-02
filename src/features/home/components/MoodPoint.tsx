@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Circle } from 'react-native-svg';
+import { Circle, G, Defs, RadialGradient, Stop } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedProps,
@@ -10,11 +10,11 @@ import Animated, {
 import { useTheme } from '@/hooks/useTheme';
 
 const LEVEL_COLORS: Record<number, string> = {
-  1: '#F43F5E', // Rose red
-  2: '#F59E0B', // Amber
-  3: '#64748B', // Cool gray
-  4: '#8B5CF6', // Purple
-  5: '#10B981', // Emerald green
+  1: '#FF2E5F', // Glowing Rose
+  2: '#FFAE00', // Neon Amber
+  3: '#7E8E9F', // Slate Blue/Gray
+  4: '#8B5CF6', // Vivid Purple
+  5: '#00E699', // Bright Teal/Emerald
 };
 
 interface MoodPointProps {
@@ -28,11 +28,23 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export const MoodPoint = React.memo(({ cx, cy, moodLevel, isToday }: MoodPointProps) => {
   const { colors } = useTheme();
-  const pulse = useSharedValue(0);
+  
+  // Staggered pulse indicators for today's node
+  const pulse1 = useSharedValue(0);
+  const pulse2 = useSharedValue(0.5);
 
   useEffect(() => {
     if (isToday) {
-      pulse.value = withRepeat(
+      pulse1.value = withRepeat(
+        withTiming(1, {
+          duration: 2000,
+          easing: Easing.out(Easing.ease),
+        }),
+        -1,
+        false
+      );
+
+      pulse2.value = withRepeat(
         withTiming(1, {
           duration: 2000,
           easing: Easing.out(Easing.ease),
@@ -41,97 +53,147 @@ export const MoodPoint = React.memo(({ cx, cy, moodLevel, isToday }: MoodPointPr
         false
       );
     }
-  }, [isToday]);
+  }, [isToday, pulse1, pulse2]);
 
-  const rippleProps = useAnimatedProps(() => {
-    return {
-      r: 6 + pulse.value * 12,
-      opacity: 0.35 * (1 - pulse.value),
-    };
-  });
+  // Ripple calculations
+  const ripple1Props = useAnimatedProps(() => ({
+    r: 6 + pulse1.value * 14,
+    opacity: 0.38 * (1 - pulse1.value),
+  }));
 
-  const innerPulseProps = useAnimatedProps(() => {
-    return {
-      r: 4.5 + Math.sin(pulse.value * Math.PI) * 0.8,
-    };
-  });
+  const ripple2Props = useAnimatedProps(() => ({
+    r: 6 + ((pulse2.value + 0.5) % 1) * 14,
+    opacity: 0.38 * (1 - ((pulse2.value + 0.5) % 1)),
+  }));
 
   const activeColor = moodLevel !== null ? LEVEL_COLORS[moodLevel] : colors.brand.primary;
 
   if (isToday) {
     return (
-      <>
-        {/* Pulsing Glow Ring */}
+      <G>
+        {/* Concentric Pulse 1 */}
         <AnimatedCircle
           cx={cx}
           cy={cy}
           fill={activeColor}
-          animatedProps={rippleProps}
+          animatedProps={ripple1Props}
         />
-        {/* Core Ring */}
-        <Circle
+        {/* Concentric Pulse 2 */}
+        <AnimatedCircle
           cx={cx}
           cy={cy}
-          r={7.5}
           fill={activeColor}
-          opacity={0.2}
+          animatedProps={ripple2Props}
         />
-        {/* Solid Outer Ring */}
+        
+        {/* Outer Aura Halo */}
         <Circle
           cx={cx}
           cy={cy}
-          r={5.5}
+          r={9}
+          fill={activeColor}
+          opacity={0.15}
+        />
+
+        {/* Specular glass boundary */}
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={6.5}
           stroke={activeColor}
           strokeWidth={1.5}
           fill={colors.surface.primary}
         />
-        {/* Animating Inner Core */}
-        <AnimatedCircle
+
+        {/* Core Jewel */}
+        <Circle
           cx={cx}
           cy={cy}
+          r={4}
           fill={activeColor}
-          animatedProps={innerPulseProps}
         />
-      </>
+
+        {/* specular reflection micro-dot */}
+        <Circle
+          cx={cx - 1.2}
+          cy={cy - 1.2}
+          r={1.2}
+          fill="#FFFFFF"
+          opacity={0.9}
+        />
+      </G>
     );
   }
 
   if (moodLevel !== null) {
     const pointColor = LEVEL_COLORS[moodLevel] || LEVEL_COLORS[3];
     return (
-      <>
-        {/* Glass Outer Glow for logged days */}
+      <G>
+        {/* Soft radial glow shadow */}
         <Circle
           cx={cx}
           cy={cy}
-          r={6.5}
+          r={9}
           fill={pointColor}
           opacity={0.12}
         />
+
+        {/* Jewel outer rim */}
         <Circle
           cx={cx}
           cy={cy}
-          r={4}
+          r={5.5}
+          stroke={pointColor}
+          strokeWidth={1}
+          fill={colors.surface.primary}
+        />
+
+        {/* Core color */}
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={3.5}
           fill={pointColor}
         />
-      </>
+
+        {/* Specular dot */}
+        <Circle
+          cx={cx - 0.8}
+          cy={cy - 0.8}
+          r={1}
+          fill="#FFFFFF"
+          opacity={0.8}
+        />
+      </G>
     );
   }
 
-  // Styled empty check-in node
+  // Placeholders for empty check-in nodes
   return (
-    <Circle
-      cx={cx}
-      cy={cy}
-      r={3}
-      fill="none"
-      stroke={colors.border.default}
-      strokeWidth={1}
-      strokeDasharray="2 2"
-      opacity={0.4}
-    />
+    <G>
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={5}
+        fill="none"
+        stroke={colors.border.default}
+        strokeWidth={0.8}
+        opacity={0.2}
+      />
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={3}
+        fill="none"
+        stroke={colors.border.default}
+        strokeWidth={1.2}
+        strokeDasharray="2 2"
+        opacity={0.55}
+      />
+    </G>
   );
 });
 
 MoodPoint.displayName = 'MoodPoint';
+
 

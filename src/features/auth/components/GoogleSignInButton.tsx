@@ -1,13 +1,13 @@
 import React from 'react';
-import { Pressable, Text, ActivityIndicator } from 'react-native';
+import { Pressable, Text, ActivityIndicator, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { useTheme } from '@/hooks/useTheme';
 
 interface GoogleSignInButtonProps {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  theme?: 'dark' | 'light';
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -37,36 +37,41 @@ export function GoogleSignInButton({
   onPress,
   loading = false,
   disabled = false,
-  theme = 'dark',
 }: GoogleSignInButtonProps) {
+  const { colors } = useTheme();
+
+  const isButtonDisabled = disabled || loading;
+
+  const containerStyles = isButtonDisabled
+    ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+    : 'bg-surface-primary border-border-default active:opacity-90';
+
+  const textStyles = isButtonDisabled
+    ? 'text-slate-600 dark:text-slate-300'
+    : 'text-text-primary';
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      opacity: withSpring(disabled ? 0.5 : 1, { damping: 15, stiffness: 200 }),
+      transform: [{ scale: 1 }],
     };
   });
-
-  const isDark = theme === 'dark';
 
   return (
     <AnimatedPressable
       onPress={onPress}
-      disabled={disabled || loading}
-      className={`flex-row items-center justify-center rounded-xl px-8 py-3.5 border active:opacity-85 ${
-        isDark
-          ? 'bg-neeva-glass-highlight border-neeva-glass-border'
-          : 'bg-white border-slate-200 shadow-sm shadow-slate-100'
-      }`}
+      disabled={isButtonDisabled}
+      className={`flex-row items-center justify-center rounded-xl px-8 py-3.5 border shadow-sm ${containerStyles}`}
       style={animatedStyle}
       accessibilityRole="button"
       accessibilityLabel="Continue with Google"
       accessibilityHint="Double tap to sign in with your Google account"
     >
       {loading ? (
-        <ActivityIndicator size="small" color={isDark ? '#FFFFFF' : '#8B5CF6'} />
+        <ActivityIndicator size="small" color={colors.brand.primary} />
       ) : (
         <>
           <GoogleIcon />
-          <Text className={`font-semibold ml-3 text-body ${isDark ? 'text-white' : 'text-slate-800'}`}>
+          <Text className={`font-semibold ml-3 text-body ${textStyles}`}>
             Continue with Google
           </Text>
         </>

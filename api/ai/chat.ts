@@ -152,7 +152,7 @@ export default async function handler(request: Request) {
     }
 
     const targetUrl = 'https://integrate.api.nvidia.com/v1/chat/completions';
-    const model = 'nvidia/nemotron-3-super-120b-a12b';
+    const model = process.env.VITE_NVIDIA_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b';
 
     const upstreamResp = await fetch(targetUrl, {
         method: 'POST',

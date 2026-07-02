@@ -1,95 +1,122 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+/**
+ * ChatScreen — Production-Ready Chat Screen
+ *
+ * Architecture (top to bottom):
+ *   SafeAreaView (edges: top only)
+ *     └─ KeyboardAvoidingView (fills remaining space)
+ *           ├─ ChatHeader
+ *           ├─ MessageList (flex: 1, scrollable)
+ *           └─ ChatInput (bottom, padded by safe-area inset)
+ *
+ * Keyboard handling strategy:
+ *   - SafeAreaView handles TOP inset only (status bar clearance)
+ *   - KeyboardAvoidingView handles keyboard push-up
+ *   - ChatInput receives bottom safe-area inset as `paddingBottom`
+ *
+ * This is the only place KeyboardAvoidingView lives — NOT inside ChatInput.
+ * Having KAV inside a child component causes double-offset bugs on iOS.
+ *
+ * Responsibilities:
+ *   - Sources uid from auth store for API calls
+ *   - Coordinates useChatStream hook
+ *   - Passes derived state down to MessageList and ChatInput
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ChatHeader } from '../components/ChatHeader';
-import { ConversationList } from '../components/ConversationList';
-import { AIMessageBubble } from '../components/AIMessageBubble';
-import { UserMessageBubble } from '../components/UserMessageBubble';
-import { ChatInput } from '../components/ChatInput';
+import { useAppStore } from '@/core/store/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
+import { ChatHeader } from '../components/ChatHeader';
+import { MessageList } from '../components/MessageList';
+import { ChatInput } from '../components/ChatInput';
+import { useChatStream } from '../hooks/useChatStream';
+import type { ChatViewState } from '../types';
 
 export function ChatScreen() {
-  const [messages, setMessages] = React.useState<any[]>([]);
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const [isLoading, setIsLoading] = useState(true);
+  const [pendingQuickStarter, setPendingQuickStarter] = useState<string | null>(null);
 
-  const formatTime = (date: Date) => {
-    let hours = date.getHours();
-    const minutes = date.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12; // the hour '0' should be '12'
-    const minutesStr = minutes < 10 ? '0' + minutes : minutes;
-    return `${hours}:${minutesStr} ${ampm}`;
-  };
+  // Get uid from the global auth store — required for x-uid API header
+  const uid = useAppStore((state) => state.session.user?.uid ?? null);
 
-  const handleSend = (text: string) => {
-    const userMsg = {
-      id: String(Date.now()),
-      sender: 'user',
-      text,
-      timestamp: formatTime(new Date()),
-    };
-    
-    setMessages((prev) => [...prev, userMsg]);
+  const { messages, isStreaming, refreshing, sendMessage, retryLast, clearError, abort, clearConversation, refreshConversation } =
+    useChatStream({ uid });
 
-    // Simulate AI response after a short delay
-    setTimeout(() => {
-      const aiResponse = {
-        id: String(Date.now() + 1),
-        sender: 'ai',
-        text: "Thank you for sharing that with me. I'm here to listen and help you process whatever is on your mind.",
-        timestamp: formatTime(new Date()),
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const handleQuickStarterPress = (text: string) => {
-    handleSend(text);
-  };
+  const chatViewState: ChatViewState =
+    isLoading && messages.length === 0
+      ? 'loading'
+      : messages.length === 0
+        ? 'empty'
+        : messages[messages.length - 1]?.status === 'error'
+          ? 'error'
+          : 'conversation';
+
+  const handleQuickStarterSelect = useCallback((text: string) => {
+    setPendingQuickStarter(text);
+  }, []);
+
+  const handlePrefillSent = useCallback(() => {
+    setPendingQuickStarter(null);
+  }, []);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]} edges={['top']}>
-      <StatusBar style="light" />
-      <ChatHeader />
-      <View style={styles.content}>
-        <ConversationList
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background.primary }]}
+      edges={['top']}
+    >
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        {/* Fixed header */}
+        <ChatHeader onMorePress={clearConversation} />
+
+        {/* Scrollable message list — flex: 1 takes all remaining vertical space */}
+        <MessageList
           messages={messages}
-          onQuickStarterPress={handleQuickStarterPress}
-        >
-          {messages.map((msg) => {
-            if (msg.sender === 'ai') {
-              return (
-                <AIMessageBubble
-                  key={msg.id}
-                  message={msg.text}
-                  timestamp={msg.timestamp}
-                />
-              );
-            } else if (msg.sender === 'user') {
-              return (
-                <UserMessageBubble
-                  key={msg.id}
-                  message={msg.text}
-                  timestamp={msg.timestamp}
-                />
-              );
-            }
-            return null;
-          })}
-        </ConversationList>
-        <ChatInput onSend={handleSend} />
-      </View>
+          refreshing={refreshing}
+          viewState={chatViewState}
+          onRefresh={refreshConversation}
+          onQuickStarterSelect={handleQuickStarterSelect}
+          onRetry={retryLast}
+          onDismiss={clearError}
+        />
+
+        {/* Input area — bottom safe-area inset passed as paddingBottom */}
+        <ChatInput
+          onSend={sendMessage}
+          onAbort={abort}
+          isStreaming={isStreaming}
+          paddingBottom={insets.bottom}
+          prefillText={pendingQuickStarter}
+          onPrefillSent={handlePrefillSent}
+        />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
   },
-  content: {
+  keyboardAvoid: {
     flex: 1,
   },
 });

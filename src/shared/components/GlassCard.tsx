@@ -13,6 +13,7 @@ import Animated, {
   type WithSpringConfig,
 } from 'react-native-reanimated';
 import { shadows } from '@/core/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
@@ -25,9 +26,9 @@ interface GlassCardProps extends ViewProps {
 }
 
 const intensityStyles = {
-  light: 'bg-neeva-glass-light',
-  medium: 'bg-neeva-glass-medium',
-  dark: 'bg-neeva-glass-dark/30',
+  light: 'bg-white/80 dark:bg-surface-primary/40',
+  medium: 'bg-white/90 dark:bg-surface-primary/60',
+  dark: 'bg-surface-primary dark:bg-surface-secondary/80',
 } as const;
 
 const springConfig: WithSpringConfig = {
@@ -49,6 +50,8 @@ export function GlassCard({
   onLayout,
   ...viewProps
 }: GlassCardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
 
   const handleLayout = React.useCallback(
@@ -90,6 +93,9 @@ export function GlassCard({
     style as any,
   ];
 
+  const defaultBorderColorStart = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
+  const defaultBorderColorEnd = isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)';
+
   const svgBorder = dimensions.width > 0 && dimensions.height > 0 ? (
     <View style={[StyleSheet.absoluteFill, { borderRadius: rx, overflow: 'hidden' }]} pointerEvents="none">
       <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
@@ -97,16 +103,16 @@ export function GlassCard({
           <LinearGradient id={`glassBorderGrad-${rx}-${themeColor || 'default'}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <Stop
               offset="0%"
-              stopColor={themeColor ? '#FFFFFF' : 'rgba(255, 255, 255, 0.25)'}
+              stopColor={themeColor ? themeColor : defaultBorderColorStart}
               stopOpacity={themeColor ? 0.32 : 1.0}
             />
             <Stop
               offset="25%"
-              stopColor={themeColor || 'rgba(255, 255, 255, 0.06)'}
-              stopOpacity={themeColor ? 0.22 : 1.0}
+              stopColor={themeColor ? themeColor : defaultBorderColorStart}
+              stopOpacity={themeColor ? 0.22 : 0.5}
             />
-            <Stop offset="60%" stopColor="rgba(255, 255, 255, 0.06)" />
-            <Stop offset="100%" stopColor="rgba(255, 255, 255, 0.02)" />
+            <Stop offset="60%" stopColor={isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'} />
+            <Stop offset="100%" stopColor={themeColor ? themeColor : defaultBorderColorEnd} stopOpacity={themeColor ? 0.05 : 1.0} />
           </LinearGradient>
         </Defs>
         <Rect
@@ -129,7 +135,7 @@ export function GlassCard({
         {
           borderRadius: rx,
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.08)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
         },
       ]}
       pointerEvents="none"

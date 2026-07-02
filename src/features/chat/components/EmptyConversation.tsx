@@ -1,9 +1,14 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Sparkles, Heart, HelpCircle, Flame } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 
-const { width } = Dimensions.get('window');
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Good morning.';
+  if (hour >= 12 && hour < 17) return 'Good afternoon.';
+  return 'Good evening.';
+}
 
 interface QuickStarter {
   icon: React.ComponentType<{ size: number; color: string }>;
@@ -19,34 +24,34 @@ const QUICK_STARTERS: QuickStarter[] = [
 ];
 
 interface EmptyConversationProps {
-  onQuickStarterPress?: (text: string) => void;
+  onQuickStarterSelect?: (text: string) => void;
 }
 
-export function EmptyConversation({ onQuickStarterPress }: EmptyConversationProps) {
+export function EmptyConversation({ onQuickStarterSelect }: EmptyConversationProps) {
   const { colors } = useTheme();
 
   return (
     <View style={styles.emptyContainer}>
-      <View style={[styles.avatarCircle, { backgroundColor: `${colors.brand.primary}1A`, borderColor: colors.border.default }]}>
-        <Text style={styles.emojiLogo}>🧠</Text>
-      </View>
-
-      <Text style={[styles.title, { color: colors.text.primary }]}>
-        Neeva's Conversation Space
+      {/* Greeting */}
+      <Text style={[styles.greeting, { color: colors.text.primary }]}>
+        {getGreeting()}
       </Text>
       
-      <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-        Your safe space for emotional support and reflection. Share whatever is on your mind, without judgement.
+      <Text style={[styles.prompt, { color: colors.text.secondary }]}>
+        {"What's on your mind today?"}
       </Text>
 
       {/* Quick Starters Grid */}
+      <Text style={[styles.suggestionsLabel, { color: colors.text.secondary }]}>
+        Suggestions
+      </Text>
       <View style={styles.startersGrid}>
         {QUICK_STARTERS.map((starter, index) => {
           const IconComponent = starter.icon;
           return (
             <Pressable
               key={index}
-              onPress={() => onQuickStarterPress?.(starter.text)}
+              onPress={() => onQuickStarterSelect?.(starter.text)}
               style={({ pressed }) => [
                 styles.starterCard,
                 {
@@ -80,35 +85,29 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingTop: 60,
+    paddingBottom: 20,
     width: '100%',
   },
-  avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  emojiLogo: {
-    fontSize: 36,
-  },
-  title: {
-    fontSize: 20,
+  greeting: {
+    fontSize: 24,
     fontWeight: '700',
     textAlign: 'center',
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 14,
+  prompt: {
+    fontSize: 15,
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 16,
-    marginBottom: 36,
-    maxWidth: width * 0.85,
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  suggestionsLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 12,
   },
   startersGrid: {
     width: '100%',

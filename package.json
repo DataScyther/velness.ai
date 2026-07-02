@@ -15,6 +15,7 @@
     "clsx": "^2.1.1",
     "expo": "^54.0.35",
     "expo-blur": "~15.0.8",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-haptics": "~15.0.8",
     "expo-linking": "~8.0.12",
@@ -43,13 +44,17 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^14.0.1",
     "@types/react": "~19.1.10",
     "@types/react-dom": "~19.1.7",
     "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.49",
     "typescript": "^5.7.3",
-    "vite": "^6.4.1"
+    "vite": "^6.4.1",
+    "vitest": "^4.1.9"
   },
   "scripts": {
     "dev": "vite",
@@ -61,6 +66,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web:expo": "expo start --web",
+    "test": "vitest run",
     "firebase:sync-env": "node scripts/sync-firebase-env.mjs"
   },
   "allowScripts": {

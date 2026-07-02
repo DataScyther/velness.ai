@@ -1,3 +1,5 @@
+import { env } from '@/core/config/env';
+
 export class AIError extends Error {
     public statusCode?: number;
     public details?: unknown;
@@ -32,7 +34,9 @@ export async function* streamAIChat(params: {
     history?: Array<{ role: 'user' | 'assistant'; content: string }>;
     signal?: AbortSignal;
 }): AsyncGenerator<StreamChunk> {
-    const res = await fetch('/api/ai/chat', {
+    const apiBase = env.apiBaseUrl;
+    const url = apiBase.endsWith('/') ? `${apiBase}ai/chat` : `${apiBase}/ai/chat`;
+    const res = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

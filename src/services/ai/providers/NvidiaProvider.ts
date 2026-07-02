@@ -1,70 +1,234 @@
-/**
- * NVIDIA NIM — AI Provider Implementation
- *
- * Communicates with the NVIDIA NIM API via the Vercel backend proxy (/api/ai/chat).
- * Never communicates directly with NVIDIA — always goes through the backend.
- */
-
 import type { AIProvider, AIStreamParams, AICompleteParams, AIResponse, StreamChunk } from '../types';
 import { AIError } from '../types';
+import { env } from '@/core/config/env';
+import { buildContextualPrompt } from '@/prompts/mentalWellnessPrompt';
+import { PerfTracker } from '@/utils/chat-performance';
+
+// ── Shared SSE line parser (no closure issues) ────────────────────────
+
+let _globalChunk = 0;
+function nextChunkId(): () => number {
+  const start = ++_globalChunk;
+  let i = 0;
+  return () => start + (i++);
+}
+
+function* parseSSELine(line: string, id: () => number): Generator<StreamChunk> {
+  const t = line.trim();
+  if (!t) return;
+  if (t === 'data: [DONE]') {
+    yield { id: `c${id()}`, contentDelta: '', done: true };
+    return;
+  }
+  const body = t.startsWith('data:') ? t.slice(5).trim() : t;
+  if (!body || body === '[DONE]') return;
+  try {
+    const p = JSON.parse(body);
+    const d = p?.choices?.[0]?.delta?.content || p?.choices?.[0]?.text || p?.content;
+    if (typeof d === 'string' && d) yield { id: `c${id()}`, contentDelta: d };
+    if (p?.choices?.[0]?.finish_reason === 'stop' || p?.done === true) {
+      yield { id: `c${id()}`, contentDelta: '', done: true };
+    }
+  } catch {}
+}
 
 export class NvidiaProvider implements AIProvider {
   readonly name = 'nvidia-nim';
 
   async *streamChat(params: AIStreamParams): AsyncGenerator<StreamChunk> {
-    const res = await fetch('/api/ai/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-uid': params.uid,
-      },
-      body: JSON.stringify({
-        text: params.text,
-        history: params.history,
-      }),
-      signal: params.signal,
+    const perf = new PerfTracker(params.uid);
+    perf.mark('send');
+
+    const apiKey = env.nvidiaApiKey;
+    if (!apiKey) {
+      throw new AIError('NVIDIA API key not configured', 500, 'Set VITE_NVIDIA_API_KEY in your .env');
+    }
+
+    const targetUrl = `${env.nvidiaBaseUrl}/chat/completions`;
+    const model = env.nvidiaModel || 'nvidia/nemotron-3-ultra-550b-a55b';
+
+    const messages: Array<{ role: string; content: string }> = [
+      { role: 'system', content: buildContextualPrompt({
+        userName: params.memoryContext?.userName,
+        timeOfDay: params.memoryContext?.timeOfDay as any,
+        returningUser: params.memoryContext?.returningUser,
+        previousMood: params.memoryContext?.previousMood,
+        preferredTone: params.memoryContext?.preferredTone as any,
+      }) },
+      ...(params.history || []).map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: params.text },
+    ];
+
+    const requestBody = JSON.stringify({
+      model,
+      messages,
+      temperature: 0.6,
+      top_p: 0.95,
+      max_tokens: 4096,
+      stream: true,
     });
 
-    if (!res.ok || !res.body) {
-      const errText = await res.text().catch(() => '');
-      throw new AIError('AI request failed', res.status, errText);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    };
+
+    perf.mark('request_start');
+
+    // ── Try fetch + ReadableStream (web / some RN) ────────────────
+
+    if (globalThis.fetch && typeof globalThis.ReadableStream !== 'undefined') {
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers,
+        body: requestBody,
+        signal: params.signal,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new AIError('AI request failed', res.status, errText);
+      }
+
+      if (res.body && typeof res.body.getReader === 'function') {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        const id = nextChunkId();
+        let hasFirstToken = false;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split(/\r?\n/);
+          buf = lines.pop() ?? '';
+          for (const line of lines) {
+            for (const c of parseSSELine(line, id)) {
+              if (c.contentDelta && !hasFirstToken) { hasFirstToken = true; perf.mark('first_token'); }
+              yield c;
+              if (c.done) { perf.report(); return; }
+            }
+          }
+        }
+        if (buf.trim()) {
+          for (const c of parseSSELine(buf, id)) {
+            if (c.contentDelta && !hasFirstToken) perf.mark('first_token');
+            yield c;
+            if (c.done) { perf.report(); return; }
+          }
+        }
+        perf.mark('complete');
+        perf.report();
+        return;
+      }
+      // body null — fall through to XHR
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let buffer = '';
+    // ── XHR streaming (React Native) ─────────────────────────────
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      if (!value) continue;
+    yield* this.streamViaXHR(targetUrl, headers, requestBody, params.signal, perf);
+  }
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(/\r?\n/);
-      buffer = lines.pop() ?? '';
+  private async *streamViaXHR(
+    url: string,
+    headers: Record<string, string>,
+    body: string,
+    signal: AbortSignal | undefined,
+    perf: PerfTracker | undefined,
+  ): AsyncGenerator<StreamChunk> {
+    type Evt = { kind: 'data'; text: string } | { kind: 'end' } | { kind: 'error'; err: Error };
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
+    let pending: Evt[] = [];
+    let waiter: ((e: Evt) => void) | null = null;
+    let done = false;
+    let streamError: Error | null = null;
 
-        try {
-          const parsed = JSON.parse(trimmed) as StreamChunk;
-          yield parsed;
-          if (parsed.done) return;
-        } catch {
-          // Ignore malformed lines
+    const push = (e: Evt) => {
+      if (waiter) { waiter(e); waiter = null; }
+      else pending.push(e);
+    };
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+    xhr.responseType = 'text';
+
+    let lastIdx = 0;
+
+    xhr.onprogress = () => {
+      const text = xhr.responseText.slice(lastIdx);
+      lastIdx = xhr.responseText.length;
+      if (text) push({ kind: 'data', text });
+    };
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== 4) return;
+      done = true;
+      perf?.mark('complete');
+      if (xhr.status >= 200 && xhr.status < 300) {
+        push({ kind: 'end' });
+      } else {
+        streamError = new AIError('AI request failed', xhr.status, xhr.responseText);
+        push({ kind: 'error', err: streamError });
+      }
+    };
+
+    xhr.onerror = () => {
+      done = true;
+      streamError = new Error('Network request failed');
+      push({ kind: 'error', err: streamError });
+    };
+
+    xhr.send(body);
+
+    const cleanup: (() => void)[] = [];
+
+    if (signal) {
+      const onAbort = () => { xhr.abort(); done = true; const abortErr = new Error('Aborted'); abortErr.name = 'AbortError'; push({ kind: 'error', err: abortErr }); };
+      signal.addEventListener('abort', onAbort);
+      cleanup.push(() => signal.removeEventListener('abort', onAbort));
+    }
+
+    const id = nextChunkId();
+    let buf = '';
+    let hasFirstToken = false;
+
+    try {
+      while (!done || pending.length > 0) {
+        let evt: Evt;
+        if (pending.length > 0) evt = pending.shift()!;
+        else if (done) break;
+        else evt = await new Promise<Evt>((r) => { waiter = r; });
+
+        if (evt.kind === 'error') throw evt.err;
+        if (evt.kind === 'end') break;
+
+        buf += evt.text;
+        const lines = buf.split(/\r?\n/);
+        buf = lines.pop() ?? '';
+
+        for (const line of lines) {
+          for (const c of parseSSELine(line, id)) {
+            if (c.contentDelta && !hasFirstToken) { hasFirstToken = true; perf?.mark('first_token'); }
+            yield c;
+            if (c.done) { perf?.report(); return; }
+          }
         }
       }
+
+      if (buf.trim()) {
+        for (const c of parseSSELine(buf, id)) {
+          if (c.contentDelta && !hasFirstToken) perf?.mark('first_token');
+          yield c;
+          if (c.done) { perf?.report(); return; }
+        }
+      }
+    } finally {
+      for (const c of cleanup) c();
     }
 
-    if (buffer.trim()) {
-      try {
-        const parsed = JSON.parse(buffer.trim()) as StreamChunk;
-        yield parsed;
-      } catch {
-        // ignore
-      }
-    }
+    perf?.report();
   }
 
   async generateResponse(params: AICompleteParams): Promise<AIResponse> {

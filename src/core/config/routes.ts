@@ -29,7 +29,7 @@ export const ROUTES = {
     MEDITATION: '/journey/meditation/:id',
     BREATHING: '/journey/breathing/:id',
     REFLECTION: '/journey/reflection',
-    CHAT_CONVERSATION: '/chat/:id',
+    // Removed: CHAT_CONVERSATION — unified into single chat screen per Phase 1
     PROFILE_SETTINGS: '/profile/settings',
     PROFILE_SUBSCRIPTION: '/profile/subscription',
     PROFILE_NOTIFICATIONS: '/profile/notifications',

@@ -20,6 +20,7 @@ import { useAuth } from '@/shared/hooks/useAuth';
 import { Button } from '@/shared/components/Button';
 import { TextField } from '@/shared/components/TextField';
 import { GlassCard } from '@/shared/components/GlassCard';
+import { useTheme } from '@/hooks/useTheme';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/features/auth/validators';
 import { AUTH_STRINGS } from '@/features/auth/constants';
 
@@ -40,6 +41,8 @@ export function ForgotPasswordScreen() {
     defaultValues: { email: '' },
   });
 
+  const { colors } = useTheme();
+
   const handleReset = useCallback(
     async (data: ForgotPasswordFormData) => {
       try {
@@ -58,7 +61,7 @@ export function ForgotPasswordScreen() {
   }, [router]);
 
   return (
-    <SafeAreaView className="flex-1 bg-app-dark">
+    <SafeAreaView className="flex-1 bg-background-primary">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -66,12 +69,12 @@ export function ForgotPasswordScreen() {
         <View className="px-4 py-2 flex-row items-center">
           <Pressable
             onPress={handleBack}
-            className="w-10 h-10 rounded-full bg-neeva-glass-highlight border border-neeva-glass-border items-center justify-center active:opacity-75"
+            className="w-10 h-10 rounded-full bg-surface-secondary border border-border-default items-center justify-center active:bg-surface-primary"
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"
             accessibilityLabel="Back to previous screen"
           >
-            <ArrowLeft size={20} color="#FFFFFF" />
+            <ArrowLeft size={20} color={colors.text.primary} />
           </Pressable>
         </View>
 
@@ -96,16 +99,16 @@ export function ForgotPasswordScreen() {
                 }}
               />
             </View>
-            <Text className="text-4xl font-bold text-white tracking-tight font-display">
+            <Text className="text-4xl font-bold text-text-primary tracking-tight font-display">
               {AUTH_STRINGS.SPLASH_TITLE}
             </Text>
           </Animated.View>
 
           {/* Form / Content Panel */}
           <Animated.View entering={FadeInDown.delay(100).duration(500).springify()}>
-            <GlassCard intensity="dark" className="p-6">
+            <GlassCard intensity="medium" className="p-6">
               <Text
-                className="text-white text-section-title font-semibold mb-2"
+                className="text-text-primary text-section-title font-semibold mb-2"
                 accessibilityRole="header"
               >
                 {AUTH_STRINGS.FORGOT_TITLE}
@@ -114,13 +117,13 @@ export function ForgotPasswordScreen() {
               {isSuccess ? (
                 <Animated.View entering={FadeIn.duration(400)} className="mt-2">
                   <View className="items-center my-6">
-                    <View className="w-16 h-16 rounded-full bg-green-500/20 border border-green-500/30 items-center justify-center mb-4">
-                      <CheckCircle2 size={36} color="#34D399" />
+                    <View className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 items-center justify-center mb-4">
+                      <CheckCircle2 size={36} color={colors.success} />
                     </View>
-                    <Text className="text-status-success font-semibold text-card-title text-center mb-2">
+                    <Text className="text-success font-semibold text-card-title text-center mb-2">
                       {AUTH_STRINGS.FORGOT_SUCCESS_TITLE}
                     </Text>
-                    <Text className="text-white/60 text-body-sm text-center leading-5 px-2">
+                    <Text className="text-text-secondary text-body-sm text-center leading-5 px-2">
                       {AUTH_STRINGS.FORGOT_SUCCESS_MESSAGE}
                     </Text>
                   </View>
@@ -130,23 +133,23 @@ export function ForgotPasswordScreen() {
                     onPress={() => router.replace('/auth/login')}
                     size="lg"
                     className="w-full mt-4"
-                    icon={<ArrowLeft size={16} color="#FFFFFF" />}
+                    icon={<ArrowLeft size={16} color={colors.brand.contrastText} />}
                     accessibilityLabel="Back to sign in page"
                   />
                 </Animated.View>
               ) : (
                 <>
-                  <Text className="text-white/40 text-body-sm mb-6 leading-5">
+                  <Text className="text-text-secondary text-body-sm mb-6 leading-5">
                     {AUTH_STRINGS.FORGOT_SUBTITLE}
                   </Text>
 
                   {error && (
                     <View
-                      className="bg-red-500/10 border border-red-500/25 rounded-glass-sm px-4 py-3 mb-4 flex-row items-center"
+                      className="bg-danger/10 border border-danger/25 rounded-xl px-4 py-3 mb-4 flex-row items-center"
                       accessibilityRole="alert"
                     >
-                      <AlertCircle size={16} color="#F87171" className="mr-2" />
-                      <Text className="text-red-400 text-body-sm flex-1">{error}</Text>
+                      <AlertCircle size={16} color={colors.danger} className="mr-2" />
+                      <Text className="text-danger text-body-sm flex-1">{error}</Text>
                     </View>
                   )}
 
@@ -167,7 +170,7 @@ export function ForgotPasswordScreen() {
                         returnKeyType="done"
                         onSubmitEditing={handleSubmit(handleReset)}
                         editable={!loading}
-                        leftIcon={<Mail size={18} color="rgba(255,255,255,0.4)" />}
+                        leftIcon={<Mail size={18} color={colors.text.secondary} />}
                         accessibilityLabel="Email input"
                         accessibilityHint="Enter the email address associated with your account"
                       />
@@ -191,7 +194,7 @@ export function ForgotPasswordScreen() {
                     accessibilityRole="link"
                     accessibilityLabel="Back to sign in screen"
                   >
-                    <Text className="text-neeva-cyan-400 text-body-sm font-medium">
+                    <Text className="text-brand-primary text-body-sm font-medium">
                       {AUTH_STRINGS.FORGOT_BACK}
                     </Text>
                   </Pressable>

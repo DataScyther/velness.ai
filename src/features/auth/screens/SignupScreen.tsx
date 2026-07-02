@@ -17,7 +17,9 @@ import { Mail, Lock, User, AlertCircle, ArrowLeft, ChevronDown, Check } from 'lu
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '@/shared/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
 import { analyticsService } from '@/services/analytics';
+import { Button } from '@/shared/components/Button';
 import { TextField } from '@/shared/components/TextField';
 import { PasswordField } from '@/shared/components/PasswordField';
 import { Checkbox } from '@/shared/components/Checkbox';
@@ -97,12 +99,14 @@ export function SignupScreen() {
     [signup, clearError, selectedRole]
   );
 
+  const { colors } = useTheme();
+
   const handleSignIn = useCallback(() => {
     router.push('/auth/login');
   }, [router]);
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8FAFF]">
+    <SafeAreaView className="flex-1 bg-background-primary">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -120,12 +124,12 @@ export function SignupScreen() {
           >
             <Pressable
               onPress={() => router.back()}
-              className="mr-4 p-1 rounded-full active:bg-slate-100"
+              className="mr-4 p-1 rounded-full active:bg-surface-secondary border border-border-default/40"
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             >
-              <ArrowLeft size={24} color="#1E293B" />
+              <ArrowLeft size={24} color={colors.text.primary} />
             </Pressable>
-            <Text className="text-slate-800 text-page-title font-bold tracking-tight">
+            <Text className="text-text-primary text-page-title font-bold tracking-tight">
               Create Account
             </Text>
           </Animated.View>
@@ -134,11 +138,11 @@ export function SignupScreen() {
           <Animated.View entering={FadeInDown.delay(100).duration(600).springify()}>
             {error && (
               <View
-                className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4 flex-row items-center"
+                className="bg-danger/10 border border-danger/25 rounded-xl px-4 py-3 mb-4 flex-row items-center"
                 accessibilityRole="alert"
               >
-                <AlertCircle size={16} color="#EF4444" className="mr-2" />
-                <Text className="text-red-600 text-body-sm flex-1 font-medium">{error}</Text>
+                <AlertCircle size={16} color={colors.danger} className="mr-2" />
+                <Text className="text-danger text-body-sm flex-1 font-medium">{error}</Text>
               </View>
             )}
 
@@ -148,7 +152,6 @@ export function SignupScreen() {
               name="name"
               render={({ field: { onChange, onBlur, value } }) => (
                 <TextField
-                  theme="light"
                   label={AUTH_STRINGS.SIGNUP_NAME_LABEL}
                   placeholder={AUTH_STRINGS.SIGNUP_NAME_PLACEHOLDER}
                   value={value}
@@ -159,7 +162,7 @@ export function SignupScreen() {
                   autoComplete="name"
                   returnKeyType="next"
                   editable={!loading}
-                  leftIcon={<User size={18} color="rgba(15, 23, 42, 0.4)" />}
+                  leftIcon={<User size={18} color={colors.text.secondary} />}
                   accessibilityLabel={AUTH_STRINGS.SIGNUP_NAME_LABEL}
                   accessibilityHint="Enter your full name"
                 />
@@ -172,7 +175,6 @@ export function SignupScreen() {
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
                 <TextField
-                  theme="light"
                   label="Work Email"
                   placeholder="nathan.roberts@example.com"
                   value={value}
@@ -184,7 +186,7 @@ export function SignupScreen() {
                   autoComplete="email"
                   returnKeyType="next"
                   editable={!loading}
-                  leftIcon={<Mail size={18} color="rgba(15, 23, 42, 0.4)" />}
+                  leftIcon={<Mail size={18} color={colors.text.secondary} />}
                   accessibilityLabel="Work Email"
                   accessibilityHint="Enter your email address"
                 />
@@ -198,14 +200,14 @@ export function SignupScreen() {
               accessibilityRole="combobox"
               accessibilityLabel="Role"
             >
-              <Text className="text-body-sm font-semibold mb-2 text-slate-600">
+              <Text className="text-body-sm font-semibold mb-2 text-text-secondary">
                 Role
               </Text>
-              <View className="flex-row items-center justify-between rounded-xl border border-slate-200 px-4 py-3.5 bg-white">
-                <Text className="text-slate-800 text-body font-medium">
+              <View className="flex-row items-center justify-between rounded-xl border border-border-default px-4 py-3.5 bg-surface-primary">
+                <Text className="text-text-primary text-body font-medium">
                   {selectedRole}
                 </Text>
-                <ChevronDown size={18} color="#94A3B8" />
+                <ChevronDown size={18} color={colors.text.secondary} />
               </View>
             </Pressable>
 
@@ -215,7 +217,6 @@ export function SignupScreen() {
               name="password"
               render={({ field: { onChange, onBlur, value } }) => (
                 <TextField
-                  theme="light"
                   secureTextEntry
                   label={AUTH_STRINGS.SIGNUP_PASSWORD_LABEL}
                   placeholder="••••••••"
@@ -227,7 +228,7 @@ export function SignupScreen() {
                   autoComplete="new-password"
                   returnKeyType="next"
                   editable={!loading}
-                  leftIcon={<Lock size={18} color="rgba(15, 23, 42, 0.4)" />}
+                  leftIcon={<Lock size={18} color={colors.text.secondary} />}
                   accessibilityLabel={AUTH_STRINGS.SIGNUP_PASSWORD_LABEL}
                   accessibilityHint="Create a password of at least 8 characters"
                 />
@@ -244,7 +245,6 @@ export function SignupScreen() {
               name="confirmPassword"
               render={({ field: { onChange, onBlur, value } }) => (
                 <PasswordField
-                  theme="light"
                   label={AUTH_STRINGS.SIGNUP_CONFIRM_PASSWORD_LABEL}
                   placeholder="••••••••"
                   value={value}
@@ -256,7 +256,7 @@ export function SignupScreen() {
                   returnKeyType="done"
                   onSubmitEditing={handleSubmit(onSubmit)}
                   editable={!loading}
-                  leftIcon={<Lock size={18} color="rgba(15, 23, 42, 0.4)" />}
+                  leftIcon={<Lock size={18} color={colors.text.secondary} />}
                   accessibilityLabel={AUTH_STRINGS.SIGNUP_CONFIRM_PASSWORD_LABEL}
                   accessibilityHint="Confirm your password by entering it again"
                 />
@@ -270,7 +270,6 @@ export function SignupScreen() {
                 name="acceptTerms"
                 render={({ field: { onChange, value } }) => (
                   <Checkbox
-                    theme="light"
                     checked={value}
                     onPress={() => {
                       const nextVal = !value;
@@ -286,24 +285,15 @@ export function SignupScreen() {
             </View>
 
             {/* Primary Submit Button */}
-            <Pressable
+            <Button
+              title={loading ? 'Creating Account...' : 'Create Account'}
               onPress={handleSubmit(onSubmit)}
-              disabled={!isValid || loading}
-              className={`w-full mt-8 py-4.5 rounded-full items-center justify-center bg-[#1C51E2] ${
-                (!isValid || loading) ? 'opacity-50' : 'active:opacity-90'
-              }`}
-              style={{
-                shadowColor: '#1C51E2',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 6,
-                elevation: 4,
-              }}
-            >
-              <Text className="text-white text-body-lg font-bold">
-                {loading ? 'Creating Account...' : 'Create Account'}
-              </Text>
-            </Pressable>
+              disabled={!isValid}
+              loading={loading}
+              variant="primary"
+              className="w-full mt-8"
+              accessibilityLabel="Create Account"
+            />
           </Animated.View>
 
           {/* Bottom Redirect */}
@@ -312,7 +302,7 @@ export function SignupScreen() {
             className="items-center mt-8 mb-6"
           >
             <View className="flex-row items-center justify-center">
-              <Text className="text-slate-500 text-body-sm font-medium">
+              <Text className="text-text-secondary text-body-sm font-medium">
                 {AUTH_STRINGS.SIGNUP_HAS_ACCOUNT}{' '}
               </Text>
               <Pressable
@@ -322,7 +312,7 @@ export function SignupScreen() {
                 accessibilityRole="link"
                 accessibilityLabel={AUTH_STRINGS.SIGNUP_LOGIN_CTA}
               >
-                <Text className="text-[#1C51E2] text-body-sm font-bold">
+                <Text className="text-brand-primary text-body-sm font-bold">
                   {AUTH_STRINGS.SIGNUP_LOGIN_CTA}
                 </Text>
               </Pressable>
@@ -340,12 +330,12 @@ export function SignupScreen() {
       >
         <View className="flex-1 justify-end bg-black/40">
           <Pressable className="flex-1" onPress={() => setShowRolePicker(false)} />
-          <View className="bg-white rounded-t-2xl px-6 pt-4 pb-10 max-h-[50%]">
+          <View className="bg-surface-primary rounded-t-2xl px-6 pt-4 pb-10 max-h-[50%] border-t border-border-default">
             {/* Sheet Handle Indicator */}
-            <View className="w-12 h-1 bg-slate-200 rounded-full align-self-center mx-auto mb-4" />
+            <View className="w-12 h-1 bg-border-default rounded-full align-self-center mx-auto mb-4" />
             
             {/* Title */}
-            <Text className="text-slate-800 text-card-title font-bold mb-4 font-display">
+            <Text className="text-text-primary text-card-title font-bold mb-4 font-display">
               Select Role
             </Text>
 
@@ -358,13 +348,13 @@ export function SignupScreen() {
                     setSelectedRole(option);
                     setShowRolePicker(false);
                   }}
-                  className="py-4 border-b border-slate-100 flex-row justify-between items-center active:bg-slate-50"
+                  className="py-4 border-b border-border-default flex-row justify-between items-center active:bg-surface-secondary"
                 >
-                  <Text className={`text-slate-800 text-body font-semibold ${selectedRole === option ? 'text-[#1C51E2]' : ''}`}>
+                  <Text className={`text-text-primary text-body font-semibold ${selectedRole === option ? 'text-brand-primary' : ''}`}>
                     {option}
                   </Text>
                   {selectedRole === option && (
-                    <Check size={16} color="#1C51E2" strokeWidth={3} />
+                    <Check size={16} color={colors.brand.primary} strokeWidth={3} />
                   )}
                 </Pressable>
               ))}

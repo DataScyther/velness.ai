@@ -11,15 +11,18 @@ import {
   setDoc,
   query,
   orderBy,
+  where,
+  limit,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ChatMessage } from '@/shared/types';
+import type { ChatMessage as FirestoreChatMessage } from '@/shared/types';
+import type { ChatMessage } from '@/features/chat/types';
 
 const COLLECTION = 'users';
 
 export class ChatRepository {
-  async loadChatHistory(uid: string): Promise<ChatMessage[]> {
+  async loadChatHistory(uid: string): Promise<FirestoreChatMessage[]> {
     if (!uid || !db) return [];
 
     try {
@@ -30,14 +33,14 @@ export class ChatRepository {
       return snapshot.docs.map((doc) => ({
         ...doc.data(),
         timestamp: (doc.data().timestamp as Timestamp).toDate(),
-      })) as ChatMessage[];
+      })) as FirestoreChatMessage[];
     } catch (error) {
       console.error('Error loading chat history:', error);
       return [];
     }
   }
 
-  async saveMessage(uid: string, message: ChatMessage): Promise<boolean> {
+  async saveMessage(uid: string, message: FirestoreChatMessage): Promise<boolean> {
     if (!uid || !db) return false;
 
     try {
@@ -58,6 +61,84 @@ export class ChatRepository {
       throw error;
     }
   }
+
+  async saveMessages(uid: string, messages: ChatMessage[], conversationId: string): Promise<boolean> {
+    if (!uid || !db) return false;
+
+    try {
+      const batch: Promise<void>[] = [];
+      for (const msg of messages) {
+        if (msg.status !== 'done') continue;
+        const docRef = doc(db, COLLECTION, uid, 'chats', msg.id);
+        const data: Record<string, any> = {
+          id: msg.id,
+          content: msg.content,
+          isUser: msg.role === 'user',
+          timestamp: Timestamp.fromDate(new Date()),
+          conversationId,
+        };
+        batch.push(setDoc(docRef, data));
+      }
+      await Promise.all(batch);
+      return true;
+    } catch (error) {
+      console.error('Error saving chat messages:', error);
+      return false;
+    }
+  }
+
+  async loadConversationMessages(uid: string, conversationId: string): Promise<ChatMessage[]> {
+    if (!uid || !db) return [];
+
+    try {
+      const chatsRef = collection(db, COLLECTION, uid, 'chats');
+      const chatsQuery = query(
+        chatsRef,
+        where('conversationId', '==', conversationId),
+        orderBy('timestamp', 'asc')
+      );
+      const snapshot = await getDocs(chatsQuery);
+
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const ts = (data.timestamp as Timestamp).toDate();
+        return {
+          id: data.id as string,
+          role: data.isUser ? ('user' as const) : ('assistant' as const),
+          content: data.content as string,
+          timestamp: formatTime(ts),
+          status: 'done' as const,
+        };
+      });
+    } catch (error) {
+      console.error('Error loading conversation messages:', error);
+      return [];
+    }
+  }
+
+  async loadLatestConversationId(uid: string): Promise<string | null> {
+    if (!uid || !db) return null;
+
+    try {
+      const chatsRef = collection(db, COLLECTION, uid, 'chats');
+      const chatsQuery = query(chatsRef, orderBy('timestamp', 'desc'), limit(1));
+      const snapshot = await getDocs(chatsQuery);
+      if (snapshot.empty) return null;
+      return snapshot.docs[0].data().conversationId as string | null;
+    } catch (error) {
+      console.error('Error loading latest conversation:', error);
+      return null;
+    }
+  }
+}
+
+function formatTime(date: Date): string {
+  let hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  const mm = minutes < 10 ? `0${minutes}` : `${minutes}`;
+  return `${hours}:${mm} ${ampm}`;
 }
 
 export const chatRepository = new ChatRepository();

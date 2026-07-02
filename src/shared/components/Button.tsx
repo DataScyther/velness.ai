@@ -6,57 +6,16 @@
  */
 
 import React from 'react';
-import { Pressable, Text, ActivityIndicator, type PressableProps } from 'react-native';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { cva, type VariantProps } from 'class-variance-authority';
+import { Pressable, Text, ActivityIndicator, View, type PressableProps } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { useTheme } from '@/hooks/useTheme';
 
-const buttonVariants = cva(
-  'flex-row items-center justify-center rounded-glass font-semibold active:opacity-80',
-  {
-    variants: {
-      variant: {
-        primary: 'bg-neeva-purple-600',
-        secondary: 'bg-neeva-glass-highlight border border-neeva-glass-border',
-        ghost: 'bg-transparent',
-        destructive: 'bg-red-500/20 border border-red-500/30',
-      },
-      size: {
-        sm: 'px-4 py-2.5',
-        md: 'px-6 py-3.5',
-        lg: 'px-8 py-4',
-      },
-    },
-    defaultVariants: {
-      variant: 'primary',
-      size: 'md',
-    },
-  }
-);
-
-const textVariants = cva('font-semibold', {
-  variants: {
-    variant: {
-      primary: 'text-white',
-      secondary: 'text-white',
-      ghost: 'text-neeva-purple-400',
-      destructive: 'text-red-400',
-    },
-    size: {
-      sm: 'text-body-sm',
-      md: 'text-body',
-      lg: 'text-body-lg',
-    },
-  },
-  defaultVariants: {
-    variant: 'primary',
-    size: 'md',
-  },
-});
-
-interface ButtonProps extends Omit<PressableProps, 'children' | 'className'>, VariantProps<typeof buttonVariants> {
+export interface ButtonProps extends Omit<PressableProps, 'children' | 'className'> {
   title: string;
   loading?: boolean;
   icon?: React.ReactNode;
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
@@ -68,34 +27,77 @@ export function Button({
   disabled = false,
   loading = false,
   icon,
-  variant,
-  size,
+  variant = 'primary',
+  size = 'md',
   className = '',
   ...pressableProps
 }: ButtonProps) {
+  const { colors } = useTheme();
+
+  // Dynamic style resolution for accessibility & contrast
+  const isButtonDisabled = disabled || loading;
+
+  let containerStyles = 'flex-row items-center justify-center rounded-xl font-semibold transition-all duration-200 ';
+  let textStyles = 'font-semibold ';
+
+  if (variant === 'primary') {
+    containerStyles += isButtonDisabled
+      ? 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700'
+      : 'bg-brand-primary active:opacity-90';
+    textStyles += isButtonDisabled
+      ? 'text-slate-600 dark:text-slate-300'
+      : 'text-brand-contrastText';
+  } else if (variant === 'secondary') {
+    containerStyles += isButtonDisabled
+      ? 'bg-transparent border border-slate-200 dark:border-slate-800'
+      : 'bg-surface-secondary border border-border-default active:bg-surface-primary';
+    textStyles += isButtonDisabled
+      ? 'text-slate-500 dark:text-slate-400'
+      : 'text-text-primary';
+  } else if (variant === 'ghost') {
+    containerStyles += 'bg-transparent';
+    textStyles += isButtonDisabled
+      ? 'text-slate-500 dark:text-slate-400'
+      : 'text-brand-primary';
+  } else if (variant === 'destructive') {
+    containerStyles += isButtonDisabled
+      ? 'bg-danger/5 border border-danger/10'
+      : 'bg-danger/10 border border-danger/25 active:bg-danger/20';
+    textStyles += isButtonDisabled
+      ? 'text-danger/40'
+      : 'text-danger';
+  }
+
+  const sizeStyles = {
+    sm: 'px-4 py-2.5 text-body-sm',
+    md: 'px-6 py-3.5 text-body',
+    lg: 'px-8 py-4 text-body-lg',
+  }[size];
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      opacity: withSpring(disabled ? 0.4 : 1, { damping: 15, stiffness: 200 }),
+      // Subtle scale response when pressing
+      transform: [{ scale: 1 }],
     };
   });
 
   return (
     <AnimatedPressable
       onPress={onPress}
-      disabled={disabled || loading}
-      className={`${buttonVariants({ variant, size })} ${className}`}
+      disabled={isButtonDisabled}
+      className={`${containerStyles} ${sizeStyles} ${className}`}
       style={animatedStyle}
       {...pressableProps}
     >
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? '#FFFFFF' : '#8B5CF6'}
+          color={variant === 'primary' ? colors.brand.contrastText : colors.brand.primary}
         />
       ) : (
         <>
-          {icon && <>{icon}</>}
-          <Text className={`${textVariants({ variant, size })} ${icon ? 'ml-2' : ''}`}>
+          {icon && <View className="mr-2">{icon}</View>}
+          <Text className={textStyles}>
             {title}
           </Text>
         </>

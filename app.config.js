@@ -85,6 +85,11 @@ const firebaseExtra = {
   EXPO_PUBLIC_API_BASE_URL: pick('EXPO_PUBLIC_API_BASE_URL') || pick('VITE_API_BASE_URL') || '/api',
   EXPO_PUBLIC_USE_FIREBASE_EMULATORS:
     pick('EXPO_PUBLIC_USE_FIREBASE_EMULATORS') || pick('VITE_USE_FIREBASE_EMULATORS') || 'false',
+
+  // NVIDIA API settings for direct calls from the app
+  EXPO_PUBLIC_NVIDIA_API_KEY: pick('VITE_NVIDIA_API_KEY'),
+  EXPO_PUBLIC_NVIDIA_MODEL: pick('VITE_NVIDIA_MODEL'),
+  EXPO_PUBLIC_NVIDIA_BASE_URL: pick('VITE_NVIDIA_BASE_URL'),
 };
 
 const androidPackage =

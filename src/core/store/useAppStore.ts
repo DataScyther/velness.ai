@@ -435,6 +435,14 @@ export const useAppStore = create<AppStore>()(
         };
       },
       storage: createJSONStorage(() => {
+        const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
+        if (isWeb && window.localStorage) {
+          return {
+            getItem: (name: string) => window.localStorage.getItem(name),
+            setItem: (name: string, value: string) => window.localStorage.setItem(name, value),
+            removeItem: (name: string) => window.localStorage.removeItem(name),
+          };
+        }
         try {
           const secureStore = require('expo-secure-store');
           if (secureStore) {

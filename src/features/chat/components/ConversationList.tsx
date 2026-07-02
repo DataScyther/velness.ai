@@ -5,13 +5,13 @@ import { EmptyConversation } from './EmptyConversation';
 
 interface ConversationListProps {
   messages: any[];
-  onQuickStarterPress?: (text: string) => void;
+  onQuickStarterSelect?: (text: string) => void;
   children?: React.ReactNode;
 }
 
 export function ConversationList({
   messages,
-  onQuickStarterPress,
+  onQuickStarterSelect,
   children,
 }: ConversationListProps) {
   const { colors } = useTheme();
@@ -28,7 +28,7 @@ export function ConversationList({
       keyboardShouldPersistTaps="handled"
     >
       {isEmpty ? (
-        <EmptyConversation onQuickStarterPress={onQuickStarterPress} />
+        <EmptyConversation onQuickStarterSelect={onQuickStarterSelect} />
       ) : (
         <View style={styles.messagesList}>
           {children}

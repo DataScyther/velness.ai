@@ -1,13 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { MoreVertical } from 'lucide-react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 
 interface ChatHeaderProps {
@@ -16,37 +10,14 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ onMorePress }: ChatHeaderProps) {
   const { colors } = useTheme();
-  
-  // Pulse animation for the online indicator
-  const pulseOpacity = useSharedValue(0.4);
-  const pulseScale = useSharedValue(1);
 
-  useEffect(() => {
-    pulseOpacity.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1000 }),
-        withTiming(0.4, { duration: 1000 })
-      ),
-      -1,
-      true
-    );
-    pulseScale.value = withRepeat(
-      withSequence(
-        withTiming(1.6, { duration: 1000 }),
-        withTiming(1, { duration: 1000 })
-      ),
-      -1,
-      true
-    );
-  }, []);
-
-  const animatedOuterPulse = useAnimatedStyle(() => ({
-    opacity: pulseOpacity.value,
-    transform: [{ scale: pulseScale.value }],
-  }));
+  const handleMorePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onMorePress?.();
+  };
 
   return (
-    <View style={[styles.headerContainer, { backgroundColor: colors.surface.primary, borderBottomColor: colors.border.default }]}>
+    <View style={[styles.headerContainer, { backgroundColor: colors.surface.primary }]}>
       <View style={styles.leftSection}>
         <Image
           source={require('@/shared/assets/neeva-logo.png')}
@@ -56,16 +27,7 @@ export function ChatHeader({ onMorePress }: ChatHeaderProps) {
         <View style={styles.titleContainer}>
           <Text style={[styles.titleText, { color: colors.text.primary }]}>Neeva</Text>
           <View style={styles.statusRow}>
-            <View style={styles.indicatorContainer}>
-              <Animated.View
-                style={[
-                  styles.outerPulse,
-                  { backgroundColor: colors.success },
-                  animatedOuterPulse,
-                ]}
-              />
-              <View style={[styles.innerDot, { backgroundColor: colors.success }]} />
-            </View>
+            <View style={[styles.indicator, { backgroundColor: colors.success }]} />
             <Text style={[styles.statusText, { color: colors.text.secondary }]}>Online</Text>
           </View>
         </View>
@@ -73,8 +35,8 @@ export function ChatHeader({ onMorePress }: ChatHeaderProps) {
 
       <View style={styles.rightSection}>
         <Pressable
-          onPress={onMorePress}
-          style={[styles.menuButton, { backgroundColor: colors.background.secondary }]}
+          onPress={handleMorePress}
+          style={styles.menuButton}
           hitSlop={12}
           accessibilityLabel="More options"
           accessibilityRole="button"
@@ -92,8 +54,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
+    paddingVertical: 10,
   },
   leftSection: {
     flexDirection: 'row',
@@ -118,24 +79,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 2,
   },
-  indicatorContainer: {
-    width: 8,
-    height: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  innerDot: {
+  indicator: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    position: 'absolute',
-  },
-  outerPulse: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    position: 'absolute',
+    marginRight: 6,
   },
   statusText: {
     fontSize: 11,
@@ -146,9 +94,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },

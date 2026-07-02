@@ -8,6 +8,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { Button } from '@/shared/components/Button';
 import { GlassCard } from '@/shared/components/GlassCard';
+import { useTheme } from '@/hooks/useTheme';
 import { AUTH_STRINGS } from '@/features/auth/constants';
 import { useAppStore } from '@/core/store/useAppStore';
 
@@ -127,8 +128,10 @@ export function EmailVerificationScreen() {
     }
   }, [logout, router, addToast]);
 
+  const { colors } = useTheme();
+
   return (
-    <SafeAreaView className="flex-1 bg-app-dark">
+    <SafeAreaView className="flex-1 bg-background-primary">
       <ScrollView
         className="flex-1"
         contentContainerClassName="flex-grow justify-center px-6 py-12"
@@ -140,42 +143,42 @@ export function EmailVerificationScreen() {
           entering={FadeInDown.duration(500).springify()}
           className="items-center mb-8"
         >
-          <View className="w-20 h-20 rounded-full bg-neeva-purple-600/20 border border-neeva-glass-border items-center justify-center mb-4">
-            <Mail size={40} color="#8B5CF6" />
+          <View className="w-20 h-20 rounded-full bg-brand-primary/10 border border-border-default items-center justify-center mb-4">
+            <Mail size={40} color={colors.brand.primary} />
           </View>
-          <Text className="text-4xl font-bold text-white tracking-tight font-display">
+          <Text className="text-4xl font-bold text-text-primary tracking-tight font-display">
             {AUTH_STRINGS.SPLASH_TITLE}
           </Text>
         </Animated.View>
 
         {/* Verification Card */}
         <Animated.View entering={FadeInDown.delay(100).duration(500).springify()}>
-          <GlassCard intensity="dark" className="p-6 mb-6">
+          <GlassCard intensity="medium" className="p-6 mb-6">
             <Text
-              className="text-white text-section-title font-semibold mb-2"
+              className="text-text-primary text-section-title font-semibold mb-2"
               accessibilityRole="header"
             >
               {AUTH_STRINGS.VERIFICATION_TITLE}
             </Text>
 
-            <Text className="text-white/50 text-body mb-6 leading-6">
+            <Text className="text-text-secondary text-body mb-6 leading-6">
               {AUTH_STRINGS.VERIFICATION_SUBTITLE}
             </Text>
 
             {user?.email && (
-              <View className="bg-neeva-glass-highlight/50 border border-neeva-glass-border/30 rounded-glass-sm p-4 mb-6 items-center">
-                <Text className="text-white/40 text-caption font-medium mb-1">
+              <View className="bg-surface-secondary border border-border-default rounded-xl p-4 mb-6 items-center">
+                <Text className="text-text-secondary text-caption font-medium mb-1">
                   Sent to:
                 </Text>
-                <Text className="text-neeva-cyan-400 font-semibold text-body">
+                <Text className="text-brand-primary font-semibold text-body">
                   {user.email}
                 </Text>
               </View>
             )}
 
             {error && (
-              <View className="bg-red-500/10 border border-red-500/20 rounded-glass-sm px-4 py-3 mb-6">
-                <Text className="text-red-400 text-body-sm">{error}</Text>
+              <View className="bg-danger/10 border border-danger/25 rounded-xl px-4 py-3 mb-6">
+                <Text className="text-danger text-body-sm font-medium">{error}</Text>
               </View>
             )}
 
@@ -186,7 +189,7 @@ export function EmailVerificationScreen() {
               variant="primary"
               size="lg"
               className="w-full mb-3"
-              icon={<RefreshCw size={16} color="#FFFFFF" />}
+              icon={<RefreshCw size={16} color={colors.brand.contrastText} />}
               accessibilityLabel="Check if verified"
               accessibilityHint="Checks if you have verified your email via the link sent"
             />
@@ -220,10 +223,10 @@ export function EmailVerificationScreen() {
             accessibilityLabel="Skip verification"
             accessibilityHint="Proceed to the application without email verification"
           >
-            <Text className="text-white/50 text-body-sm font-semibold mr-1">
+            <Text className="text-text-secondary text-body-sm font-semibold mr-1">
               {AUTH_STRINGS.VERIFICATION_SKIP}
             </Text>
-            <ArrowRight size={14} color="rgba(255,255,255,0.4)" />
+            <ArrowRight size={14} color={colors.text.secondary} />
           </Pressable>
 
           <Pressable
@@ -232,8 +235,8 @@ export function EmailVerificationScreen() {
             accessibilityRole="link"
             accessibilityLabel="Sign out of your account"
           >
-            <LogOut size={14} color="#F87171" className="mr-2" />
-            <Text className="text-red-400 text-body-sm font-medium">
+            <LogOut size={14} color={colors.danger} className="mr-2" />
+            <Text className="text-danger text-body-sm font-medium">
               Sign Out / Edit Email
             </Text>
           </Pressable>

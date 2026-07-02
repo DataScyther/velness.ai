@@ -6,6 +6,7 @@
  * Do not use dynamic keys or `import.meta.env` — Hermes does not support import.meta.
  */
 
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 const extra = Constants.expoConfig?.extra ?? {};
@@ -60,11 +61,37 @@ export const env = {
     process.env.VITE_FIREBASE_MEASUREMENT_ID,
   ),
 
-  apiBaseUrl: pick(
-    extra.EXPO_PUBLIC_API_BASE_URL as string | undefined,
-    process.env.EXPO_PUBLIC_API_BASE_URL,
-    process.env.VITE_API_BASE_URL,
-  ) || '/api',
+  nvidiaApiKey: pick(
+    extra.EXPO_PUBLIC_NVIDIA_API_KEY as string | undefined,
+    process.env.EXPO_PUBLIC_NVIDIA_API_KEY,
+    process.env.VITE_NVIDIA_API_KEY,
+  ),
+  nvidiaModel: pick(
+    extra.EXPO_PUBLIC_NVIDIA_MODEL as string | undefined,
+    process.env.EXPO_PUBLIC_NVIDIA_MODEL,
+    process.env.VITE_NVIDIA_MODEL,
+  ),
+  nvidiaBaseUrl: pick(
+    extra.EXPO_PUBLIC_NVIDIA_BASE_URL as string | undefined,
+    process.env.EXPO_PUBLIC_NVIDIA_BASE_URL,
+    process.env.VITE_NVIDIA_BASE_URL,
+  ),
+
+  apiBaseUrl: (() => {
+    const configured = pick(
+      extra.EXPO_PUBLIC_API_BASE_URL as string | undefined,
+      process.env.EXPO_PUBLIC_API_BASE_URL,
+      process.env.VITE_API_BASE_URL,
+    );
+    if (configured) return configured;
+
+    if (Platform.OS !== 'web') {
+      const hostUri = Constants.expoConfig?.hostUri || '';
+      const host = hostUri.split(':')[0];
+      return host ? `http://${host}:5173/api` : 'http://localhost:5173/api';
+    }
+    return '/api';
+  })(),
 
   useFirebaseEmulators:
     isTruthyFlag(extra.EXPO_PUBLIC_USE_FIREBASE_EMULATORS as string | undefined) ||

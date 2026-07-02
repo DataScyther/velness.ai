@@ -204,8 +204,8 @@ When the user sends their FIRST message in a session:
 // ─────────────────────────────────────────────────────────────────────
 
 /**
- * Builds the complete system instruction for the Neeva AI.
- * This is the single source of truth for Neeva's behavior.
+ * Builds the complete system instruction for the Neeva AI (~2500 tokens).
+ * Full personality, clinical knowledge, formatting, tone, and openers.
  */
 export function buildSystemPrompt(): string {
   return [
@@ -216,6 +216,32 @@ export function buildSystemPrompt(): string {
     FORMATTING_RULES,
     TONE_GUIDELINES,
     CONVERSATION_STARTERS,
+  ].join('\n\n---\n\n');
+}
+
+/**
+ * Fast system prompt (~500 tokens) for latency-sensitive conversations.
+ * Retains core identity, crisis safety, and a condensed response guide.
+ */
+const FAST_RESPONSE = `## How to Respond
+
+Quickly gauge the user's emotional state from their words:
+- **Distressed / Anxious / Low mood** — Lead with validation. Offer one grounding technique. Ask permission before advice.
+- **Neutral / Curious** — Be warm, answer clearly, add context.
+- **Positive** — Celebrate with them. Reflect their joy.
+
+Structure every response:
+1. Brief acknowledgment (1 sentence)
+2. Main content (bullets or short paragraphs)
+3. Gentle closing invitation
+
+Never dump a wall of text.`;
+
+export function buildFastPrompt(): string {
+  return [
+    IDENTITY,
+    CRISIS_PROTOCOL,
+    FAST_RESPONSE,
   ].join('\n\n---\n\n');
 }
 

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import Svg, { Path, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Line, G } from 'react-native-svg';
 import { useTheme } from '@/hooks/useTheme';
 import { MoodPoint } from './MoodPoint';
 
@@ -19,12 +19,14 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
   const { colors } = useTheme();
 
   const pathD = useMemo(() => {
-    if (points.length < 2) return '';
+    // Filter out points to find logged indices to draw smooth curve segment
+    const validPoints = points.filter(p => p.moodLevel !== null);
+    if (validPoints.length < 2) return '';
 
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
+    let d = `M ${validPoints[0].x} ${validPoints[0].y}`;
+    for (let i = 1; i < validPoints.length; i++) {
+      const prev = validPoints[i - 1];
+      const curr = validPoints[i];
       const cx1 = (prev.x + curr.x) / 2;
       const cx2 = (prev.x + curr.x) / 2;
       d += ` C ${cx1} ${prev.y}, ${cx2} ${curr.y}, ${curr.x} ${curr.y}`;
@@ -33,10 +35,11 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
   }, [points]);
 
   const areaD = useMemo(() => {
-    if (points.length < 2) return '';
-    const last = points[points.length - 1];
-    const first = points[0];
-    return `${pathD} L ${last.x} ${svgHeight} L ${first.x} ${svgHeight} Z`;
+    const validPoints = points.filter(p => p.moodLevel !== null);
+    if (validPoints.length < 2) return '';
+    const last = validPoints[validPoints.length - 1];
+    const first = validPoints[0];
+    return `${pathD} L ${last.x} ${svgHeight - 10} L ${first.x} ${svgHeight - 10} Z`;
   }, [pathD, points, svgHeight]);
 
   // Compute grid line Y coordinates
@@ -54,7 +57,7 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
     >
       <Defs>
         <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={colors.brand.primary} stopOpacity={0.12} />
+          <Stop offset="0" stopColor={colors.brand.primary} stopOpacity={0.16} />
           <Stop offset="1" stopColor={colors.brand.primary} stopOpacity={0} />
         </LinearGradient>
         <LinearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -72,8 +75,8 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
         y2={topY}
         stroke={colors.border.default}
         strokeWidth={1}
-        strokeDasharray="4 4"
-        opacity={0.3}
+        strokeDasharray="4 6"
+        opacity={0.15}
       />
       <Line
         x1={startX}
@@ -82,8 +85,8 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
         y2={midY}
         stroke={colors.border.default}
         strokeWidth={1}
-        strokeDasharray="4 4"
-        opacity={0.3}
+        strokeDasharray="4 6"
+        opacity={0.15}
       />
       <Line
         x1={startX}
@@ -92,9 +95,24 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
         y2={bottomY}
         stroke={colors.border.default}
         strokeWidth={1}
-        strokeDasharray="4 4"
-        opacity={0.3}
+        strokeDasharray="4 6"
+        opacity={0.15}
       />
+
+      {/* Vertical connector grids linking points to days axis */}
+      {points.map((p, i) => (
+        <Line
+          key={`v-grid-${i}`}
+          x1={p.x}
+          y1={p.moodLevel !== null ? p.y + 4 : topY}
+          x2={p.x}
+          y2={svgHeight - 10}
+          stroke={colors.border.default}
+          strokeWidth={1}
+          strokeDasharray="2 3"
+          opacity={p.moodLevel !== null ? 0.18 : 0.05}
+        />
+      ))}
 
       {/* Filled area under curve */}
       {areaD.length > 0 && (
@@ -105,8 +123,17 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
       )}
 
       {pathD.length > 0 && (
-        <>
-          {/* Futuristic glowing shadow line */}
+        <G>
+          {/* Neon wide outer glow */}
+          <Path
+            d={pathD}
+            stroke="url(#lineGrad)"
+            strokeWidth={9}
+            fill="none"
+            strokeLinecap="round"
+            opacity={0.1}
+          />
+          {/* Neon medium glow */}
           <Path
             d={pathD}
             stroke="url(#lineGrad)"
@@ -115,18 +142,19 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
             strokeLinecap="round"
             opacity={0.25}
           />
-          {/* Main sharp line */}
+          {/* Main foreground crisp line */}
           <Path
             d={pathD}
             stroke="url(#lineGrad)"
             strokeWidth={2.5}
             fill="none"
             strokeLinecap="round"
-            opacity={0.9}
+            opacity={0.95}
           />
-        </>
+        </G>
       )}
 
+      {/* Mood Points markers */}
       {points.map((p, i) => (
         <MoodPoint
           key={i}
@@ -141,4 +169,5 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
 });
 
 MoodTimeline.displayName = 'MoodTimeline';
+
 
