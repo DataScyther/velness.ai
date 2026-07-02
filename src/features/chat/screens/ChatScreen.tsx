@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ChatHeader } from '../components/ChatHeader';
 import { ChatContainer } from '../components/ChatContainer';
 import { AIMessageBubble } from '../components/AIMessageBubble';
+import { UserMessageBubble } from '../components/UserMessageBubble';
 
 export function ChatScreen() {
   const [messages, setMessages] = React.useState<any[]>([
@@ -13,6 +14,12 @@ export function ChatScreen() {
       sender: 'ai',
       text: "Hello! I'm Neeva. I'm here to support you. Let's take a moment together to check in on how you're feeling today.",
       timestamp: '2:15 PM',
+    },
+    {
+      id: '2',
+      sender: 'user',
+      text: "I've been feeling a bit stressed recently, mostly about school and work balancing. It's hard to keep up sometimes.",
+      timestamp: '2:16 PM',
     },
   ]);
 
@@ -33,6 +40,14 @@ export function ChatScreen() {
             if (msg.sender === 'ai') {
               return (
                 <AIMessageBubble
+                  key={msg.id}
+                  message={msg.text}
+                  timestamp={msg.timestamp}
+                />
+              );
+            } else if (msg.sender === 'user') {
+              return (
+                <UserMessageBubble
                   key={msg.id}
                   message={msg.text}
                   timestamp={msg.timestamp}
