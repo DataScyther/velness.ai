@@ -28,19 +28,19 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/core/store/useAppStore';
-import { useTheme } from '@/hooks/useTheme';
 import { ChatHeader } from '../components/ChatHeader';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { MessageList } from '../components/MessageList';
 import { ChatInput } from '../components/ChatInput';
 import { useChatStream } from '../hooks/useChatStream';
 import type { ChatViewState } from '../types';
+import { LAYOUT } from '@/shared/constants';
 
 export function ChatScreen() {
-  const { colors, theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const keyboardOffset = Platform.OS === 'ios' ? insets.top : 0;
   const [isLoading, setIsLoading] = useState(true);
   const [pendingQuickStarter, setPendingQuickStarter] = useState<string | null>(null);
 
@@ -72,20 +72,20 @@ export function ChatScreen() {
     setPendingQuickStarter(null);
   }, []);
 
-  return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background.primary }]}
-      edges={['top']}
-    >
-      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+  const inConversation = chatViewState === 'conversation';
 
+  return (
+    <ScreenContainer>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={keyboardOffset}
       >
-        {/* Fixed header */}
-        <ChatHeader onMorePress={clearConversation} />
+        <ChatHeader
+          title="Neeva AI"
+          showBackButton={inConversation}
+          onBackPress={clearConversation}
+        />
 
         {/* Scrollable message list — flex: 1 takes all remaining vertical space */}
         <MessageList
@@ -103,19 +103,16 @@ export function ChatScreen() {
           onSend={sendMessage}
           onAbort={abort}
           isStreaming={isStreaming}
-          paddingBottom={insets.bottom}
+          paddingBottom={insets.bottom + LAYOUT.TAB_BAR_HEIGHT + LAYOUT.CHAT_COMPOSER_SPACING}
           prefillText={pendingQuickStarter}
           onPrefillSent={handlePrefillSent}
         />
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   keyboardAvoid: {
     flex: 1,
   },
