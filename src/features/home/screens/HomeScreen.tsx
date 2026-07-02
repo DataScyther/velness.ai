@@ -26,6 +26,9 @@ import {
   MoodSelector,
   WeeklyHistoryCard,
   ContinueJourneyCard,
+  JourneyLoadingState,
+  JourneyErrorState,
+  EmptyJourneyState,
 } from '../components';
 
 export function HomeScreen() {
@@ -245,16 +248,21 @@ export function HomeScreen() {
 
         <View style={styles.sectionSpacing}>
           <SectionHeader title="Continue Your Journey" />
-          <ContinueJourneyCard
-            journey={journey}
-            isLoading={journeyLoading}
-            isFetching={journeyFetching}
-            error={journeyError}
-            onContinue={resumeJourney}
-            onRetry={refetchJourney}
-            onStartJourney={() => journey && resumeJourney(journey)}
-            onExplorePrograms={() => router.push(ROUTES.TABS.JOURNEY)}
-          />
+          {journeyLoading ? (
+            <JourneyLoadingState />
+          ) : journeyError ? (
+            <JourneyErrorState onRetry={refetchJourney} />
+          ) : !journey ? (
+            <EmptyJourneyState onStart={() => router.push(ROUTES.TABS.JOURNEY)} />
+          ) : (
+            <ContinueJourneyCard
+              title={journey.title}
+              currentStep={journey.currentLesson}
+              totalSteps={journey.totalLessons}
+              percent={journey.completionPercent}
+              onContinue={() => resumeJourney(journey)}
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
