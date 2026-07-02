@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { useTheme } from '@/hooks/useTheme';
+import { MessageTimestamp } from './MessageTimestamp';
 
 interface UserMessageBubbleProps {
   message: string;
@@ -9,6 +11,8 @@ interface UserMessageBubbleProps {
 }
 
 export function UserMessageBubble({ message, timestamp }: UserMessageBubbleProps) {
+  const { colors } = useTheme();
+
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.container}>
       <View style={styles.bubbleWrapper}>
@@ -16,15 +20,17 @@ export function UserMessageBubble({ message, timestamp }: UserMessageBubbleProps
           <Svg style={StyleSheet.absoluteFillObject}>
             <Defs>
               <LinearGradient id="userBubbleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor="#8B5CF6" />
-                <Stop offset="100%" stopColor="#6D28D9" />
+                <Stop offset="0%" stopColor={colors.brand.secondary} />
+                <Stop offset="100%" stopColor={colors.brand.primary} />
               </LinearGradient>
             </Defs>
             <Rect width="100%" height="100%" rx={16} fill="url(#userBubbleGrad)" />
           </Svg>
-          <Text style={styles.messageText}>{message}</Text>
+          <Text style={[styles.messageText, { color: colors.brand.contrastText }]}>
+            {message}
+          </Text>
         </View>
-        <Text style={styles.timestampText}>{timestamp}</Text>
+        <MessageTimestamp timestamp={timestamp} style={styles.timestampStyle} />
       </View>
     </Animated.View>
   );
@@ -52,18 +58,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   messageText: {
-    color: '#FFFFFF',
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '400',
   },
-  timestampText: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.35)',
-    marginTop: 4,
+  timestampStyle: {
     marginRight: 4,
-    fontWeight: '500',
   },
 });
+
 
 export default UserMessageBubble;
