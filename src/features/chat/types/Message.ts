@@ -1,6 +1,19 @@
 export type MessageRole = 'user' | 'assistant' | 'system';
 
-export type MessageType = 'markdown' | 'reflection' | 'exercise' | 'journal' | 'breathing' | 'cbt-exercise' | 'wellness' | 'insight';
+export type MessageType =
+  | 'markdown'
+  | 'reflection'
+  | 'exercise'
+  | 'journal'
+  | 'breathing'
+  | 'cbt-exercise'
+  | 'wellness'
+  | 'insight'
+  // Phase 2 conversation blocks
+  | 'question'
+  | 'action'
+  | 'summary'
+  | 'resource';
 
 export type MessageStatus = 'sending' | 'streaming' | 'complete' | 'failed';
 
@@ -21,6 +34,11 @@ export interface Message {
   metadata?: MessageMetadata;
 }
 
+const VALID_TYPES: MessageType[] = [
+  'markdown', 'reflection', 'exercise', 'journal', 'breathing',
+  'cbt-exercise', 'wellness', 'insight', 'question', 'action', 'summary', 'resource',
+];
+
 export function validateMessage(value: unknown): value is Message {
   if (typeof value !== 'object' || value === null) return false;
   const m = value as Record<string, unknown>;
@@ -29,10 +47,11 @@ export function validateMessage(value: unknown): value is Message {
     typeof m.role === 'string' &&
     ['user', 'assistant', 'system'].includes(m.role) &&
     typeof m.type === 'string' &&
-    ['markdown', 'reflection', 'exercise', 'journal', 'breathing', 'cbt-exercise', 'wellness', 'insight'].includes(m.type) &&
+    VALID_TYPES.includes(m.type as MessageType) &&
     typeof m.content === 'string' &&
     m.createdAt instanceof Date &&
     typeof m.status === 'string' &&
     ['sending', 'streaming', 'complete', 'failed'].includes(m.status)
   );
 }
+

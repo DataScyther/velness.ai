@@ -39,7 +39,17 @@ export interface AIStreamParams {
 export interface AICompleteParams {
   text: string;
   uid: string;
-  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
+  signal?: AbortSignal;
+  memoryContext?: {
+    userName?: string;
+    preferredTone?: string;
+    timeOfDay?: string;
+    returningUser?: boolean;
+    previousMood?: string;
+    summary?: string;
+    goals?: string[];
+  };
 }
 
 export interface AIProvider {

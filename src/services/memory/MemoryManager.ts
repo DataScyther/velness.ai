@@ -1,13 +1,27 @@
-import { SessionMemory, UserContext, AIContext } from './types';
+/**
+ * MemoryManager
+ *
+ * Phase 3/4 — Full Context Engine
+ *
+ * Tracks conversation state, builds rich AI context, and manages
+ * summarization. Before every response, buildContext() injects the
+ * user's current state, history, and long-term preferences.
+ */
+
+import { SessionMemory, UserContext, AIContext, ContextEngineInput } from './types';
 import { getTimeOfDay } from '@/prompts/mentalWellnessPrompt';
 
 export class MemoryManager {
   private session: SessionMemory;
   private user: UserContext;
+  private preferences: string[] = [];
+  private reflectionStreak: number = 0;
+  private currentJourney: string | null = null;
+  private sessionCount: number = 0;
 
   readonly DEFAULT_SUMMARY_TURNS = 8;
 
-  constructor(conversationId: string, userContext?: Partial<UserContext>) {
+  constructor(conversationId: string, contextInput?: ContextEngineInput) {
     this.session = {
       conversationId,
       turnCount: 0,
@@ -18,12 +32,17 @@ export class MemoryManager {
     };
 
     this.user = {
-      name: userContext?.name ?? null,
-      tone: userContext?.tone ?? 'auto',
-      goals: userContext?.goals ?? [],
-      initialMood: userContext?.initialMood ?? null,
-      returningUser: userContext?.returningUser ?? false,
+      name: contextInput?.userName ?? null,
+      tone: (contextInput?.preferredTone as UserContext['tone']) ?? 'auto',
+      goals: contextInput?.goals ?? [],
+      initialMood: contextInput?.initialMood ?? null,
+      returningUser: contextInput?.returningUser ?? false,
     };
+
+    this.preferences = contextInput?.preferences ?? [];
+    this.reflectionStreak = contextInput?.reflectionStreak ?? 0;
+    this.currentJourney = contextInput?.currentJourney ?? null;
+    this.sessionCount = contextInput?.sessionCount ?? 0;
   }
 
   incrementTurn(): void {
@@ -52,6 +71,13 @@ export class MemoryManager {
     return this.session.turnCount - this.session.summaryTurnCount >= this.DEFAULT_SUMMARY_TURNS;
   }
 
+  /**
+   * Build the full AI context before every response.
+   * This implements Phase 4 — Context Engine.
+   *
+   * Injects: user name, current mood, reflection streak, recent
+   * conversation summary, current wellness journey, long-term preferences.
+   */
   buildContext(): AIContext {
     return {
       userName: this.user.name ?? undefined,
@@ -61,6 +87,11 @@ export class MemoryManager {
       previousMood: this.session.recentMood ?? undefined,
       summary: this.session.summary ?? undefined,
       goals: this.user.goals.length > 0 ? this.user.goals : undefined,
+      reflectionStreak: this.reflectionStreak > 0 ? this.reflectionStreak : undefined,
+      currentJourney: this.currentJourney ?? undefined,
+      preferences: this.preferences.length > 0 ? this.preferences : undefined,
+      recentTopics: this.session.recentTopics.length > 0 ? this.session.recentTopics : undefined,
+      sessionCount: this.sessionCount > 0 ? this.sessionCount : undefined,
     };
   }
 
@@ -80,5 +111,15 @@ export class MemoryManager {
 
   getSession(): Readonly<SessionMemory> {
     return { ...this.session };
+  }
+
+  /** Update context data mid-conversation (e.g., mood detected from message) */
+  updateContext(data: Partial<ContextEngineInput>): void {
+    if (data.userName) this.user.name = data.userName;
+    if (data.preferredTone) this.user.tone = data.preferredTone as UserContext['tone'];
+    if (data.goals) this.user.goals = data.goals;
+    if (data.reflectionStreak !== undefined) this.reflectionStreak = data.reflectionStreak;
+    if (data.currentJourney) this.currentJourney = data.currentJourney;
+    if (data.preferences) this.preferences = data.preferences;
   }
 }

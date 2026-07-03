@@ -19,6 +19,7 @@ import { spacing, borderRadius } from '@/core/theme/tokens';
 import { EmptyConversation } from './EmptyConversation';
 import { MessageBubble } from './MessageBubble';
 import { ConversationSkeleton } from './ConversationSkeleton';
+import { TypingIndicator } from './TypingIndicator';
 import type { Message, ChatViewState } from '../types';
 import type { ConversationState } from '../conversation/ConversationState';
 
@@ -41,6 +42,11 @@ interface MessageListProps {
   onRegenerate?: () => void;
   onCopy?: (text: string) => void;
   onFeedback?: (type: 'helpful' | 'unhelpful') => void;
+  /** Phase 6 — Neeva-native actions */
+  onSaveReflection?: (messageId: string) => void;
+  onContinueLater?: (messageId: string) => void;
+  onShareInsight?: (messageId: string) => void;
+  onAskFollowUp?: (messageId: string) => void;
 }
 
 function deriveViewState(state: ConversationState, showSkeleton: boolean): ChatViewState {
@@ -62,6 +68,10 @@ export function MessageList({
   onRegenerate,
   onCopy,
   onFeedback,
+  onSaveReflection,
+  onContinueLater,
+  onShareInsight,
+  onAskFollowUp,
 }: MessageListProps) {
   const { colors } = useTheme();
   const flatListRef = useRef<FlatList<Message>>(null);
@@ -151,21 +161,35 @@ export function MessageList({
   const renderItem: ListRenderItem<Message> = useCallback(
     ({ item, index }) => {
       const prevItem = index > 0 ? messages[index - 1] : null;
+      const nextItem = index < messages.length - 1 ? messages[index + 1] : null;
+
+      // Same role as previous → grouped (not first in its group)
       const isGrouped = prevItem !== null && prevItem.role === item.role;
+      // First in a run of same-role messages
+      const isFirst = !isGrouped;
+      // Last in a run: next message has a different role or doesn't exist
+      const isLast = nextItem === null || nextItem.role !== item.role;
+
       return (
         <MessageBubble
           message={item}
           isGrouped={isGrouped}
+          isFirst={isFirst}
+          isLast={isLast}
           onRetry={onRetry}
           onDismiss={onDismiss}
           onDelete={onDelete}
           onRegenerate={onRegenerate}
           onCopy={onCopy}
           onFeedback={onFeedback}
+          onSaveReflection={onSaveReflection}
+          onContinueLater={onContinueLater}
+          onShareInsight={onShareInsight}
+          onAskFollowUp={onAskFollowUp}
         />
       );
     },
-    [messages, onRetry, onDismiss, onDelete, onRegenerate, onCopy, onFeedback]
+    [messages, onRetry, onDismiss, onDelete, onRegenerate, onCopy, onFeedback, onSaveReflection, onContinueLater, onShareInsight, onAskFollowUp]
   );
 
   if (viewState === 'loading') {
@@ -219,6 +243,11 @@ export function MessageList({
                 onResumeLastConversation={onResumeLastConversation}
               />
             </Animated.View>
+          ) : null
+        }
+        ListFooterComponent={
+          state.status === 'streaming' && messages.length > 0 && messages[messages.length - 1].role === 'user' ? (
+            <TypingIndicator />
           ) : null
         }
         refreshControl={

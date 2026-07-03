@@ -21,6 +21,13 @@ function classifyError(error: unknown): string {
     if (error.statusCode === 408) {
       return 'Request timed out. Tap to retry.';
     }
+    if (error.statusCode === 503) {
+      const detail =
+        error.details && typeof error.details === 'string'
+          ? `: ${error.details.slice(0, 200)}`
+          : '';
+      return `Service temporarily busy${detail}. Tap to retry.`;
+    }
     const statusInfo = error.statusCode ? ` (HTTP ${error.statusCode})` : '';
     return `AI request failed${statusInfo}. Tap to retry.`;
   }
@@ -46,13 +53,15 @@ function classifyError(error: unknown): string {
   return 'Something went wrong. Tap to retry.';
 }
 
+const MAX_HISTORY_MESSAGES = 40;
+
 function buildHistory(
   messages: Message[],
 ): Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
   const doneMessages = messages
     .filter((m) => m.status === 'complete' && (m.role === 'user' || m.role === 'assistant'))
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-  return doneMessages;
+  return doneMessages.slice(-MAX_HISTORY_MESSAGES);
 }
 
 describe('classifyError', () => {
@@ -66,12 +75,22 @@ describe('classifyError', () => {
     expect(classifyError(error)).toBe('Server error. Tap to retry.');
   });
 
-  it('returns server error message for 502', () => {
-    const error = new AIError('Bad gateway', 502);
-    expect(classifyError(error)).toBe('Server error. Tap to retry.');
-  });
+it('returns server error message for 502', () => {
+  const error = new AIError('Bad gateway', 502);
+  expect(classifyError(error)).toBe('Server error. Tap to retry.');
+});
 
-  it('includes details for 500 when present', () => {
+it('returns service busy message for 503', () => {
+  const error = new AIError('Worker limit reached', 503);
+  expect(classifyError(error)).toBe('Service temporarily busy. Tap to retry.');
+});
+
+it('includes details for 503 when present', () => {
+  const error = new AIError('Worker limit reached', 503, 'ResourceExhausted: Worker local total request limit reached (32/32)');
+  expect(classifyError(error)).toBe('Service temporarily busy: ResourceExhausted: Worker local total request limit reached (32/32). Tap to retry.');
+});
+
+it('includes details for 500 when present', () => {
     const error = new AIError('Internal error', 500, 'Model overloaded');
     expect(classifyError(error)).toBe('Server error: Model overloaded. Tap to retry.');
   });

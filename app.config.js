@@ -113,6 +113,10 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.neeva.ai',
+      infoPlist: {
+        NSMicrophoneUsageDescription: 'Neeva uses the microphone to convert your speech into text, making it easier to express yourself.',
+        NSSpeechRecognitionUsageDescription: 'Neeva uses speech recognition to transcribe your voice into text for messaging.',
+      },
     },
     android: {
       adaptiveIcon: {
@@ -125,7 +129,7 @@ module.exports = {
       favicon: './src/shared/assets/favicon.png',
       bundler: 'metro',
     },
-    plugins: ['expo-router', 'expo-secure-store'],
+    plugins: ['expo-router', 'expo-secure-store', 'expo-speech-recognition', 'expo-system-ui'],
     extra: {
       ...firebaseExtra,
       eas: {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
@@ -28,6 +28,7 @@ export const EmptyConversation = React.memo(function EmptyConversation({
   const { colors } = useTheme();
   const user = useAppStore((state) => state.session.user);
   const sessionContext = useSessionContext();
+  const [selectedChip, setSelectedChip] = useState<string | null>(null);
 
   const userName = user?.name || 'NK';
   const currentMood = sessionContext?.mood || sessionContext?.previousSessionMood || 'Overwhelmed';
@@ -37,6 +38,12 @@ export const EmptyConversation = React.memo(function EmptyConversation({
   const handleStarterSelect = useCallback((text: string) => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
     onQuickStarterSelect?.(text);
+  }, [onQuickStarterSelect]);
+
+  const handleChipSelect = useCallback((chip: { label: string; text: string }) => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    setSelectedChip(chip.label);
+    onQuickStarterSelect?.(chip.text);
   }, [onQuickStarterSelect]);
 
   const handleResumePress = useCallback(() => {
@@ -97,17 +104,15 @@ export const EmptyConversation = React.memo(function EmptyConversation({
             <View style={[styles.moodTag, { backgroundColor: moodInfo.color + '10' }]}>
               <Text style={styles.moodEmoji}>{moodInfo.emoji}</Text>
               <Text style={[styles.moodValue, { color: moodInfo.color }]}>
-                {moodInfo.label}
+                Feeling {moodInfo.label.toLowerCase()}
               </Text>
             </View>
           </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border.default }]} />
+          <View style={styles.statSpacer} />
           <View style={styles.statColumn}>
-            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Streak</Text>
-            <Text style={[styles.streakValue, { color: colors.text.primary }]}>
-              🔥 {reflectionStreak} days
+            <Text style={[styles.streakCompact, { color: colors.text.primary }]}>
+              🔥 {reflectionStreak}-day streak
             </Text>
-            <Text style={[styles.streakSub, { color: colors.text.secondary }]}>Reflection streak</Text>
           </View>
         </View>
       </Animated.View>
@@ -118,24 +123,30 @@ export const EmptyConversation = React.memo(function EmptyConversation({
         <View style={styles.chipRow}>
           {topicChips.map((chip) => {
             const Icon = chip.icon;
+            const isSelected = selectedChip === chip.label;
             return (
               <Pressable
                 key={chip.label}
-                onPress={() => handleStarterSelect(chip.text)}
+                onPress={() => handleChipSelect(chip)}
                 style={styles.chipPressable}
                 accessibilityRole="button"
                 accessibilityLabel={chip.label}
+                accessibilityState={{ selected: isSelected }}
               >
                 {({ pressed }) => (
                   <View style={[
                     styles.chipButton,
                     {
-                      backgroundColor: pressed ? colors.background.secondary : colors.surface.primary,
-                      borderColor: colors.border.default,
+                      backgroundColor: isSelected
+                        ? colors.brand.primary
+                        : pressed
+                          ? colors.brand.primary + '18'
+                          : colors.surface.primary,
+                      borderColor: isSelected ? colors.brand.primary : colors.border.default,
                     }
                   ]}>
-                    <Icon size={14} color={colors.brand.primary} style={styles.chipIcon} />
-                    <Text style={[styles.chipLabel, { color: colors.text.primary }]}>{chip.label}</Text>
+                    <Icon size={16} color={isSelected ? colors.brand.contrastText : colors.brand.primary} style={styles.chipIcon} />
+                    <Text style={[styles.chipLabel, { color: isSelected ? colors.brand.contrastText : colors.text.primary }]}>{chip.label}</Text>
                   </View>
                 )}
               </Pressable>
@@ -164,9 +175,14 @@ export const EmptyConversation = React.memo(function EmptyConversation({
                     {
                       backgroundColor: pressed ? colors.background.secondary : colors.surface.primary,
                       borderColor: colors.border.default,
+                      shadowColor: colors.text.primary,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: pressed ? 0.02 : 0.06,
+                      shadowRadius: 4,
+                      elevation: pressed ? 0 : 2,
                     }
                   ]}>
-                    <View style={[styles.promptIconCircle, { backgroundColor: colors.background.secondary }]}>
+                    <View style={[styles.promptIconCircle, { backgroundColor: colors.brand.primary + '12' }]}>
                       <Icon size={16} color={colors.brand.primary} />
                     </View>
                     <Text style={[styles.promptText, { color: colors.text.primary }]}>
@@ -255,7 +271,7 @@ const styles = StyleSheet.create({
   heroContainer: {
     alignItems: 'center',
     marginBottom: spacing.xl,
-    marginTop: spacing.sm,
+    marginTop: spacing.xl + spacing.sm,
   },
   greeting: {
     fontSize: 26,
@@ -297,10 +313,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  statDivider: {
-    width: 1,
-    height: 48,
-    marginHorizontal: spacing.md,
+  statSpacer: {
+    width: spacing.xl,
   },
   statLabel: {
     fontSize: 12,
@@ -320,17 +334,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   moodValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
-  streakValue: {
+  streakCompact: {
     fontSize: 15,
     fontWeight: '700',
-    marginBottom: 2,
-  },
-  streakSub: {
-    fontSize: 11,
-    fontWeight: '400',
+    textAlign: 'right',
   },
   section: {
     marginBottom: spacing.xl,
@@ -384,11 +394,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
   },
   promptIconCircle: {
     width: 28,

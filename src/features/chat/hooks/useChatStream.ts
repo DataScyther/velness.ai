@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { streamChat, generateResponse } from '@/services/ai';
+import { generateResponse } from '@/services/ai';
 import { AIError } from '@/services/ai/types';
 import { PerfTracker } from '@/utils/chat-performance';
 import { MemoryManager } from '@/services/memory';
+import type { ContextEngineInput } from '@/services/memory/types';
 import { chatRepository } from '@/repositories/ChatRepository';
 import { saveSessionMeta, clearSessionMeta } from '@/features/chat/persistence/sessionStorage';
 import { clearDraft } from '@/features/chat/persistence/draftStorage';
@@ -17,18 +18,25 @@ function classifyError(error: unknown): string {
     if (error.statusCode === 401) {
       return 'Session expired. Please sign in again.';
     }
-    if (error.statusCode === 500 || error.statusCode === 502) {
-      const detail =
-        error.details && typeof error.details === 'string'
-          ? `: ${error.details.slice(0, 200)}`
-          : '';
-      return `Server error${detail}. Tap to retry.`;
-    }
-    if (error.statusCode === 408) {
-      return 'Request timed out. Tap to retry.';
-    }
-    const statusInfo = error.statusCode ? ` (HTTP ${error.statusCode})` : '';
-    return `AI request failed${statusInfo}. Tap to retry.`;
+  if (error.statusCode === 500 || error.statusCode === 502) {
+    const detail =
+      error.details && typeof error.details === 'string'
+        ? `: ${error.details.slice(0, 200)}`
+        : '';
+    return `Server error${detail}. Tap to retry.`;
+  }
+  if (error.statusCode === 408) {
+    return 'Request timed out. Tap to retry.';
+  }
+  if (error.statusCode === 503) {
+    const detail =
+      error.details && typeof error.details === 'string'
+        ? `: ${error.details.slice(0, 200)}`
+        : '';
+    return `Service temporarily busy${detail}. Tap to retry.`;
+  }
+  const statusInfo = error.statusCode ? ` (HTTP ${error.statusCode})` : '';
+  return `AI request failed${statusInfo}. Tap to retry.`;
   }
 
   if (error instanceof Error) {
@@ -52,6 +60,8 @@ function classifyError(error: unknown): string {
   return 'Something went wrong. Tap to retry.';
 }
 
+const MAX_HISTORY_MESSAGES = 40;
+
 function buildHistory(
   messages: Message[],
   memoryManager?: MemoryManager | null
@@ -60,14 +70,17 @@ function buildHistory(
     .filter((m) => m.status === 'complete' && (m.role === 'user' || m.role === 'assistant'))
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
+  const trimmed = doneMessages.slice(-MAX_HISTORY_MESSAGES);
+
   if (memoryManager) {
-    return memoryManager.buildCondensedHistory(doneMessages);
+    return memoryManager.buildCondensedHistory(trimmed);
   }
-  return doneMessages;
+  return trimmed;
 }
 
 export interface UseChatStreamOptions {
   uid: string | null;
+  contextEngine?: ContextEngineInput;
 }
 
 export interface UseChatStreamReturn {
@@ -87,7 +100,7 @@ export interface UseChatStreamReturn {
   resumeLastConversation: () => Promise<void>;
 }
 
-export function useChatStream({ uid }: UseChatStreamOptions): UseChatStreamReturn {
+export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): UseChatStreamReturn {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -161,7 +174,7 @@ export function useChatStream({ uid }: UseChatStreamOptions): UseChatStreamRetur
   );
 
   const summarizeConversation = useCallback(async () => {
-    if (!uid) return;
+    if (!uid || isStreamingRef.current) return;
     const currentMsgs = messagesRef.current;
     const fullHistory = currentMsgs
       .filter((m) => m.status === 'complete' && (m.role === 'user' || m.role === 'assistant'))
@@ -203,81 +216,111 @@ export function useChatStream({ uid }: UseChatStreamOptions): UseChatStreamRetur
 
       const timeoutId = setTimeout(() => {
         controller.abort();
-      }, 30_000);
+      }, 60_000);
 
       const history = buildHistory(historyContext, memoryManagerRef.current);
 
-      const assistantId = generateId();
-      const assistantPlaceholder: Message = {
-        id: assistantId,
-        role: 'assistant',
-        type: 'markdown',
-        content: '',
-        createdAt: new Date(),
-        status: 'streaming',
-      };
-
-      setMessages((prev) => [...prev, assistantPlaceholder]);
       setIsStreaming(true);
+      console.log('[Chat] executeStream — sending NON-STREAMING request via generateResponse');
 
-      let hasContent = false;
+      // Fail-safe: force isStreaming off after 90s
+      const stuckTimer = setTimeout(() => {
+        if (isStreamingRef.current) {
+          console.warn('[Chat] Fail-safe: force-resetting stuck isStreaming');
+          setIsStreaming(false);
+        }
+      }, 90_000);
 
       try {
-        for await (const chunk of streamChat({
+        const response = await generateResponse({
           text,
           uid,
           history,
           signal: controller.signal,
           memoryContext: memoryManagerRef.current?.buildContext(),
-        })) {
-          if (chunk.done) break;
+        });
+        clearTimeout(stuckTimer);
 
-          if (chunk.contentDelta) {
-            hasContent = true;
-            updateMessage(assistantId, (msg) => ({
-              ...msg,
-              content: msg.content + chunk.contentDelta,
-            }));
-          }
-        }
+        const content = response.content || "I'm sorry, I wasn't able to generate a response. Please try again.";
 
-        updateMessage(assistantId, (msg) => ({
-          ...msg,
+        const assistantMessage: Message = {
+          id: generateId(),
+          role: 'assistant',
+          type: 'markdown',
+          content,
+          createdAt: new Date(),
           status: 'complete',
-          content: hasContent
-            ? msg.content
-            : "I'm sorry, I wasn't able to generate a response. Please try again.",
-        }));
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          updateMessage(assistantId, (msg) => ({
-            ...msg,
-            status: 'failed',
-            metadata: { ...msg.metadata, errorMessage: 'Request cancelled.' },
-          }));
-          return;
-        }
+        };
 
-        if (error instanceof AIError) {
-          console.error('[Chat] AI request failed — status:', error.statusCode, 'body:', error.details);
-        } else {
-          console.error('[Chat] AI stream error:', error);
-        }
+        setMessages((prev) => [...prev, assistantMessage]);
+ } catch (error) {
+  if (error instanceof Error && error.name === 'AbortError') {
+    const cancelledMsg: Message = {
+      id: generateId(),
+      role: 'assistant',
+      type: 'markdown',
+      content: '',
+      createdAt: new Date(),
+      status: 'failed',
+      metadata: { errorMessage: 'Request cancelled.' },
+    };
+    setMessages((prev) => [...prev, cancelledMsg]);
+    return;
+  }
 
-        const friendly = classifyError(error);
-        updateMessage(assistantId, (msg) => ({
-          ...msg,
+  if (error instanceof AIError && error.statusCode === 503) {
+    console.warn('[Chat] AI service temporarily unavailable, retrying...', error.details);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const retryResponse = await generateResponse({
+        text,
+        uid,
+        history,
+        signal: controller.signal,
+        memoryContext: memoryManagerRef.current?.buildContext(),
+      });
+      clearTimeout(stuckTimer);
+      const retryContent = retryResponse.content || "I'm sorry, I wasn't able to generate a response. Please try again.";
+      const retryMessage: Message = {
+        id: generateId(),
+        role: 'assistant',
+        type: 'markdown',
+        content: retryContent,
+        createdAt: new Date(),
+        status: 'complete',
+      };
+      setMessages((prev) => [...prev, retryMessage]);
+      return;
+    } catch (retryError) {
+      console.error('[Chat] AI retry failed — status:', retryError instanceof AIError ? retryError.statusCode : 'n/a', 'body:', retryError instanceof AIError ? retryError.details : retryError);
+    }
+  }
+
+  if (error instanceof AIError) {
+    console.error('[Chat] AI request failed — status:', error.statusCode, 'body:', error.details);
+  } else {
+    console.error('[Chat] AI stream error:', error);
+  }
+
+  const friendly = classifyError(error);
+  const errorMsg: Message = {
+          id: generateId(),
+          role: 'assistant',
+          type: 'markdown',
+          content: '',
+          createdAt: new Date(),
           status: 'failed',
-          metadata: { ...msg.metadata, errorMessage: friendly },
-        }));
-        hasContent = false;
+          metadata: { errorMessage: friendly },
+        };
+        setMessages((prev) => [...prev, errorMsg]);
       } finally {
+        clearTimeout(stuckTimer);
         clearTimeout(timeoutId);
         setIsStreaming(false);
         abortRef.current = null;
       }
 
-      if (hasContent && uid && conversationIdRef.current) {
+      if (uid && conversationIdRef.current) {
         const currentMsgs = messagesRef.current;
         const toSave = currentMsgs.filter((m) => m.status === 'complete');
 
@@ -294,7 +337,7 @@ export function useChatStream({ uid }: UseChatStreamOptions): UseChatStreamRetur
         }
       }
     },
-    [uid, updateMessage, summarizeConversation]
+    [uid, summarizeConversation]
   );
 
   const sendMessage = useCallback(
@@ -308,7 +351,7 @@ export function useChatStream({ uid }: UseChatStreamOptions): UseChatStreamRetur
         const newId = generateId();
         conversationIdRef.current = newId;
         setConversationId(newId);
-        memoryManagerRef.current = new MemoryManager(newId);
+        memoryManagerRef.current = new MemoryManager(newId, contextEngine);
         setIsRestored(false);
         saveSessionMeta({
           lastConversationId: newId,
@@ -406,7 +449,7 @@ export function useChatStream({ uid }: UseChatStreamOptions): UseChatStreamRetur
     conversationIdRef.current = newId;
     setConversationId(newId);
     setIsRestored(false);
-    memoryManagerRef.current = new MemoryManager(newId);
+    memoryManagerRef.current = new MemoryManager(newId, contextEngine);
   }, []);
 
   const refreshConversation = useCallback(async () => {

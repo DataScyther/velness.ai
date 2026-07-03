@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: LAYOUT.HEADER_HEIGHT + 12,
+    height: LAYOUT.HEADER_HEIGHT,
     paddingHorizontal: spacing.lg,
   },
   backSection: {

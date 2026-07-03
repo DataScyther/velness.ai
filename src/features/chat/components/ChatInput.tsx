@@ -1,18 +1,26 @@
-/**
- * ChatInput
- *
- * Text input + send/abort button row with voice transcription simulator,
- * pulsating waveform animation, and focus glow effects.
- */
-
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { View, TextInput, Text, StyleSheet, Pressable, type NativeSyntheticEvent, type TextInputContentSizeChangeEventData } from 'react-native';
-import { Square, Mic, X, Check } from 'lucide-react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, TextInput, Text, StyleSheet, Pressable, Alert, type NativeSyntheticEvent, type TextInputContentSizeChangeEventData } from 'react-native';
+import { Square, Mic, MicOff, X, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring, withTiming, FadeIn, FadeOut, withRepeat } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring, withTiming, FadeIn, FadeOut } from 'react-native-reanimated';
+import {
+  speechRecognitionAvailable,
+  useSpeechRecognitionEvent,
+  requestSpeechPermission,
+  startSpeechRecognition,
+  stopSpeechRecognition,
+  abortSpeechRecognition,
+} from '@/services/speech/SpeechRecognition';
 import { SendButton } from './SendButton';
 import { saveDraft, loadDraft, clearDraft } from '../persistence/draftStorage';
+
+const WARM_PLACEHOLDERS = [
+  "Share what's on your mind...",
+  "What's on your heart right now?",
+  "Tell me how your day went...",
+  "How can I support you today?",
+] as const;
 
 interface ChatInputProps {
   onSend: (text: string) => void;
@@ -42,23 +50,66 @@ export function ChatInput({
   const [isFocused, setIsFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcriptionText, setTranscriptionText] = useState('');
-  
+  const [permissionAsked, setPermissionAsked] = useState(false);
+
   const inputRef = useRef<TextInput>(null);
   const { colors } = useTheme();
-  
+
   const inputScale = useSharedValue(1);
   const focusBorderColor = useSharedValue(colors.border.default);
   const focusShadowOpacity = useSharedValue(0.04);
 
-  // Reanimated Waveform Bar Heights
   const bar1 = useSharedValue(10);
   const bar2 = useSharedValue(10);
   const bar3 = useSharedValue(10);
   const bar4 = useSharedValue(10);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isListeningRef = useRef(false);
+  const transcriptionRef = useRef('');
 
-  // Focus effect transition
+  // --- Speech Recognition Events ---
+
+  useSpeechRecognitionEvent('result', (event) => {
+    const transcript = event.results.map(r => r.transcript).join(' ');
+    transcriptionRef.current = transcript;
+    setTranscriptionText(transcript);
+  });
+
+  useSpeechRecognitionEvent('error', (event) => {
+    if (event.error === 'not-allowed') {
+      setIsListening(false);
+      isListeningRef.current = false;
+      Alert.alert(
+        'Microphone Permission Required',
+        'Voice typing needs microphone access. You can enable it in your device Settings.'
+      );
+      return;
+    }
+    setIsListening(false);
+    isListeningRef.current = false;
+    setTranscriptionText('');
+  });
+
+  useSpeechRecognitionEvent('end', () => {
+    if (isListeningRef.current) {
+      setIsListening(false);
+      isListeningRef.current = false;
+    }
+  });
+
+  useSpeechRecognitionEvent('volumechange', (event) => {
+    if (!isListeningRef.current) return;
+    const vol = Math.max(0, Math.min(1, (event.value + 2) / 12));
+    const target = 6 + vol * 30;
+    bar1.value = withTiming(target * 0.7, { duration: 100 });
+    bar2.value = withTiming(target * 0.9, { duration: 100 });
+    bar3.value = withTiming(target * 1.1, { duration: 100 });
+    bar4.value = withTiming(target * 0.8, { duration: 100 });
+  });
+
+  // --- Focus effect ---
+
   useEffect(() => {
     focusBorderColor.value = withTiming(
       isFocused ? colors.brand.primary : colors.border.default,
@@ -76,14 +127,15 @@ export function ChatInput({
     transform: [{ scale: inputScale.value }],
   }));
 
-  // Waveform animations when listening
+  // Keep isListeningRef in sync with isListening state
   useEffect(() => {
-    if (isListening) {
-      bar1.value = withRepeat(withSequence(withTiming(28, { duration: 400 }), withTiming(8, { duration: 400 })), -1, true);
-      bar2.value = withRepeat(withSequence(withTiming(20, { duration: 320 }), withTiming(10, { duration: 320 })), -1, true);
-      bar3.value = withRepeat(withSequence(withTiming(36, { duration: 480 }), withTiming(6, { duration: 480 })), -1, true);
-      bar4.value = withRepeat(withSequence(withTiming(24, { duration: 360 }), withTiming(8, { duration: 360 })), -1, true);
-    } else {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
+  // --- Waveform animation fallback (when not listening) ---
+
+  useEffect(() => {
+    if (!isListening) {
       bar1.value = withTiming(10);
       bar2.value = withTiming(10);
       bar3.value = withTiming(10);
@@ -91,70 +143,107 @@ export function ChatInput({
     }
   }, [isListening]);
 
-  // Voice transcript simulation typing effect
-  useEffect(() => {
-    if (!isListening) return;
-
-    const transcripts = [
-      "I'm feeling quite overwhelmed today. There's just so much on my mind, and I can't seem to focus on anything.",
-      "My mind is racing and I can't sleep. I just need a moment to breathe and clear my thoughts.",
-      "I had a pretty stressful interaction today, and I'm still holding on to the tension. I'd love to unpack it."
-    ];
-    const selected = transcripts[Math.floor(Math.random() * transcripts.length)];
-
-    let index = 0;
-    const delayTimeout = setTimeout(() => {
-      const interval = setInterval(() => {
-        if (index < selected.length) {
-          setTranscriptionText(selected.slice(0, index + 1));
-          index += 2; // Type 2 characters at a time for natural speed
-        } else {
-          clearInterval(interval);
-        }
-      }, 35);
-      return () => clearInterval(interval);
-    }, 1200);
-
-    return () => {
-      clearTimeout(delayTimeout);
-    };
-  }, [isListening]);
-
-  const startVoiceSimulator = () => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-    setTranscriptionText('');
-    setIsListening(true);
-  };
-
-  const cancelVoiceSimulator = () => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-    setIsListening(false);
-    setTranscriptionText('');
-  };
-
-  const acceptVoiceSimulator = () => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-    setIsListening(false);
-    if (transcriptionText.trim()) {
-      setInputText(transcriptionText);
-    }
-    setTranscriptionText('');
-    setTimeout(() => inputRef.current?.focus(), 150);
-  };
-
   const animatedBar1 = useAnimatedStyle(() => ({ height: bar1.value }));
   const animatedBar2 = useAnimatedStyle(() => ({ height: bar2.value }));
   const animatedBar3 = useAnimatedStyle(() => ({ height: bar3.value }));
   const animatedBar4 = useAnimatedStyle(() => ({ height: bar4.value }));
 
-  // Auto focus input when streaming stops
+  // --- Voice Typing ---
+
+  const requestMicPermission = useCallback(async (): Promise<boolean> => {
+    const granted = await requestSpeechPermission();
+    if (granted) {
+      setPermissionAsked(true);
+      return true;
+    }
+    return false;
+  }, []);
+
+  const startVoiceTyping = useCallback(async () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+
+    if (!speechRecognitionAvailable) {
+      Alert.alert(
+        'Voice Typing Unavailable',
+        'Voice typing requires a development build with the speech recognition module. Please rebuild the app using `npx expo run:android` or `npx expo run:ios`.'
+      );
+      return;
+    }
+
+    if (!permissionAsked) {
+      const permissionResult = await requestMicPermission();
+      if (!permissionResult) {
+        Alert.alert(
+          'Microphone Access Needed',
+          'Neeva uses the microphone to convert your speech into text. This helps you express yourself more naturally, especially when typing feels heavy. You can enable mic access in your device Settings.'
+        );
+        return;
+      }
+    }
+
+    transcriptionRef.current = '';
+    setTranscriptionText('');
+
+    startSpeechRecognition({
+      lang: 'en-US',
+      interimResults: true,
+      continuous: false,
+      addsPunctuation: true,
+      iosTaskHint: 'dictation',
+      contextualStrings: [
+        'anxiety', 'depression', 'overwhelmed', 'stressed', 'worried',
+        'grateful', 'hopeful', 'anxious', 'calm', 'peaceful',
+        'therapy', 'mental health', 'self care', 'mindfulness',
+      ],
+      volumeChangeEventOptions: {
+        enabled: true,
+        intervalMillis: 100,
+      },
+    });
+
+    setIsListening(true);
+  }, [permissionAsked, requestMicPermission]);
+
+  const stopVoiceTyping = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    stopSpeechRecognition();
+    setIsListening(false);
+    isListeningRef.current = false;
+  }, []);
+
+  const cancelVoiceTyping = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    abortSpeechRecognition();
+    setIsListening(false);
+    isListeningRef.current = false;
+    transcriptionRef.current = '';
+    setTranscriptionText('');
+  }, []);
+
+  const acceptVoiceTyping = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    stopSpeechRecognition();
+    setIsListening(false);
+    isListeningRef.current = false;
+    const transcript = transcriptionRef.current;
+    if (transcript.trim()) {
+      setInputText(transcript);
+    }
+    transcriptionRef.current = '';
+    setTranscriptionText('');
+    setTimeout(() => inputRef.current?.focus(), 150);
+  }, []);
+
+  // --- Auto focus when streaming stops ---
+
   useEffect(() => {
     if (!isStreaming && !disabled && !isListening) {
       inputRef.current?.focus();
     }
   }, [isStreaming, disabled, isListening]);
 
-  // Handle Quick starter chip prefills
+  // --- Prefill handling ---
+
   useEffect(() => {
     if (!prefillText) return;
     const trimmed = prefillText.trim();
@@ -176,7 +265,8 @@ export function ChatInput({
     return () => clearTimeout(timer);
   }, [prefillText, onSend, onPrefillSent]);
 
-  // Load draft
+  // --- Draft persistence ---
+
   useEffect(() => {
     if (!conversationId) return;
     loadDraft(conversationId).then((draft) => {
@@ -186,7 +276,6 @@ export function ChatInput({
     });
   }, [conversationId]);
 
-  // Save draft
   useEffect(() => {
     if (!conversationId) return;
 
@@ -215,37 +304,27 @@ export function ChatInput({
     []
   );
 
-  const handleSend = () => {
-    if (inputText.trim() === '') return;
+  const handleSend = useCallback(() => {
+    const text = inputText.trim();
+    if (!text) return;
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
     inputScale.value = withSequence(
-      withTiming(0.95, { duration: 100 }),
+      withTiming(0.96, { duration: 80 }),
       withTiming(1, { duration: 100 })
     );
-    onSend(inputText.trim());
+    onSend(text);
     if (conversationId) {
       clearDraft(conversationId);
     }
     onDraftChange?.('');
     setInputText('');
-  };
+  }, [inputText, onSend, conversationId, onDraftChange]);
 
-  const handleAbort = () => {
+  const handleAbort = useCallback(() => {
     onAbort?.();
-  };
+  }, [onAbort]);
 
-  const warmPlaceholders = useMemo(() => [
-    "Share what's on your mind...",
-    "What's on your heart right now?",
-    "Tell me how your day went...",
-    "How can I support you today?"
-  ], []);
-
-  const placeholder = useMemo(() => {
-    if (isStreaming) return 'Neeva is responding...';
-    // Use first warm placeholder
-    return warmPlaceholders[0];
-  }, [isStreaming, warmPlaceholders]);
+  const placeholder = isStreaming ? 'Neeva is responding...' : WARM_PLACEHOLDERS[0];
 
   return (
     <View
@@ -257,9 +336,9 @@ export function ChatInput({
       ]}
     >
       {isListening ? (
-        // Voice Simulator View
-        <Animated.View 
-          entering={FadeIn.duration(250)} 
+        // Voice Typing View
+        <Animated.View
+          entering={FadeIn.duration(250)}
           exiting={FadeOut.duration(200)}
           style={[styles.voiceContainer, { backgroundColor: colors.surface.primary, borderColor: colors.brand.primary }]}
         >
@@ -270,23 +349,44 @@ export function ChatInput({
             <Animated.View style={[styles.waveBar, animatedBar4, { backgroundColor: colors.brand.primary }]} />
           </View>
 
-          <Text style={[styles.transcriptionText, { color: transcriptionText ? colors.text.primary : colors.text.secondary }]}>
-            {transcriptionText || "Listening... Speak now..."}
+          <Text
+            style={[
+              styles.transcriptionText,
+              { color: transcriptionText ? colors.text.primary : colors.text.secondary },
+            ]}
+            numberOfLines={2}
+          >
+            {transcriptionText || 'Listening... Speak now...'}
           </Text>
 
           <View style={styles.voiceActions}>
-            <Pressable 
-              onPress={cancelVoiceSimulator}
+            <Pressable
+              onPress={cancelVoiceTyping}
               style={[styles.voiceActionBtn, styles.cancelBtn, { borderColor: colors.border.default }]}
+              accessibilityLabel="Cancel voice typing"
+              accessibilityRole="button"
             >
               <X size={18} color={colors.text.secondary} />
             </Pressable>
-            <Pressable 
-              onPress={acceptVoiceSimulator}
-              style={[styles.voiceActionBtn, styles.acceptBtn, { backgroundColor: colors.brand.primary }]}
-              disabled={!transcriptionText}
+            <Pressable
+              onPress={transcriptionText.trim() ? acceptVoiceTyping : stopVoiceTyping}
+              style={[
+                styles.voiceActionBtn,
+                styles.acceptBtn,
+                {
+                  backgroundColor: transcriptionText.trim()
+                    ? colors.brand.primary
+                    : colors.surface.secondary,
+                },
+              ]}
+              accessibilityLabel={transcriptionText.trim() ? 'Accept transcription' : 'Stop listening'}
+              accessibilityRole="button"
             >
-              <Check size={18} color={colors.brand.contrastText} />
+              {transcriptionText.trim() ? (
+                <Check size={18} color={colors.brand.contrastText} />
+              ) : (
+                <Square size={14} color={colors.text.secondary} fill={colors.text.secondary} />
+              )}
             </Pressable>
           </View>
         </Animated.View>
@@ -304,16 +404,24 @@ export function ChatInput({
           {/* Voice button */}
           {!disabled && !isStreaming && (
             <Pressable
-              onPress={startVoiceSimulator}
+              onPress={startVoiceTyping}
               style={({ pressed }) => [
                 styles.micButton,
-                { backgroundColor: pressed ? colors.border.default : 'transparent' }
+                {
+                  backgroundColor: pressed ? colors.brand.primary + '18' : colors.surface.secondary,
+                },
               ]}
-              accessibilityLabel="Speak message"
+              accessibilityLabel="Voice typing"
               accessibilityRole="button"
             >
-              <Mic size={18} color={colors.text.secondary} />
+              <Mic size={18} color={colors.brand.primary} />
             </Pressable>
+          )}
+
+          {disabled && !isStreaming && (
+            <View style={[styles.micButton, { backgroundColor: colors.surface.secondary }]}>
+              <MicOff size={16} color={colors.text.secondary} />
+            </View>
           )}
 
           <TextInput

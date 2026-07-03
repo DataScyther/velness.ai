@@ -68,7 +68,7 @@ describe('MemoryManager', () => {
 
   describe('buildContext', () => {
     it('includes userName when set', () => {
-      const m = new MemoryManager('test', { name: 'Alice' });
+      const m = new MemoryManager('test', { userName: 'Alice' });
       const ctx = m.buildContext();
       expect(ctx.userName).toBe('Alice');
     });

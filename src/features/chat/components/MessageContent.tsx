@@ -1,22 +1,19 @@
 import React from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { MessageRenderer } from './MessageRenderer';
+import { chat } from '@/core/theme/tokens';
 import type { Message } from '../types/Message';
 
 interface MessageContentProps {
   message: Message;
 }
 
-const variantBaseStyles = {
-  ai: { fontSize: 16, lineHeight: 26 },
-  user: { fontSize: 14, lineHeight: 20 },
-};
-
 export const MessageContent = React.memo(function MessageContent({ message }: MessageContentProps) {
   const { colors } = useTheme();
-  const variant = message.role === 'user' ? 'user' : 'ai';
-  const color = variant === 'user' ? colors.brand.contrastText : colors.text.primary;
-  const baseStyle = { ...variantBaseStyles[variant], color };
+  const isUser = message.role === 'user';
+  const typo = isUser ? chat.typography.bodyUser : chat.typography.bodyAI;
+  const color = isUser ? colors.brand.contrastText : colors.text.primary;
+  const baseStyle = { ...typo, color };
 
   return (
     <MessageRenderer

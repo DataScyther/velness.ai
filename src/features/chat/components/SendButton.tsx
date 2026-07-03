@@ -3,7 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { ArrowUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 interface SendButtonProps {
   onPress: () => void;
@@ -13,30 +13,36 @@ interface SendButtonProps {
 export function SendButton({ onPress, disabled = false }: SendButtonProps) {
   const { colors } = useTheme();
   const scale = useSharedValue(1);
-  const disabledOpacity = useSharedValue(disabled ? 0.4 : 1);
-  const disabledScale = useSharedValue(disabled ? 0.92 : 1);
+  const disabledProgress = useSharedValue(disabled ? 1 : 0);
 
   useEffect(() => {
-    disabledOpacity.value = withSpring(disabled ? 0.4 : 1, { damping: 15, stiffness: 200 });
-    disabledScale.value = withSpring(disabled ? 0.92 : 1, { damping: 15, stiffness: 200 });
+    disabledProgress.value = withSpring(disabled ? 1 : 0, { damping: 18, stiffness: 250 });
   }, [disabled]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: disabledOpacity.value,
-    transform: [{ scale: scale.value * disabledScale.value }],
+  const animatedStyle = useAnimatedStyle(() => {
+    const p = disabledProgress.value;
+    return {
+      opacity: 1 - p * 0.5,
+      transform: [{ scale: scale.value * (1 - p * 0.1) }],
+    };
+  });
+
+  const animatedShadow = useAnimatedStyle(() => ({
+    shadowOpacity: (1 - disabledProgress.value) * 0.35,
+    shadowRadius: (1 - disabledProgress.value) * 12,
   }));
 
   const handlePress = () => {
     if (disabled) return;
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-    scale.value = withTiming(0.9, { duration: 80 }, () => {
-      scale.value = withTiming(1, { duration: 80 });
+    scale.value = withSpring(0.88, { damping: 12, stiffness: 300 }, () => {
+      scale.value = withSpring(1, { damping: 10, stiffness: 250 });
     });
     onPress();
   };
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[animatedStyle, animatedShadow]}>
       <Pressable
         onPress={handlePress}
         disabled={disabled}
@@ -44,9 +50,12 @@ export function SendButton({ onPress, disabled = false }: SendButtonProps) {
           styles.sendButton,
           {
             backgroundColor: disabled
-              ? colors.border.default
+              ? colors.surface.secondary
               : colors.brand.primary,
-            opacity: pressed ? 0.8 : 1,
+            borderWidth: disabled ? 1 : 0,
+            borderColor: disabled ? colors.border.default : 'transparent',
+            shadowColor: disabled ? 'transparent' : colors.brand.primary,
+            opacity: pressed && !disabled ? 0.85 : 1,
           },
         ]}
         accessibilityRole="button"
@@ -54,11 +63,7 @@ export function SendButton({ onPress, disabled = false }: SendButtonProps) {
       >
         <ArrowUp
           size={20}
-          color={
-            disabled
-              ? colors.text.secondary
-              : colors.brand.contrastText
-          }
+          color={disabled ? colors.text.secondary : colors.brand.contrastText}
           strokeWidth={2.5}
         />
       </Pressable>

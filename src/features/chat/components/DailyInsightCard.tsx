@@ -1,9 +1,16 @@
+/**
+ * DailyInsightCard
+ *
+ * Legacy insight card used for the 'insight' message type.
+ * Upgraded to match the Phase 2 block anatomy: accent bar,
+ * emoji+label chip, highlighted callout box, and footer text.
+ */
+
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, StyleSheet } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
-import { spacing, borderRadius as radius } from '@/core/theme/tokens';
-import { Lightbulb } from 'lucide-react-native';
+import { chat, spacing, borderRadius as radius } from '@/core/theme/tokens';
 
 interface DailyInsightCardProps {
   title?: string;
@@ -17,59 +24,111 @@ function parseInsightContent(content: string) {
   return { title, insight };
 }
 
-export const DailyInsightCard = React.memo(function DailyInsightCard({ title: propTitle, content }: DailyInsightCardProps) {
+const ACCENT = chat.blocks.insight; // #A78BFA
+
+export const DailyInsightCard = React.memo(function DailyInsightCard({
+  title: propTitle,
+  content,
+}: DailyInsightCardProps) {
   const { colors } = useTheme();
   const parsed = content ? parseInsightContent(content) : { title: undefined, insight: undefined };
   const title = propTitle || parsed.title || 'Daily Insight';
   const insight = parsed.insight || content || undefined;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface.secondary, borderColor: colors.border.default }]}>
-      <View style={styles.header}>
-        <Lightbulb size={18} color={colors.warning} />
-        <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>
-      </View>
-      {insight ? (
-        <View style={[styles.insightBox, { borderLeftColor: colors.warning }]}>
-          <Text style={[styles.insightText, { color: colors.text.primary }]}>{insight}</Text>
+    <Animated.View
+      entering={FadeIn.duration(350).springify().damping(18)}
+      style={[
+        styles.card,
+        { backgroundColor: colors.surface.secondary, borderColor: `${ACCENT}30` },
+      ]}
+    >
+      {/* Accent bar */}
+      <View style={[styles.accentBar, { backgroundColor: ACCENT }]} />
+
+      <View style={styles.content}>
+        {/* Header chip */}
+        <View style={styles.chip}>
+          <Text style={styles.chipEmoji}>✨</Text>
+          <Text style={[styles.chipLabel, { color: ACCENT }]}>Insight</Text>
         </View>
-      ) : null}
-      <Text style={[styles.footer, { color: colors.text.secondary }]}>Reflect on this insight</Text>
-    </View>
+
+        <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>
+
+        {insight ? (
+          <View
+            style={[
+              styles.callout,
+              {
+                backgroundColor: `${ACCENT}12`,
+                borderColor: `${ACCENT}40`,
+              },
+            ]}
+          >
+            <Text style={[styles.insightText, { color: colors.text.primary }]}>{insight}</Text>
+          </View>
+        ) : null}
+
+        <Text style={[styles.footer, { color: colors.text.secondary }]}>Reflect on this insight</Text>
+      </View>
+    </Animated.View>
   );
 });
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radius.lg,
+    flexDirection: 'row',
+    borderRadius: radius.xl,
     borderWidth: 1,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    overflow: 'hidden',
   },
-  header: {
+  accentBar: {
+    width: 4,
+    borderTopLeftRadius: radius.xl,
+    borderBottomLeftRadius: radius.xl,
+  },
+  content: {
+    flex: 1,
+    padding: spacing.lg,
+    paddingLeft: spacing.md,
+  },
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 5,
     marginBottom: spacing.sm,
+  },
+  chipEmoji: {
+    fontSize: 14,
+  },
+  chipLabel: {
+    fontSize: chat.typography.blockLabel.fontSize,
+    fontWeight: chat.typography.blockLabel.fontWeight,
+    letterSpacing: chat.typography.blockLabel.letterSpacing,
+    textTransform: 'uppercase',
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
+    lineHeight: 22,
+    marginBottom: spacing.sm,
   },
-  insightBox: {
-    borderLeftWidth: 3,
-    paddingLeft: spacing.sm,
-    marginBottom: spacing.md,
+  callout: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
   },
   insightText: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 23,
     fontStyle: 'italic',
+    fontWeight: '500',
   },
   footer: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontStyle: 'italic',
+    fontSize: chat.typography.supporting.fontSize,
+    lineHeight: chat.typography.supporting.lineHeight,
   },
 });
 

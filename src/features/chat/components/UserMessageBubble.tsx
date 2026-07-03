@@ -1,3 +1,17 @@
+/**
+ * UserMessageBubble
+ *
+ * Right-aligned pill bubble for user messages.
+ *
+ * Grouping rules (iMessage-style):
+ *  - Corner radius flattened on the top-right for grouped messages
+ *    (messages consecutive within the same user turn)
+ *  - Timestamp shown only on the last in the group
+ *
+ * Animation:
+ *  - SlideInRight for send, routed through BaseMessageBubble
+ */
+
 import React, { useCallback, useState } from 'react';
 import { View, StyleSheet, Pressable, Share } from 'react-native';
 import * as ExpoClipboard from 'expo-clipboard';
@@ -7,20 +21,30 @@ import { BaseMessageBubble } from './BaseMessageBubble';
 import { MessageContent } from './MessageContent';
 import { MessageTimestamp } from './MessageTimestamp';
 import { MessageActionSheet } from './MessageActionSheet';
-import { userBubble } from '../styles/bubbleVariants';
+import { getBubbleRadius, getBubbleMarginBottom } from '../styles/bubbleVariants';
+import { chat } from '@/core/theme/tokens';
 import type { Message } from '../types/Message';
-import { spacing } from '@/core/theme/tokens';
 
 interface UserMessageBubbleProps {
   message: Message;
   onCopy?: (text: string) => void;
   onDelete?: (id: string) => void;
   isGrouped?: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
-export const UserMessageBubble = React.memo(function UserMessageBubble({ message, onCopy, onDelete, isGrouped }: UserMessageBubbleProps) {
+export const UserMessageBubble = React.memo(function UserMessageBubble({
+  message,
+  onCopy,
+  onDelete,
+  isGrouped = false,
+  isFirst = true,
+  isLast = true,
+}: UserMessageBubbleProps) {
   const { colors } = useTheme();
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const showTimestamp = !isGrouped || isLast;
 
   const handleCopy = useCallback(async () => {
     if (!message.content) return;
@@ -45,29 +69,41 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({ message
   }, []);
 
   const actionSheetActions = [
-    {
-      label: 'Copy',
-      onPress: handleCopy,
-    },
-    {
-      label: 'Share',
-      onPress: handleShare,
-    },
+    { label: 'Copy', onPress: handleCopy },
+    { label: 'Share', onPress: handleShare },
     ...(onDelete ? [{ label: 'Delete', onPress: () => onDelete(message.id), destructive: true }] : []),
   ];
 
+  const radiusStyle = getBubbleRadius('user', { isGrouped, isFirst, isLast });
+  const marginBottom = getBubbleMarginBottom(isGrouped && !isLast);
+
   return (
-    <BaseMessageBubble containerStyle={[userBubble.container, isGrouped && { marginBottom: spacing.xs }]}>
-      <View style={userBubble.wrapper}>
+    <BaseMessageBubble
+      role="user"
+      containerStyle={[styles.outerRow, { marginBottom }]}
+    >
+      <View style={[styles.wrapper, { maxWidth: chat.bubble.maxWidthUser }]}>
         <Pressable
           onLongPress={handleLongPress}
           accessibilityHint="Long press for more options"
         >
-          <View style={[userBubble.bubble, { backgroundColor: colors.brand.primary, shadowColor: colors.brand.primary }]}>
+          <View
+            style={[
+              styles.bubble,
+              radiusStyle,
+              {
+                backgroundColor: colors.brand.primary,
+                shadowColor: colors.brand.primary,
+              },
+            ]}
+          >
             <MessageContent message={message} />
           </View>
         </Pressable>
-        <MessageTimestamp date={message.createdAt} style={styles.timestampStyle} />
+
+        {showTimestamp && (
+          <MessageTimestamp date={message.createdAt} style={styles.timestamp} />
+        )}
       </View>
 
       <MessageActionSheet
@@ -80,8 +116,26 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({ message
 });
 
 const styles = StyleSheet.create({
-  timestampStyle: {
-    marginRight: 4,
+  outerRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: '100%',
+  },
+  wrapper: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+  },
+  bubble: {
+    paddingHorizontal: chat.bubble.paddingHUser,
+    paddingVertical: chat.bubble.paddingVUser,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  timestamp: {
+    marginTop: 4,
+    marginRight: 2,
   },
 });
 

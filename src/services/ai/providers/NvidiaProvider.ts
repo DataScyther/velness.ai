@@ -33,6 +33,47 @@ function* parseSSELine(line: string, id: () => number): Generator<StreamChunk> {
   } catch {}
 }
 
+// ── Shared helpers for building requests ─────────────────────────────
+
+function buildSystemMessage(memoryContext?: AIStreamParams['memoryContext']): { role: string; content: string } {
+  return {
+    role: 'system',
+    content: buildContextualPrompt({
+      userName: memoryContext?.userName,
+      timeOfDay: memoryContext?.timeOfDay as any,
+      returningUser: memoryContext?.returningUser,
+      previousMood: memoryContext?.previousMood,
+      preferredTone: memoryContext?.preferredTone as any,
+    }),
+  };
+}
+
+function buildRequestPayload(messages: Array<{ role: string; content: string }>, stream: boolean): string {
+  return JSON.stringify({
+    model: env.nvidiaModel || 'nvidia/nemotron-3-ultra-550b-a55b',
+    messages,
+    temperature: 0.9,
+    top_p: 0.97,
+    max_tokens: 4096,
+    stream,
+  });
+}
+
+function buildHeaders(apiKey: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+  };
+}
+
+function getApiKey(): string {
+  const key = env.nvidiaApiKey;
+  if (!key) {
+    throw new AIError('NVIDIA API key not configured', 500, 'Set VITE_NVIDIA_API_KEY in your .env');
+  }
+  return key;
+}
+
 export class NvidiaProvider implements AIProvider {
   readonly name = 'nvidia-nim';
 
@@ -40,46 +81,21 @@ export class NvidiaProvider implements AIProvider {
     const perf = new PerfTracker(params.uid);
     perf.mark('send');
 
-    const apiKey = env.nvidiaApiKey;
-    if (!apiKey) {
-      throw new AIError('NVIDIA API key not configured', 500, 'Set VITE_NVIDIA_API_KEY in your .env');
-    }
-
+    const apiKey = getApiKey();
     const targetUrl = `${env.nvidiaBaseUrl}/chat/completions`;
-    const model = env.nvidiaModel || 'nvidia/nemotron-3-ultra-550b-a55b';
 
     const messages: Array<{ role: string; content: string }> = [
-      { role: 'system', content: buildContextualPrompt({
-        userName: params.memoryContext?.userName,
-        timeOfDay: params.memoryContext?.timeOfDay as any,
-        returningUser: params.memoryContext?.returningUser,
-        previousMood: params.memoryContext?.previousMood,
-        preferredTone: params.memoryContext?.preferredTone as any,
-      }) },
+      buildSystemMessage(params.memoryContext),
       ...(params.history || []).map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: params.text },
     ];
 
-    const requestBody = JSON.stringify({
-      model,
-      messages,
-      temperature: 0.6,
-      top_p: 0.95,
-      max_tokens: 4096,
-      stream: true,
-    });
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    };
-
+    const requestBody = buildRequestPayload(messages, true);
+    const headers = buildHeaders(apiKey);
     perf.mark('request_start');
 
     // ── Try fetch + ReadableStream (web only) ────────────────────
-    console.log(`[NvidiaProvider] Checking stream support. Platform.OS: ${Platform.OS}`);
     if (Platform.OS === 'web' && globalThis.fetch && typeof globalThis.ReadableStream !== 'undefined') {
-      console.log('[NvidiaProvider] Using Web Fetch API for streaming');
       const res = await fetch(targetUrl, {
         method: 'POST',
         headers,
@@ -151,7 +167,6 @@ export class NvidiaProvider implements AIProvider {
       else pending.push(e);
     };
 
-    console.log('[NvidiaProvider] Starting XHR streaming request to:', url);
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
     
@@ -167,7 +182,6 @@ export class NvidiaProvider implements AIProvider {
     xhr.onprogress = () => {
       const text = xhr.responseText.slice(lastIdx);
       lastIdx = xhr.responseText.length;
-      console.log(`[NvidiaProvider] XHR progress: received ${text.length} chars (total: ${xhr.responseText.length})`);
       if (text) push({ kind: 'data', text });
     };
 
@@ -175,11 +189,12 @@ export class NvidiaProvider implements AIProvider {
       if (xhr.readyState !== 4) return;
       done = true;
       perf?.mark('complete');
-      console.log(`[NvidiaProvider] XHR completed with status: ${xhr.status}`);
       if (xhr.status >= 200 && xhr.status < 300) {
         push({ kind: 'end' });
+      } else if (xhr.status === 0) {
+        streamError = new AIError('Connection lost. The request could not reach the server or was interrupted.', 0, xhr.responseText);
+        push({ kind: 'error', err: streamError });
       } else {
-        console.error(`[NvidiaProvider] XHR failed: status = ${xhr.status}, response = ${xhr.responseText}`);
         streamError = new AIError('AI request failed', xhr.status, xhr.responseText);
         push({ kind: 'error', err: streamError });
       }
@@ -187,7 +202,6 @@ export class NvidiaProvider implements AIProvider {
 
     xhr.onerror = () => {
       done = true;
-      console.error('[NvidiaProvider] XHR network error occurred');
       streamError = new Error('Network request failed');
       push({ kind: 'error', err: streamError });
     };
@@ -244,10 +258,63 @@ export class NvidiaProvider implements AIProvider {
   }
 
   async generateResponse(params: AICompleteParams): Promise<AIResponse> {
-    let content = '';
-    for await (const chunk of this.streamChat(params)) {
-      content += chunk.contentDelta;
+    const apiKey = getApiKey();
+    const targetUrl = `${env.nvidiaBaseUrl}/chat/completions`;
+
+    const messages: Array<{ role: string; content: string }> = [
+      buildSystemMessage(params.memoryContext),
+      ...(params.history || []).map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: params.text },
+    ];
+
+    const requestBody = buildRequestPayload(messages, false);
+    const headers = buildHeaders(apiKey);
+
+    let res: Response;
+    try {
+      res = await fetch(targetUrl, {
+        method: 'POST',
+        headers,
+        body: requestBody,
+        signal: params.signal,
+      });
+    } catch (err) {
+      if (err instanceof TypeError && (err.message.includes('Network') || err.message.includes('fetch'))) {
+        throw new AIError('Network request failed', 0, null);
+      }
+      throw err;
     }
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new AIError('AI request failed', res.status, errText);
+    }
+
+    const raw = await res.text();
+    // Some endpoints return SSE even when stream=false; detect and handle
+    if (raw.startsWith('data:') || raw.includes('\ndata:')) {
+      let content = '';
+      for (const line of raw.split(/\r?\n/)) {
+        const t = line.trim();
+        if (!t || t === 'data: [DONE]') continue;
+        const body = t.startsWith('data:') ? t.slice(5).trim() : t;
+        if (!body || body === '[DONE]') continue;
+        try {
+          const p = JSON.parse(body);
+          const d = p?.choices?.[0]?.delta?.content || p?.choices?.[0]?.text || p?.choices?.[0]?.message?.content || p?.content;
+          if (typeof d === 'string') content += d;
+        } catch {}
+      }
+      return { content };
+    }
+
+    let data: any;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      throw new AIError('AI request failed — unexpected response format', 0, raw.slice(0, 500));
+    }
+    const content = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text || data?.content || '';
     return { content };
   }
 }

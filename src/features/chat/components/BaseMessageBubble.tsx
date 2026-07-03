@@ -1,21 +1,22 @@
+/**
+ * BaseMessageBubble
+ *
+ * Wraps every message in a plain View.
+ * User messages slide in from the right; assistant messages appear instantly.
+ */
+
 import React from 'react';
 import type { ViewStyle, StyleProp } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { View } from 'react-native';
 
 interface BaseMessageBubbleProps {
   children: React.ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
+  role?: 'assistant' | 'user';
 }
 
 export function BaseMessageBubble({ children, containerStyle }: BaseMessageBubbleProps) {
-  return (
-    <Animated.View
-      entering={FadeIn.duration(300).springify().damping(20).stiffness(200)}
-      style={containerStyle}
-    >
-      {children}
-    </Animated.View>
-  );
+  return <View style={containerStyle}>{children}</View>;
 }
 
 export default BaseMessageBubble;

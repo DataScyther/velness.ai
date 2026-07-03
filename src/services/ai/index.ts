@@ -9,7 +9,7 @@ import type { AIProvider, AIResponse, AIStreamParams, AICompleteParams, AIMessag
 import { AIError } from './types';
 import { NvidiaProvider } from './providers/NvidiaProvider';
 
-export { AIError, AIResponse, AIStreamParams, AICompleteParams, AIMessage, StreamChunk };
+export { AIError };
 
 let activeProvider: AIProvider | null = null;
 

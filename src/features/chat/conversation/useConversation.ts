@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/core/store/useAppStore';
 import { useChatStream } from '../hooks/useChatStream';
+import { useSessionContext } from '../hooks/useSessionContext';
+import type { ContextEngineInput } from '@/services/memory/types';
 import type { Message } from '../types/Message';
 import type { ConversationState, ConversationStatus } from './ConversationState';
 import type { ConversationController } from './ConversationController';
@@ -17,6 +19,17 @@ function deriveStatus(messages: Message[], isStreaming: boolean): ConversationSt
 
 export function useConversation(): { state: ConversationState; controller: ConversationController; isRestored: boolean } {
   const uid = useAppStore((state) => state.session.user?.uid ?? null);
+  const userName = useAppStore((state) => state.session.user?.name);
+  const sessionCtx = useSessionContext();
+
+  const contextEngine: ContextEngineInput = useMemo(() => ({
+    userName: userName,
+    initialMood: sessionCtx.mood ?? undefined,
+    reflectionStreak: sessionCtx.streak,
+    currentJourney: sessionCtx.previousSessionFocus ?? undefined,
+    sessionCount: sessionCtx.sessionCount,
+  }), [userName, sessionCtx.mood, sessionCtx.streak, sessionCtx.previousSessionFocus, sessionCtx.sessionCount]);
+
   const {
     messages,
     isStreaming,
@@ -31,7 +44,7 @@ export function useConversation(): { state: ConversationState; controller: Conve
     deleteMessage,
     isRestored,
     resumeLastConversation,
-  } = useChatStream({ uid });
+  } = useChatStream({ uid, contextEngine });
 
   const status = deriveStatus(messages, isStreaming);
   const lastMessage = messages[messages.length - 1];
