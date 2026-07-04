@@ -8,7 +8,7 @@ import {
   Auth,
   connectAuthEmulator,
 } from 'firebase/auth';
-import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore, Firestore, connectFirestoreEmulator, enableIndexedDbPersistence } from 'firebase/firestore';
 import {
   getAnalytics,
   logEvent,
@@ -56,10 +56,24 @@ if (firebaseConfig.apiKey) {
     auth = createAuth(app);
     db = getFirestore(app);
 
+    if (Platform.OS === 'web') {
+      enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn('[Firebase] Multiple tabs open — Firestore persistence only available in one tab');
+        } else if (err.code === 'unimplemented') {
+          console.warn('[Firebase] Browser does not support IndexedDB persistence');
+        }
+      });
+    }
+
     if (env.isDev && env.useFirebaseEmulators) {
-      connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-      connectFirestoreEmulator(db, 'localhost', 8080);
-      console.log('[Firebase] Using emulators');
+      try {
+        connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+        connectFirestoreEmulator(db, 'localhost', 8080);
+        console.log('[Firebase] Using emulators');
+      } catch (e) {
+        console.warn('[Firebase] Emulator connection failed — falling back to production Firestore', e);
+      }
     }
 
     if (!__DEV__) {

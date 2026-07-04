@@ -3,6 +3,8 @@ import {
   doc,
   getDocs,
   getDoc,
+  getDocFromServer,
+  getDocFromCache,
   setDoc,
   writeBatch,
   runTransaction,
@@ -289,11 +291,18 @@ export class JourneyRepository {
     if (!ref) return null;
 
     try {
-      const snap = await getDoc(ref);
+      const snap = await getDocFromServer(ref);
       if (!snap.exists()) return null;
       return userProgressFromDoc(snap);
-    } catch (error) {
-      logger.error('journey', 'Failed to load user progress from cloud', { uid, error: String(error) });
+    } catch (serverError) {
+      // Try cache when offline
+      try {
+        const cached = await getDocFromCache(ref);
+        if (cached.exists()) return userProgressFromDoc(cached);
+      } catch {
+        // No cache available either
+      }
+      logger.warn('journey', 'Could not load user progress from cloud', { uid, error: String(serverError) });
       return null;
     }
   }

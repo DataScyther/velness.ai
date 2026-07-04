@@ -32,33 +32,25 @@ const mapRouteToTab = (routeName: string): TabName => {
   return routeName as TabName;
 };
 
-export function BottomNavigation({ state, descriptors, navigation }: BottomTabBarProps) {
+export function BottomNavigation({ state, navigation }: BottomTabBarProps) {
   const { theme, colors } = useTheme();
   const [pressedTab, setPressedTab] = useState<TabName | null>(null);
 
-  // Retrieve unread counts
   const chatUnread = useUnreadCount();
   
-  const profileUnread = 1; // Represents the "Notification" badge count
+  const profileUnread = 1;
 
-  // Combine badges into a dictionary
   const badges = useMemo<Partial<Record<TabName, number>>>(() => {
     return {
       chat: chatUnread,
-      profile: profileUnread, // Display the Notification badge on Profile tab
+      profile: profileUnread,
     };
   }, [chatUnread, profileUnread]);
 
-  // Support disabled tabs state if needed (currently empty but fully functional)
   const disabledTabs = useMemo<TabName[]>(() => [], []);
 
-  // Find the currently active tab index and name
   const activeRoute = state.routes[state.index];
   const activeTabName = mapRouteToTab(activeRoute.name);
-
-  const activeIndex = useMemo(() => {
-    return state.routes.findIndex((route) => mapRouteToTab(route.name) === activeTabName);
-  }, [state.routes, activeTabName]);
 
   // Handle route switching
   const handleTabPress = async (tabName: TabName) => {
@@ -102,7 +94,7 @@ export function BottomNavigation({ state, descriptors, navigation }: BottomTabBa
 
   return (
     <NavigationContext.Provider value={contextValue}>
-      <NavigationContainer activeIndex={activeIndex} totalTabs={state.routes.length}>
+      <NavigationContainer>
         {state.routes.map((route) => {
           const tabName = mapRouteToTab(route.name);
           const config = TAB_CONFIGS[tabName];

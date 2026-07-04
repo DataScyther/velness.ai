@@ -8,6 +8,7 @@ export interface ThemeTokens {
     secondary: string;
   };
   text: {
+    tertiary: string;
     primary: string;
     secondary: string;
   };

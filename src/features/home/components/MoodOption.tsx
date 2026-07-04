@@ -58,21 +58,22 @@ export const MoodOption = React.memo(({
   }, [scale]);
 
   return (
-    <AnimatedPressable
-      entering={FadeInDown.duration(400).springify()}
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[styles.card, { borderColor: colors.border.default, backgroundColor: colors.surface.secondary }, animatedStyle]}
-      accessibilityRole="button"
-      accessibilityLabel={`Select mood: ${label}`}
-      accessibilityState={{ selected: isSelected }}
-    >
-      <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={[styles.label, { color: colors.text.secondary }, isSelected && { color: colors.brand.primary, fontWeight: '600' }]}>
-        {label}
-      </Text>
-    </AnimatedPressable>
+    <Animated.View entering={FadeInDown.duration(400).springify()}>
+      <AnimatedPressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[styles.card, { borderColor: colors.border.default, backgroundColor: colors.surface.secondary }, animatedStyle]}
+        accessibilityRole="button"
+        accessibilityLabel={`Select mood: ${label}`}
+        accessibilityState={{ selected: isSelected }}
+      >
+        <Text style={styles.emoji}>{emoji}</Text>
+        <Text style={[styles.label, { color: colors.text.secondary }, isSelected && { color: colors.brand.primary, fontWeight: '600' }]}>
+          {label}
+        </Text>
+      </AnimatedPressable>
+    </Animated.View>
   );
 });
 

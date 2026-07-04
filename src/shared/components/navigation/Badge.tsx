@@ -12,8 +12,6 @@ export function Badge({ count = 0 }: BadgeProps) {
   if (count <= 0) return null;
 
   const displayCount = count > 99 ? '99+' : count.toString();
-
-  // Create badge style matching theme
   const borderStrokeColor = theme === 'dark' ? 'rgba(26, 20, 40, 0.92)' : '#FFFFFF';
 
   return (

@@ -3,12 +3,18 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
-  Easing,
+  withSpring,
+  WithSpringConfig,
 } from 'react-native-reanimated';
 import { TabName, useNavigationContext } from './NavigationContext';
 import IconWrapper from './IconWrapper';
 import Badge from './Badge';
+
+const springConfig: WithSpringConfig = {
+  stiffness: 300,
+  damping: 15,
+  mass: 1,
+};
 
 interface NavigationItemProps {
   name: TabName;
@@ -33,28 +39,20 @@ export function NavigationItem({ name, label, hint }: NavigationItemProps) {
 
   const scale = useSharedValue(1);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const handlePressIn = () => {
     if (isDisabled) return;
     setPressedTab(name);
-    scale.value = withTiming(0.92, {
-      duration: 120,
-      easing: Easing.bezier(0.25, 1, 0.5, 1),
-    });
+    scale.value = withSpring(0.9, springConfig);
   };
 
   const handlePressOut = () => {
     if (isDisabled) return;
     setPressedTab(null);
-    scale.value = withTiming(1.0, {
-      duration: 120,
-      easing: Easing.bezier(0.25, 1, 0.5, 1),
-    });
+    scale.value = withSpring(1, springConfig);
   };
 
   const handlePress = () => {
@@ -62,14 +60,13 @@ export function NavigationItem({ name, label, hint }: NavigationItemProps) {
     onTabPress(name);
   };
 
-  // Determine text color based on states
   let textColor: string;
   if (isDisabled) {
-    textColor = colors.text.secondary + '40'; // 25% opacity
+    textColor = colors.text.secondary + '40';
   } else if (isActive) {
-    textColor = colors.brand.primary;
+    textColor = colors.text.primary;
   } else {
-    textColor = colors.text.secondary + 'B3'; // Inactive label (70% opacity)
+    textColor = colors.text.secondary + 'B3';
   }
 
   return (

@@ -1,15 +1,9 @@
 import React, { useCallback } from 'react';
-import {
-  View,
-  Text,
-  Dimensions,
-  Image,
-  Pressable,
-} from 'react-native';
+import { View, Text, Dimensions, Image, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Svg, Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/core/store/useAppStore';
 import type { UserProfile } from '@/services/auth/types';
@@ -23,7 +17,8 @@ export function WelcomeScreen() {
   const setUser = useAppStore((state) => state.setUser);
   const setEmailVerified = useAppStore((state) => state.setEmailVerified);
   const setOnboardingCompleted = useAppStore((state) => state.setOnboardingCompleted);
-  const { colors, theme } = useTheme();
+  
+  const { colors: themeColors, theme } = useTheme();
   const isDark = theme === 'dark';
 
   const handleSignIn = useCallback(() => {
@@ -38,8 +33,7 @@ export function WelcomeScreen() {
 
   const handleGuestMode = useCallback(() => {
     analyticsService.trackEvent('login_attempt', { action: 'welcome_guest' });
-
-    // Create a mock guest user profile to bypass auth
+    
     const guestProfile: UserProfile = {
       uid: `guest-${Date.now()}`,
       name: 'Guest User',
@@ -54,135 +48,202 @@ export function WelcomeScreen() {
     setUser(guestProfile);
     setEmailVerified(true);
     setOnboardingCompleted(true);
-    const store = useAppStore.getState();
-    store.setPreviousGuestUid(guestProfile.uid);
+    useAppStore.getState().setPreviousGuestUid(guestProfile.uid);
     router.replace('/(tabs)');
   }, [setUser, setEmailVerified, setOnboardingCompleted, router]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background.primary, justifyContent: 'center', alignItems: 'center' }}>
-      {/* Premium Radial Glow Background */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.background.primary }}>
+      {/* Premium Radial Background */}
+      <View style={StyleSheet.absoluteFill}>
         <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
           <Defs>
             <RadialGradient
               id="bgGlow"
               cx="50%"
-              cy="35%"
-              rx="90%"
-              ry="65%"
+              cy="28%"
+              rx="85%"
+              ry="68%"
             >
-              <Stop offset="0%" stopColor={isDark ? "#FFFFFF" : "#FFFFFF"} stopOpacity={isDark ? 0.35 : 0.9} />
-              <Stop offset="30%" stopColor={isDark ? "#2563EB" : "#F1F4F9"} stopOpacity={isDark ? 0.7 : 0.9} />
-              <Stop offset="70%" stopColor={isDark ? "#0B1E78" : "#E5E7EB"} stopOpacity={isDark ? 0.9 : 1.0} />
-              <Stop offset="100%" stopColor={isDark ? "#050C3A" : "#F8F9FC"} stopOpacity={1.0} />
+              <Stop offset="0%" stopColor={isDark ? "#A5B4FC" : "#E0E7FF"} stopOpacity={isDark ? 0.25 : 0.45} />
+              <Stop offset="35%" stopColor={isDark ? "#4F46E5" : "#6366F1"} stopOpacity={isDark ? 0.18 : 0.25} />
+              <Stop offset="70%" stopColor={isDark ? "#1E1B4B" : "#F8FAFC"} stopOpacity={isDark ? 0.9 : 1} />
+              <Stop offset="100%" stopColor={isDark ? "#0F172A" : "#F1F5F9"} stopOpacity={1} />
             </RadialGradient>
           </Defs>
           <Rect width="100%" height="100%" fill="url(#bgGlow)" />
         </Svg>
       </View>
 
-      <SafeAreaView className="flex-1 px-6 justify-between py-12">
-        <View className="flex-1 justify-center items-center">
-          <Animated.View
-            entering={FadeInDown.duration(800).springify()}
-            className="items-center"
-          >
-            {/* Circle surrounding the brain logo */}
-            <View
-              style={{
-                width: 84,
-                height: 84,
-                borderRadius: borderRadius.lg,
-                backgroundColor: colors.surface.primary,
-                borderColor: colors.border.default,
-                borderWidth: 1,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: isDark ? 0.3 : 0.1,
-                shadowRadius: 16,
-                elevation: 10,
-              }}
-            >
-              <Image
-                source={require('@/shared/assets/neeva-logo.png')}
-                style={{
-                  width: 84,
-                  height: 84,
-                  resizeMode: 'contain',
-                }}
-              />
-            </View>
-
-            {/* Brand Title */}
-            <Text style={{ color: colors.text.primary, ...typography.titleLarge }} className="text-5xl font-bold tracking-tight mt-6">
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.container}>
+          {/* Top Branding */}
+          <Animated.View entering={FadeInDown.duration(700)} style={styles.topBrand}>
+            <Image
+              source={require('@/shared/assets/neeva-logo.png')}
+              style={styles.smallLogo}
+            />
+            <Text style={[typography.titleLarge, { color: themeColors.text.primary, fontWeight: '700' }]}>
               Neeva
-            </Text>
-
-            {/* Subtext */}
-            <Text style={{ color: colors.text.secondary, ...typography.textSecondary, marginTop: spacing.md, paddingHorizontal: 8, lineHeight: 24 }}>
-              Your personal AI wellness companion
             </Text>
           </Animated.View>
 
-          {/* Buttons (At the bottom) */}
+          {/* Main Content */}
+          <View style={styles.mainContent}>
+            <Animated.View entering={FadeInDown.delay(100).duration(800).springify()}>
+              <Text style={styles.welcomeText}>Welcome!</Text>
+              <Text style={styles.subtitle}>
+                Your personal AI wellness companion
+              </Text>
+            </Animated.View>
+
+            {/* Premium Logo Container */}
+            <Animated.View
+              entering={FadeInUp.delay(400).duration(1000).springify()}
+              style={styles.logoContainer}
+            >
+              <View style={styles.glowRing}>
+                <Image
+                  source={require('@/shared/assets/neeva-logo.png')}
+                  style={styles.mainLogo}
+                />
+              </View>
+            </Animated.View>
+          </View>
+
+          {/* Actions */}
           <Animated.View
-            entering={FadeInDown.delay(200).duration(800).springify()}
-            className="space-y-4 w-full"
+            entering={FadeInDown.delay(600).duration(800).springify()}
+            style={styles.actionContainer}
           >
-            {/* Sign In Button */}
-            <Pressable
-              onPress={handleSignIn}
-              className="rounded-full py-4.5 items-center w-full active:opacity-90 shadow-lg shadow-black/20"
-              style={{
-                backgroundColor: colors.brand.primary,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 6,
-                elevation: 4,
-              }}
-            >
-              <Text style={{ color: colors.brand.contrastText, ...typography.buttonPrimary }}>
-                Sign In
-              </Text>
+            <Pressable style={styles.primaryButton} onPress={handleSignIn}>
+              <Text style={styles.primaryButtonText}>Sign In</Text>
             </Pressable>
 
-            {/* Create Account Button */}
-            <Pressable
-              onPress={handleSignUp}
-              className="rounded-full py-4.5 items-center w-full active:opacity-90"
-              style={{
-                borderColor: colors.brand.primary,
-                borderWidth: 1.5,
-                backgroundColor: 'transparent',
-              }}
-            >
-              <Text style={{ color: colors.brand.primary, ...typography.buttonPrimary }}>
-                Create Account
-              </Text>
+            <Pressable style={styles.secondaryButton} onPress={handleSignUp}>
+              <Text style={styles.secondaryButtonText}>Create Account</Text>
             </Pressable>
 
-            {/* Explore as Guest Button */}
-            <Pressable
-              onPress={handleGuestMode}
-              className="rounded-full py-4.5 items-center w-full active:opacity-90"
-              style={{
-                backgroundColor: colors.surface.secondary,
-                borderColor: colors.border.default,
-                borderWidth: 1,
-                borderRadius: borderRadius.md,
-              }}
-            >
-              <Text style={{ color: colors.text.primary, ...typography.textSecondary }}>
-                Explore as Guest
-              </Text>
+            <Pressable style={styles.guestButton} onPress={handleGuestMode}>
+              <Text style={styles.guestButtonText}>Continue as Guest</Text>
             </Pressable>
           </Animated.View>
         </View>
       </SafeAreaView>
-</View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'space-between',
+    paddingBottom: 40,
+  },
+  topBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+  },
+  smallLogo: {
+    width: 32,
+    height: 32,
+    resizeMode: 'contain',
+  },
+  mainContent: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    gap: 32,
+  },
+  welcomeText: {
+    fontSize: 42,
+    fontWeight: '700',
+    color: colors.text.primary,
+    textAlign: 'center',
+    letterSpacing: -1.2,
+  },
+  subtitle: {
+    fontSize: 17,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 26,
+    maxWidth: 280,
+    opacity: 0.85,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowRing: {
+    width: 148,
+    height: 148,
+    borderRadius: 999,
+    backgroundColor: colors.surface.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.25,
+    shadowRadius: 35,
+    elevation: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(165, 180, 252, 0.2)',
+  },
+  mainLogo: {
+    width: 118,
+    height: 118,
+    resizeMode: 'contain',
+  },
+  actionContainer: {
+    gap: 14,
+    width: '100%',
+  },
+  primaryButton: {
+    backgroundColor: '#4F46E5',
+    height: 58,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    elevation: 16,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+  secondaryButton: {
+    height: 58,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#6366F1',
+    backgroundColor: 'transparent',
+  },
+  secondaryButtonText: {
+    color: '#6366F1',
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+  guestButton: {
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guestButtonText: {
+    color: colors.text.secondary,
+    fontSize: 15.5,
+    fontWeight: '500',
+  },
+});
 
 export default WelcomeScreen;
