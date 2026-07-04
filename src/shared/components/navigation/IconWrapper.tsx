@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Home, MessageCircle, Compass, Users, User } from 'lucide-react-native';
+import { Home, MessageCircle, Compass, User } from 'lucide-react-native';
 import { TabName, useNavigationContext } from './NavigationContext';
 
 interface IconWrapperProps {
@@ -43,9 +43,6 @@ export function IconWrapper({
       break;
     case 'journey':
       IconComponent = Compass;
-      break;
-    case 'community':
-      IconComponent = Users;
       break;
     case 'profile':
       IconComponent = User;

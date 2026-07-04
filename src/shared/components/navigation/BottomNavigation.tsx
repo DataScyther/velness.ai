@@ -21,10 +21,6 @@ const TAB_CONFIGS: Record<TabName, { label: string; hint: string }> = {
     label: 'Journey',
     hint: 'Opens your wellness journey and exercises',
   },
-  community: {
-    label: 'Community',
-    hint: 'Opens the community groups and discussions',
-  },
   profile: {
     label: 'Profile',
     hint: 'Opens your profile settings and statistics',
@@ -43,18 +39,15 @@ export function BottomNavigation({ state, descriptors, navigation }: BottomTabBa
   // Retrieve unread counts
   const chatUnread = useUnreadCount();
   
-  // Set up mock notifications/community counts (Chat, Notification/Profile, Community need badges)
-  const communityUnread = 3;
   const profileUnread = 1; // Represents the "Notification" badge count
 
   // Combine badges into a dictionary
   const badges = useMemo<Partial<Record<TabName, number>>>(() => {
     return {
       chat: chatUnread,
-      community: communityUnread,
       profile: profileUnread, // Display the Notification badge on Profile tab
     };
-  }, [chatUnread, communityUnread, profileUnread]);
+  }, [chatUnread, profileUnread]);
 
   // Support disabled tabs state if needed (currently empty but fully functional)
   const disabledTabs = useMemo<TabName[]>(() => [], []);

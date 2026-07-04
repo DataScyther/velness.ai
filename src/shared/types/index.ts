@@ -144,7 +144,7 @@ export interface UserConversation {
 
 // ─── Navigation ─────────────────────────────────────────────────────────
 
-export type TabName = 'home' | 'chat' | 'journey' | 'community' | 'profile';
+export type TabName = 'home' | 'chat' | 'journey' | 'profile';
 export type AuthScreen = 'login' | 'signup' | 'onboarding';
 
 // ─── Journey ──────────────────────────────────────────────────────────

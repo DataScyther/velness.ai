@@ -21,7 +21,7 @@ export type Tone = 'warm' | 'motivational' | 'soothing' | 'auto';
 
 export interface UIState {
   /** Currently active tab/screen */
-  currentTab: 'home' | 'chat' | 'journey' | 'community' | 'profile';
+  currentTab: 'home' | 'chat' | 'journey' | 'profile';
   /** Theme preference */
   theme: ThemeMode;
   /** Global loading flag */
@@ -54,6 +54,8 @@ export interface SessionState {
   authLoading: boolean;
   /** Auth error message */
   authError: string | null;
+  /** Previous guest UID (transient — cleared after migration) */
+  previousGuestUid: string | null;
 }
 
 export interface AppStore {
@@ -75,6 +77,7 @@ export interface AppStore {
   setAuthInitialized: (initialized: boolean) => void;
   setAuthLoading: (loading: boolean) => void;
   setAuthError: (error: string | null) => void;
+  setPreviousGuestUid: (uid: string | null) => void;
   clearSession: () => void;
 
   // ─── Auth Actions ──────────────────────────────────────────────────────
@@ -111,6 +114,7 @@ const initialSessionState: SessionState = {
   onboardingCompleted: false,
   authLoading: false,
   authError: null,
+  previousGuestUid: null,
 };
 
 // ─── Store ──────────────────────────────────────────────────────────────
@@ -194,6 +198,11 @@ export const useAppStore = create<AppStore>()(
           session: { ...state.session, authError },
         })),
 
+      setPreviousGuestUid: (previousGuestUid) =>
+        set((state) => ({
+          session: { ...state.session, previousGuestUid },
+        })),
+
       clearSession: () =>
         set(() => ({
           session: { ...initialSessionState, initialized: true },
@@ -269,6 +278,12 @@ export const useAppStore = create<AppStore>()(
         state.setAuthError(null);
         try {
           const user = await authService.signUp({ name, email, password });
+
+          const previousGuestUid = state.session.previousGuestUid;
+          if (previousGuestUid && user.uid !== previousGuestUid) {
+            await authService.migrateGuestAccount(previousGuestUid, user.uid);
+          }
+
           set({
             session: {
               ...state.session,
@@ -276,6 +291,7 @@ export const useAppStore = create<AppStore>()(
               isAuthenticated: true,
               authLoading: false,
               emailVerified: false,
+              previousGuestUid: null,
             },
           });
         } catch (error) {
