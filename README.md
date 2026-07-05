@@ -1,4 +1,4 @@
-# 🚀 Neeva AI: Revolutionizing Mental Health with AI
+# 🚀 Velness AI: Revolutionizing Mental Health with AI
 
 [![GitHub Release](https://img.shields.io/github/v/release/DataScyther/Neeva-AI?color=4F46E5&style=for-the-badge)](https://github.com/DataScyther/Neeva-AI/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-4F46E5.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
@@ -10,7 +10,7 @@
 
 ---
 
-# Neeva AI
+# Velness AI
 
 A conversational AI project exploring mood tracking, reflective journaling, and CBT-inspired exercises using modern LLM tooling.
 
