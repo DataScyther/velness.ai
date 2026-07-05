@@ -1,4 +1,4 @@
-# 🚀 Velness AI: Revolutionizing Mental Health with AI
+# 🚀 Velness: Revolutionizing Mental Health with AI
 
 [![GitHub Release](https://img.shields.io/github/v/release/DataScyther/Neeva-AI?color=4F46E5&style=for-the-badge)](https://github.com/DataScyther/Neeva-AI/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-4F46E5.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
@@ -10,7 +10,7 @@
 
 ---
 
-# Velness AI
+# Velness
 
 A conversational AI project exploring mood tracking, reflective journaling, and CBT-inspired exercises using modern LLM tooling.
 
@@ -21,7 +21,7 @@ A conversational AI project exploring mood tracking, reflective journaling, and 
 
 > *"Empowering minds through AI-driven mental wellness – where technology meets compassion."*
 
-Neeva AI represents the future of mental health support, seamlessly blending cutting-edge artificial intelligence with evidence-based therapeutic practices. Designed for proactive emotional maintenance and intelligent crisis intervention, our platform transforms how individuals engage with their mental well-being.
+Velness represents the future of mental health support, seamlessly blending cutting-edge artificial intelligence with evidence-based therapeutic practices. Designed for proactive emotional maintenance and intelligent crisis intervention, our platform transforms how individuals engage with their mental well-being.
 
 ---
 
@@ -48,7 +48,7 @@ Most mental wellness apps either:
 - track data but don’t talk to you
 - or talk to you but don’t remember anything meaningful
 
-Neeva AI prototypes a middle ground:  
+Velness prototypes a middle ground:  
 a personal conversational interface that helps users notice patterns in thoughts, habits, and emotions over time.
 
 The focus is behavioral awareness, not treatment.
