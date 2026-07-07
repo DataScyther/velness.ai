@@ -4,6 +4,7 @@ import type { Exercise } from '../models/Exercise';
 import type { Recommendation } from '../models/Recommendation';
 import type { Mood } from '@/shared/types';
 import { CATEGORY_ID } from '../constants';
+import { DEFAULT_LESSONS, DEFAULT_PROGRAMS } from '../data/programs';
 
 export interface RecommendationInputs {
   userProgress: UserProgress;
@@ -28,10 +29,15 @@ const MOOD_CATEGORY_MAP: Record<string, string> = {
   sad: CATEGORY_ID.CBT,
   angry: CATEGORY_ID.MEDITATION,
   positive: CATEGORY_ID.WELLNESS,
+  'low motivation': CATEGORY_ID.CBT,
+  calm: CATEGORY_ID.MEDITATION,
 };
 
 const REASONS: Record<string, string> = {
   mood_match: 'Based on how you\'re feeling right now',
+  mood_anxious: 'Breathe to ease your anxious mind',
+  mood_low_motivation: 'A short lesson to boost your motivation',
+  mood_calm: 'Deepen your calm with a meditation session',
   continue_program: 'Continue your current program',
   variety: 'Try something different today',
   least_practiced: 'Give some attention to this area',
@@ -43,6 +49,65 @@ function getLatestMoodCategory(moodHistory: Mood[]): string | null {
   if (moodHistory.length === 0) return null;
   const sorted = [...moodHistory].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   const latest = sorted[0];
+
+  // 1. Check structured label first
+  if (latest.label) {
+    const normalizedLabel = latest.label.toLowerCase().trim();
+    if (normalizedLabel === 'anxious' || normalizedLabel === 'anxiety') {
+      return 'anxious';
+    }
+    if (normalizedLabel === 'low motivation' || normalizedLabel === 'unmotivated' || normalizedLabel === 'motivation') {
+      return 'low motivation';
+    }
+    if (normalizedLabel === 'calm' || normalizedLabel === 'calmness') {
+      return 'calm';
+    }
+    if (MOOD_CATEGORY_MAP[normalizedLabel]) {
+      return normalizedLabel;
+    }
+  }
+
+  // 2. Check note keywords
+  if (latest.note) {
+    const noteLower = latest.note.toLowerCase();
+    
+    if (
+      noteLower.includes('anxious') ||
+      noteLower.includes('anxiety') ||
+      noteLower.includes('panic') ||
+      noteLower.includes('nervous') ||
+      noteLower.includes('worried') ||
+      noteLower.includes('scared') ||
+      noteLower.includes('fear')
+    ) {
+      return 'anxious';
+    }
+
+    if (
+      noteLower.includes('low motivation') ||
+      noteLower.includes('unmotivated') ||
+      noteLower.includes('no motivation') ||
+      noteLower.includes('lazy') ||
+      noteLower.includes('procrastinating') ||
+      noteLower.includes('hard to start') ||
+      noteLower.includes('cannot focus')
+    ) {
+      return 'low motivation';
+    }
+
+    if (
+      noteLower.includes('calm') ||
+      noteLower.includes('peaceful') ||
+      noteLower.includes('relaxed') ||
+      noteLower.includes('serene') ||
+      noteLower.includes('mindful') ||
+      noteLower.includes('tranquil')
+    ) {
+      return 'calm';
+    }
+  }
+
+  // 3. Fallback to rating
   if (latest.rating <= 2) return 'distressed';
   if (latest.rating === 3) return 'neutral';
   if (latest.rating >= 4) return 'positive';
@@ -63,8 +128,20 @@ export function getTodaysRecommendations(inputs: RecommendationInputs): Recommen
   if (moodCategory && MOOD_CATEGORY_MAP[moodCategory]) {
     const targetCategory = MOOD_CATEGORY_MAP[moodCategory];
     const matching = findCategoryExercises(targetCategory, categories, allExercises);
+    
+    let reason = REASONS.mood_match;
+    if (moodCategory === 'anxious') {
+      reason = REASONS.mood_anxious;
+    } else if (moodCategory === 'low motivation') {
+      reason = REASONS.mood_low_motivation;
+    } else if (moodCategory === 'calm') {
+      reason = REASONS.mood_calm;
+    }
+
     for (const { exercise, category } of matching) {
-      candidates.push({ exercise, category, score: 100, reason: REASONS.mood_match });
+      const isCompleted = completedIds.has(exercise.lessonId);
+      const score = isCompleted ? 90 : 100;
+      candidates.push({ exercise, category, score, reason });
     }
   }
 
@@ -81,6 +158,7 @@ export function getTodaysRecommendations(inputs: RecommendationInputs): Recommen
         const catExercises = findCategoryExercises(category.id, categories, allExercises);
         for (const { exercise, category: cat } of catExercises) {
           if (recentIds.has(exercise.id)) continue;
+          if (completedIds.has(exercise.lessonId)) continue; // Prioritize unfinished lessons
           candidates.push({ exercise, category: cat, score: 80, reason: REASONS.continue_program });
         }
       }
@@ -112,6 +190,7 @@ export function getTodaysRecommendations(inputs: RecommendationInputs): Recommen
       const catExercises = findCategoryExercises(leastPracticed.id, categories, allExercises);
       for (const { exercise, category } of catExercises) {
         if (recentIds.has(exercise.id)) continue;
+        if (completedIds.has(exercise.lessonId)) continue; // Prioritize unfinished lessons
         if (candidates.some((c) => c.exercise.id === exercise.id)) continue;
         candidates.push({ exercise, category, score: 60, reason: REASONS.least_practiced });
       }
@@ -169,7 +248,13 @@ function findCategoryExercises(
 
   const result: { exercise: Exercise; category: Category }[] = [];
   for (const ex of allExercises) {
-    result.push({ exercise: ex, category });
+    const lesson = DEFAULT_LESSONS.find((l) => l.id === ex.lessonId);
+    if (!lesson) continue;
+    const program = DEFAULT_PROGRAMS.find((p) => p.id === lesson.programId);
+    if (!program) continue;
+    if (program.categoryId === categoryId) {
+      result.push({ exercise: ex, category });
+    }
   }
 
   return result;

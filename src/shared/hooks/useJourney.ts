@@ -223,6 +223,18 @@ export function useJourney() {
   const recommendations = recommendationsQuery.data ?? DEFAULT_RECOMMENDATIONS;
   const userProgress = userProgressQuery.data ?? null;
 
+  const favorites = useMemo(() => {
+    if (!userProgress || !userProgress.favorites || !programs) return [];
+    return programs.filter((p) => userProgress.favorites?.includes(p.id));
+  }, [userProgress, programs]);
+
+  const toggleFavorite = useCallback(async (programId: string) => {
+    if (!uid) return;
+    await journeyRepository.toggleFavorite(uid, programId);
+    await queryClient.invalidateQueries({ queryKey: ['journey', 'user-progress', uid] });
+    await queryClient.invalidateQueries({ queryKey: ['journey', 'legacy', uid] });
+  }, [uid, queryClient]);
+
   const streak = useMemo(() => {
     if (!userProgress) return 0;
     return computeStreak(userProgress);
@@ -324,6 +336,8 @@ export function useJourney() {
     refreshRecommendation,
     startExercise,
     completeLesson,
+    favorites,
+    toggleFavorite,
   };
 }
 

@@ -26,7 +26,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useJourney } from '@/shared/hooks/useJourney';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
-import { ROUTES } from '@/core/config/routes';
+import { ROUTES, buildRoute } from '@/core/config/routes';
 import { spacing } from '@/core/theme';
 
 import {
@@ -58,6 +58,23 @@ function getCategoryIcon(type: string, color: string) {
   }
 }
 
+const categoryColors: Record<string, string> = {
+  cbt: '#A78BFA',
+  breathing: '#34D399',
+  meditation: '#60A5FA',
+  wellness: '#F472B6',
+};
+
+function getProgramCategoryIcon(categoryId: string, color: string) {
+  switch (categoryId) {
+    case 'cbt': return getCategoryIcon('brain', color);
+    case 'breathing': return getCategoryIcon('wind', color);
+    case 'meditation': return getCategoryIcon('leaf', color);
+    case 'wellness': return getCategoryIcon('sparkles', color);
+    default: return getCategoryIcon('sparkles', color);
+  }
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function JourneyScreen() {
@@ -86,9 +103,32 @@ export function JourneyScreen() {
     refresh,
     refreshRecommendation,
     startExercise,
+    favorites,
+    programs,
   } = useJourney();
 
   const { data: personalization, isLoading: personalizationLoading } = usePersonalization();
+
+  const activeProg = useMemo(() => {
+    if (!journey || !programs) return null;
+    return programs.find((p) => p.id === journey.programId);
+  }, [journey, programs]);
+
+  const minutesRemaining = useMemo(() => {
+    if (!activeProg) return 8;
+    return Math.max(Math.round(activeProg.duration * (1 - (journey?.completionPercent || 0) / 100)), 5);
+  }, [activeProg, journey?.completionPercent]);
+
+  const categoryLabels: Record<string, string> = {
+    cbt: 'CBT Program',
+    breathing: 'Breathing Practice',
+    meditation: 'Guided Meditation',
+    wellness: 'Wellness Studio',
+  };
+  const categoryLabel = useMemo(() => {
+    if (!activeProg) return 'CBT Program';
+    return categoryLabels[activeProg.categoryId] || 'Wellness Program';
+  }, [activeProg]);
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
@@ -196,11 +236,11 @@ export function JourneyScreen() {
           <View style={styles.cardPadding}>
             <CurrentProgramCard
               title={journey?.title || 'Managing Overthinking'}
-              currentLesson={journey?.currentLesson || 3}
-              totalLessons={journey?.totalLessons || 8}
-              completionPercent={journey?.completionPercent || 37}
-              minutesRemaining={8}
-              category="CBT PROGRAM"
+              currentLesson={journey?.currentLesson || 1}
+              totalLessons={journey?.totalLessons || 5}
+              completionPercent={journey?.completionPercent || 0}
+              minutesRemaining={minutesRemaining}
+              category={categoryLabel.toUpperCase()}
               onContinue={handleContinue}
             />
           </View>
@@ -232,6 +272,38 @@ export function JourneyScreen() {
             ))}
           </ScrollView>
         </View>
+
+        {/* ── 4b. Favorite Practices ─────────────────────────── */}
+        {favorites && favorites.length > 0 && (
+          <View style={styles.sectionSpacing}>
+            <JourneySectionHeader
+              title="Your favorite practices"
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesContainer}
+            >
+              {favorites.map((favProg, idx) => {
+                const accentColor = categoryColors[favProg.categoryId] || '#A78BFA';
+                return (
+                  <View key={favProg.id} style={idx < favorites.length - 1 ? styles.categoryGap : undefined}>
+                    <PracticeCategoryCard
+                      icon={getProgramCategoryIcon(favProg.categoryId, accentColor)}
+                      title={favProg.title}
+                      description={favProg.description}
+                      countLabel={`${favProg.lessonCount} Lessons`}
+                      accentColor={accentColor}
+                      width={160}
+                      animationDelay={100 + idx * 50}
+                      onPress={() => router.push(buildRoute(ROUTES.JOURNEY.PROGRAM, { programId: favProg.id }) as any)}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* ── 5. Recommended Activities ──────────────────────── */}
         <View style={styles.sectionSpacing}>

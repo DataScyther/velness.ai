@@ -5,6 +5,7 @@ import type { Recommendation } from '../models/Recommendation';
 import type { Milestone } from '../models/Milestone';
 import type { Streak } from '../models/Streak';
 import type { ExerciseProgress } from '@/repositories/JourneyRepository';
+import type { Mood } from '@/shared/types';
 import { DEFAULT_RECOMMENDATIONS } from '../data/recommendations';
 import { getTodaysRecommendations } from './RecommendationEngine';
 
@@ -164,17 +165,37 @@ export function computeAchievements(
   const completedPrograms = Object.values(userProgress.programProgress)
     .filter((p) => p.status === 'completed');
 
+  const savedAchievements = userProgress.achievements || {};
+  let updated = false;
+
   for (const ms of milestones) {
-    if (ms.id === 'first-exercise' && totalEx >= 1) ms.achievedAt = new Date();
-    if (ms.id === 'five-exercises' && totalEx >= 5) ms.achievedAt = new Date();
+    if (savedAchievements[ms.id]) {
+      ms.achievedAt = new Date(savedAchievements[ms.id]);
+      continue;
+    }
+
+    let met = false;
+    if (ms.id === 'first-exercise' && totalEx >= 1) met = true;
+    if (ms.id === 'five-exercises' && totalEx >= 5) met = true;
     if (ms.id === 'first-lesson') {
       const hasCompletedLesson = Object.values(userProgress.programProgress)
         .some((p) => p.completedLessonIds.length >= 1);
-      if (hasCompletedLesson) ms.achievedAt = new Date();
+      if (hasCompletedLesson) met = true;
     }
-    if (ms.id === 'first-program' && completedPrograms.length >= 1) ms.achievedAt = new Date();
-    if (ms.id === 'ten-exercises' && totalEx >= 10) ms.achievedAt = new Date();
-    if (ms.id === 'three-day-streak' && userProgress.streakDays >= 3) ms.achievedAt = new Date();
+    if (ms.id === 'first-program' && completedPrograms.length >= 1) met = true;
+    if (ms.id === 'ten-exercises' && totalEx >= 10) met = true;
+    if (ms.id === 'three-day-streak' && userProgress.streakDays >= 3) met = true;
+
+    if (met) {
+      const now = new Date();
+      ms.achievedAt = now;
+      savedAchievements[ms.id] = now.toISOString();
+      updated = true;
+    }
+  }
+
+  if (updated) {
+    userProgress.achievements = savedAchievements;
   }
 
   return milestones;
@@ -184,14 +205,17 @@ export function getRecommendations(
   userProgress: UserProgress,
   categories: Category[],
   allExercises: Exercise[],
+  moodHistory: Mood[] = [],
+  recentExercises: string[] = [],
+  completedLessons: string[] = [],
 ): Recommendation[] {
   return getTodaysRecommendations({
     userProgress,
     categories,
     allExercises,
-    moodHistory: [],
-    recentExercises: [],
-    completedLessons: [],
+    moodHistory,
+    recentExercises,
+    completedLessons,
     preferences: [],
   });
 }

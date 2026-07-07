@@ -20,4 +20,6 @@ export interface UserProgress {
   streakDays: number;
   lastActivityAt: Date | null;
   programProgress: Record<string, ProgramProgress>;
+  achievements?: Record<string, string>; // Maps milestoneId -> ISO achieved Date
+  favorites?: string[]; // Array of favorited program IDs
 }

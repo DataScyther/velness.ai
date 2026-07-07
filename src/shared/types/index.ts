@@ -69,6 +69,7 @@ export interface Mood {
   rating: MoodRating;
   note: string;
   timestamp: Date;
+  label?: string;
 }
 
 // ─── Chat ───────────────────────────────────────────────────────────────

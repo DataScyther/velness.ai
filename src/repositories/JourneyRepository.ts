@@ -52,6 +52,7 @@ import { DEFAULT_CATEGORIES } from '@/features/journey/data/categories';
 import { DEFAULT_PROGRAMS, DEFAULT_LESSONS } from '@/features/journey/data/programs';
 import { DEFAULT_RECOMMENDATIONS } from '@/features/journey/data/recommendations';
 import { getRecommendations, computeStreak } from '@/features/journey/services/JourneyService';
+import { moodRepository } from './MoodRepository';
 import { logger } from '@/services/logging';
 
 export interface ExerciseProgress {
@@ -82,64 +83,89 @@ function getDefaultRouteForExercise(type: string): string {
 function computeJourneyFromProgress(
   progress: Record<string, ExerciseProgress>
 ): JourneyProgress {
-  const completedCount = DEFAULT_EXERCISES.filter((ex) => progress[ex.id]?.completed).length;
-  const totalCount = DEFAULT_EXERCISES.length;
-  const allCompleted = completedCount === totalCount;
-  const noneStarted = completedCount === 0;
+  const programStates = DEFAULT_PROGRAMS.map((prog) => {
+    const lessons = DEFAULT_LESSONS.filter((l) => l.programId === prog.id).sort((a, b) => a.order - b.order);
+    const lessonIds = new Set(lessons.map((l) => l.id));
+    const exercises = DEFAULT_EXERCISES.filter((ex) => lessonIds.has(ex.lessonId));
+    
+    const completedExercises = exercises.filter((ex) => progress[ex.id]?.completed);
+    const completedCount = completedExercises.length;
+    const totalCount = exercises.length;
 
-  if (noneStarted) {
+    const completedLessonIds: string[] = [];
+    for (const lesson of lessons) {
+      const lessonExs = exercises.filter((ex) => ex.lessonId === lesson.id);
+      const allCompleted = lessonExs.length > 0 && lessonExs.every((ex) => progress[ex.id]?.completed);
+      if (allCompleted) {
+        completedLessonIds.push(lesson.id);
+      }
+    }
+
+    const dates = completedExercises
+      .map((ex) => progress[ex.id]?.lastCompletedAt)
+      .filter((d): d is Date => !!d);
+    const lastActivity = dates.length > 0
+      ? dates.reduce((latest, d) => d > latest ? d : latest)
+      : null;
+
+    const sortedExercises = [...exercises].sort((a, b) => {
+      const lessonA = lessons.find((l) => l.id === a.lessonId);
+      const lessonB = lessons.find((l) => l.id === b.lessonId);
+      if (lessonA && lessonB && lessonA.order !== lessonB.order) {
+        return lessonA.order - lessonB.order;
+      }
+      return a.sortOrder - b.sortOrder;
+    });
+    const nextExercise = sortedExercises.find((ex) => !progress[ex.id]?.completed) || null;
+
+    const completionPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const currentLesson = completedLessonIds.length + 1;
+
+    let status: 'not_started' | 'active' | 'completed' = 'not_started';
+    if (completedCount === totalCount && totalCount > 0) {
+      status = 'completed';
+    } else if (completedCount > 0) {
+      status = 'active';
+    }
+
     return {
-      programId: 'wellness-basics',
-      title: DEFAULT_EXERCISES[0].title,
-      currentLesson: 1,
-      totalLessons: totalCount,
-      completionPercent: 0,
-      lastActivity: null,
-      resumeTarget: {
-        exerciseId: DEFAULT_EXERCISES[0].id,
-        route: getDefaultRouteForExercise(DEFAULT_EXERCISES[0].type),
-      },
-      status: 'not_started',
+      programId: prog.id,
+      title: prog.title,
+      currentLesson: Math.min(currentLesson, lessons.length > 0 ? lessons.length : 1),
+      totalLessons: lessons.length,
+      completionPercent,
+      lastActivity,
+      resumeTarget: nextExercise
+        ? {
+            exerciseId: nextExercise.id,
+            route: getDefaultRouteForExercise(nextExercise.type),
+          }
+        : null,
+      status,
     };
+  });
+
+  const activePrograms = programStates
+    .filter((ps) => ps.status === 'active')
+    .sort((a, b) => {
+      const timeA = a.lastActivity?.getTime() || 0;
+      const timeB = b.lastActivity?.getTime() || 0;
+      return timeB - timeA;
+    });
+
+  if (activePrograms.length > 0) {
+    return activePrograms[0];
   }
 
-  if (allCompleted) {
-    return {
-      programId: 'wellness-basics',
-      title: DEFAULT_EXERCISES[0].title,
-      currentLesson: totalCount,
-      totalLessons: totalCount,
-      completionPercent: 100,
-      lastActivity: null,
-      resumeTarget: null,
-      status: 'completed',
-    };
+  const notStartedPrograms = programStates.filter((ps) => ps.status === 'not_started');
+  if (notStartedPrograms.length > 0) {
+    const firstProg = DEFAULT_PROGRAMS[0];
+    const firstState = notStartedPrograms.find((ps) => ps.programId === firstProg.id);
+    if (firstState) return firstState;
+    return notStartedPrograms[0];
   }
 
-  const firstUncompletedIndex = DEFAULT_EXERCISES.findIndex(
-    (ex) => !progress[ex.id]?.completed
-  );
-  const nextExercise = DEFAULT_EXERCISES[firstUncompletedIndex];
-  const lastActivityDates = DEFAULT_EXERCISES
-    .map((ex) => progress[ex.id]?.lastCompletedAt)
-    .filter((d): d is Date => !!d);
-  const lastActivity = lastActivityDates.length > 0
-    ? lastActivityDates.reduce((latest, d) => d > latest ? d : latest)
-    : null;
-
-  return {
-    programId: 'wellness-basics',
-    title: DEFAULT_EXERCISES[0].title,
-    currentLesson: firstUncompletedIndex + 1,
-    totalLessons: totalCount,
-    completionPercent: Math.round((completedCount / totalCount) * 100),
-    lastActivity,
-    resumeTarget: {
-      exerciseId: nextExercise.id,
-      route: getDefaultRouteForExercise(nextExercise.type),
-    },
-    status: 'active',
-  };
+  return programStates[0];
 }
 
 export class JourneyRepository {
@@ -223,7 +249,7 @@ export class JourneyRepository {
 
   async loadUserProgress(uid: string): Promise<UserProgress> {
     if (!uid) {
-      return { userId: '', totalExercisesCompleted: 0, streakDays: 0, lastActivityAt: null, programProgress: {} };
+      return { userId: '', totalExercisesCompleted: 0, streakDays: 0, lastActivityAt: null, programProgress: {}, achievements: {}, favorites: [] };
     }
 
     const key = getUserProgressKey(uid);
@@ -239,12 +265,6 @@ export class JourneyRepository {
     const progress = await this.loadExerciseProgress(uid);
     const completedCount = DEFAULT_EXERCISES.filter((ex) => progress[ex.id]?.completed).length;
 
-    const completedLessonIds: string[] = [];
-    for (const lesson of DEFAULT_LESSONS) {
-      const allCompleted = lesson.exerciseIds.every((eid) => progress[eid]?.completed);
-      if (allCompleted) completedLessonIds.push(lesson.id);
-    }
-
     const lastActivityDates = DEFAULT_EXERCISES
       .map((ex) => progress[ex.id]?.lastCompletedAt)
       .filter((d): d is Date => !!d);
@@ -252,27 +272,54 @@ export class JourneyRepository {
       ? lastActivityDates.reduce((latest, d) => d > latest ? d : latest)
       : null;
 
-    const totalCount = DEFAULT_EXERCISES.length;
-    const completionPercent = totalCount > 0
-      ? Math.round((completedCount / totalCount) * 100)
-      : 0;
+    const programProgress: Record<string, ProgramProgress> = {};
+    for (const prog of DEFAULT_PROGRAMS) {
+      const lessons = DEFAULT_LESSONS.filter((l) => l.programId === prog.id);
+      const lessonIds = new Set(lessons.map((l) => l.id));
+      const exercises = DEFAULT_EXERCISES.filter((ex) => lessonIds.has(ex.lessonId));
+      
+      const completedExercises = exercises.filter((ex) => progress[ex.id]?.completed);
+      const completedExCount = completedExercises.length;
+      
+      const completedLessonIds: string[] = [];
+      for (const lesson of lessons) {
+        const lessonExs = exercises.filter((ex) => ex.lessonId === lesson.id);
+        const allCompleted = lessonExs.length > 0 && lessonExs.every((ex) => progress[ex.id]?.completed);
+        if (allCompleted) completedLessonIds.push(lesson.id);
+      }
 
-    const status = completedCount === 0
-      ? PROGRAM_STATUS.NOT_STARTED
-      : completedCount >= totalCount
-      ? PROGRAM_STATUS.COMPLETED
-      : PROGRAM_STATUS.ACTIVE;
+      const progDates = completedExercises
+        .map((ex) => progress[ex.id]?.lastCompletedAt)
+        .filter((d): d is Date => !!d);
+      const progLastActivity = progDates.length > 0
+        ? progDates.reduce((latest, d) => d > latest ? d : latest)
+        : null;
 
-    const programProgress: Record<string, ProgramProgress> = {
-      'wellness-basics': {
-        programId: 'wellness-basics',
+      const totalCount = exercises.length;
+      const completionPercent = totalCount > 0 ? Math.round((completedExCount / totalCount) * 100) : 0;
+      
+      const status = completedExCount === 0
+        ? PROGRAM_STATUS.NOT_STARTED
+        : completedExCount >= totalCount
+        ? PROGRAM_STATUS.COMPLETED
+        : PROGRAM_STATUS.ACTIVE;
+
+      const nextExercise = exercises.find((ex) => !progress[ex.id]?.completed) || null;
+
+      programProgress[prog.id] = {
+        programId: prog.id,
         completedLessonIds,
         completionPercent,
-        lastOpenedAt: lastActivity,
+        lastOpenedAt: progLastActivity,
         status,
-        resumeTarget: null,
-      },
-    };
+        resumeTarget: nextExercise
+          ? {
+              exerciseId: nextExercise.id,
+              route: getDefaultRouteForExercise(nextExercise.type),
+            }
+          : null,
+      };
+    }
 
     const userProgress: UserProgress = {
       userId: uid,
@@ -280,6 +327,8 @@ export class JourneyRepository {
       streakDays: 0,
       lastActivityAt: lastActivity,
       programProgress,
+      achievements: {},
+      favorites: [],
     };
 
     await storageService.setJSON(key, userProgress);
@@ -340,11 +389,44 @@ export class JourneyRepository {
   async loadRecommendations(uid: string): Promise<Recommendation[]> {
     if (!uid) return DEFAULT_RECOMMENDATIONS;
 
-    const fromCloud = await this.loadRecommendationsFromCloud(uid);
-    if (fromCloud.length > 0) return fromCloud;
+    try {
+      const [userProgress, moodHistory, exerciseProgress] = await Promise.all([
+        this.loadUserProgress(uid),
+        moodRepository.loadMoods(uid),
+        this.loadExerciseProgress(uid),
+      ]);
 
-    const userProgress = await this.loadUserProgress(uid);
-    return getRecommendations(userProgress, DEFAULT_CATEGORIES, DEFAULT_EXERCISES);
+      const recentExercises = Object.entries(exerciseProgress)
+        .filter(([_, ep]) => ep.lastCompletedAt)
+        .map(([exerciseId]) => exerciseId);
+
+      const completedLessons = Object.values(userProgress.programProgress).flatMap(
+        (p) => p.completedLessonIds,
+      );
+
+      const recs = getRecommendations(
+        userProgress,
+        DEFAULT_CATEGORIES,
+        DEFAULT_EXERCISES,
+        moodHistory,
+        recentExercises,
+        completedLessons,
+      );
+
+      if (recs.length > 0) {
+        for (const rec of recs) {
+          this.saveRecommendation(uid, rec).catch((err) => {
+            logger.warn('journey', 'Failed to save recommendation to cloud', { err });
+          });
+        }
+      }
+
+      return recs;
+    } catch (error) {
+      logger.error('journey', 'Failed to compute recommendations dynamically, falling back', { error: String(error) });
+      const userProgress = await this.loadUserProgress(uid);
+      return getRecommendations(userProgress, DEFAULT_CATEGORIES, DEFAULT_EXERCISES);
+    }
   }
 
   private async loadRecommendationsFromCloud(uid: string): Promise<Recommendation[]> {
@@ -424,6 +506,33 @@ export class JourneyRepository {
   async computeUserProgress(uid: string): Promise<JourneyProgress> {
     const progress = await this.loadExerciseProgress(uid);
     return computeJourneyFromProgress(progress);
+  }
+
+  async toggleFavorite(uid: string, programId: string): Promise<void> {
+    if (!uid) return;
+    const userProgress = await this.loadUserProgress(uid);
+    const favorites = userProgress.favorites || [];
+    const index = favorites.indexOf(programId);
+    if (index >= 0) {
+      favorites.splice(index, 1);
+    } else {
+      favorites.push(programId);
+    }
+    userProgress.favorites = favorites;
+
+    // Save locally
+    const key = getUserProgressKey(uid);
+    await storageService.setJSON(key, userProgress);
+
+    // Save to cloud
+    const ref = userProgressDocRef(uid);
+    if (ref && db) {
+      try {
+        await setDoc(ref, userProgressToDoc(userProgress), { merge: true });
+      } catch (error) {
+        logger.error('journey', 'Failed to save toggled favorite to cloud', { uid, error: String(error) });
+      }
+    }
   }
 
   // ─── Save ───────────────────────────────────────────────────────────

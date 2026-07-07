@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import '../src/global.css';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

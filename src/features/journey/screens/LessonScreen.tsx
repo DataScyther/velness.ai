@@ -61,7 +61,7 @@ export function LessonScreen() {
     completingRef.current = true;
     try {
       await completeLesson(programId, lessonId);
-      router.push(ROUTES.JOURNEY.COMPLETION as any);
+      router.push(`/journey/completion?programId=${programId}&lessonId=${lessonId}` as any);
     } catch {
       completingRef.current = false;
     }

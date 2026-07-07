@@ -54,6 +54,7 @@ export class MoodRepository {
         rating: entry.rating,
         note: entry.note,
         timestamp: Timestamp.fromDate(entry.timestamp),
+        ...(entry.label !== undefined ? { label: entry.label } : {}),
       });
     } catch (error) {
       console.error('Error syncing mood to cloud:', error);
@@ -111,12 +112,16 @@ export class MoodRepository {
       const snapshot = await getDocs(moodsQuery);
       return snapshot.docs.map((doc) => {
         const data = doc.data();
-        return {
+        const mood: Mood = {
           id: data.id,
           rating: data.rating as Mood['rating'],
           note: data.note || '',
           timestamp: (data.timestamp as Timestamp).toDate(),
-        } as Mood;
+        };
+        if (data.label !== undefined) {
+          mood.label = data.label;
+        }
+        return mood;
       });
     } catch (error) {
       console.error('Error loading moods from cloud:', error);

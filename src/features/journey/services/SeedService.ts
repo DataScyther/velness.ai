@@ -7,7 +7,7 @@ import { programToDoc, lessonToDoc, exerciseToDoc } from '@/features/journey/mod
 import { logger } from '@/services/logging';
 
 const OLD_SEEDED_FLAG_KEY = 'neeva_journey_seeded_v1';
-const SEEDED_FLAG_KEY = 'velness_journey_seeded_v1';
+const SEEDED_FLAG_KEY = 'velness_journey_seeded_sprint4_v2';
 
 let seedingInProgress = false;
 
@@ -15,25 +15,12 @@ async function hasBeenSeeded(): Promise<boolean> {
   const storage = await import('@/services/storage').then((m) => m.storageService);
   const flag = await storage.get(SEEDED_FLAG_KEY);
   if (flag === 'true') return true;
-  const oldFlag = await storage.get(OLD_SEEDED_FLAG_KEY);
-  if (oldFlag === 'true') {
-    await storage.set(SEEDED_FLAG_KEY, 'true');
-    await storage.delete(OLD_SEEDED_FLAG_KEY);
-    return true;
-  }
   return false;
 }
 
 async function markSeeded(): Promise<void> {
   const storage = await import('@/services/storage').then((m) => m.storageService);
   await storage.set(SEEDED_FLAG_KEY, 'true');
-  await storage.delete(OLD_SEEDED_FLAG_KEY);
-}
-
-async function isCollectionEmpty(ref: ReturnType<typeof programsRef>): Promise<boolean> {
-  if (!ref) return true;
-  const snapshot = await getDocs(ref);
-  return snapshot.empty;
 }
 
 export async function ensureSeeded(): Promise<boolean> {
@@ -45,13 +32,6 @@ export async function ensureSeeded(): Promise<boolean> {
     if (seeded) return true;
 
     seedingInProgress = true;
-
-    const programsEmpty = await isCollectionEmpty(programsRef());
-    if (!programsEmpty) {
-      await markSeeded();
-      logger.info('journey', 'Seed skipped — programs already exist in Firestore');
-      return true;
-    }
 
     const batch = writeBatch(db);
 
@@ -66,14 +46,7 @@ export async function ensureSeeded(): Promise<boolean> {
       }
     }
 
-    const existingExerciseIds = new Set<string>();
-    if (!(await isCollectionEmpty(exercisesRef()))) {
-      const snap = await getDocs(exercisesRef()!);
-      snap.forEach((d) => existingExerciseIds.add(d.id));
-    }
-
     for (const exercise of DEFAULT_EXERCISES) {
-      if (existingExerciseIds.has(exercise.id)) continue;
       const exerciseRef = doc(db, 'exercises', exercise.id);
       batch.set(exerciseRef, exerciseToDoc(exercise));
     }
