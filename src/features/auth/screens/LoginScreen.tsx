@@ -190,16 +190,17 @@ export function LoginScreen() {
                 }}
               >
                 <Image
-                  source={require('@/shared/assets/neeva-logo.png')}
+                  source={require('@/shared/assets/velness-logo.jpg')}
                   style={{
                     width: 28,
                     height: 28,
                     resizeMode: 'contain',
+                    borderRadius: 7,
                   }}
                 />
               </View>
               <Text className="text-text-primary text-body font-bold tracking-tight ml-2">
-                Neeva AI
+                Velness
               </Text>
               <Text className="text-text-secondary text-caption font-semibold">
                 1.0.0 Beta
@@ -362,7 +363,7 @@ export function LoginScreen() {
             </View>
 
             <Text className="text-text-secondary text-caption text-center px-4 leading-5 font-medium">
-              By continuing, you agree to Neeva's{' '}
+              By continuing, you agree to Velness'{' '}
               <Text className="underline text-text-primary">Terms of Service</Text> and{' '}
               <Text className="underline text-text-primary">Privacy Policy</Text>.
             </Text>

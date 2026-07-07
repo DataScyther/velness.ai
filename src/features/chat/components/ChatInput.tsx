@@ -175,7 +175,7 @@ export function ChatInput({
       if (!permissionResult) {
         Alert.alert(
           'Microphone Access Needed',
-          'Neeva uses the microphone to convert your speech into text. This helps you express yourself more naturally, especially when typing feels heavy. You can enable mic access in your device Settings.'
+          'Velness uses the microphone to convert your speech into text. This helps you express yourself more naturally, especially when typing feels heavy. You can enable mic access in your device Settings.'
         );
         return;
       }
@@ -324,7 +324,7 @@ export function ChatInput({
     onAbort?.();
   }, [onAbort]);
 
-  const placeholder = isStreaming ? 'Neeva is responding...' : WARM_PLACEHOLDERS[0];
+  const placeholder = isStreaming ? 'Velness is responding...' : WARM_PLACEHOLDERS[0];
 
   return (
     <View

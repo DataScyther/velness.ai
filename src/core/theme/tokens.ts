@@ -1,5 +1,5 @@
 /**
- * Neeva AI Design System — Design Tokens
+ * Velness Design System — Design Tokens
  *
  * Centralised design tokens for typography, spacing, radius, shadows, and motion.
  * These values are the source of truth for the design system.

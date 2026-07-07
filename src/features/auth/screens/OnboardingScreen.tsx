@@ -37,11 +37,11 @@ export function OnboardingScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
         <Image
-          source={require('@/shared/assets/neeva-logo.png')}
-          style={{ width: 120, height: 120, marginBottom: spacing.md }}
+          source={require('@/shared/assets/velness-logo.jpg')}
+          style={{ width: 120, height: 120, resizeMode: 'contain', borderRadius: 24, marginBottom: spacing.md }}
         />
         <Text style={{ ...typography.headingLarge, color: colors.text.primary, textAlign: 'center' }}>
-          Welcome to Neeva
+          Welcome to Velness
         </Text>
         <Text style={{ ...typography.textSecondary, textAlign: 'center', marginVertical: spacing.md }}>
           Your personal AI wellness companion

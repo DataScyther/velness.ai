@@ -248,7 +248,7 @@ export const EmptyConversation = React.memo(function EmptyConversation({
                   </View>
                   <View style={styles.resumeMeta}>
                     <Text style={[styles.resumeTitle, { color: colors.text.primary }]}>Resume Last Conversation</Text>
-                    <Text style={[styles.resumeSubtitle, { color: colors.text.secondary }]}>Pick up where you left off with Neeva</Text>
+                    <Text style={[styles.resumeSubtitle, { color: colors.text.secondary }]}>Pick up where you left off with Velness</Text>
                   </View>
                 </View>
                 <ChevronRight size={18} color={colors.text.secondary} />

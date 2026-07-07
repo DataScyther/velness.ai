@@ -47,7 +47,7 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="pt-4 pb-8 items-center">
-          <View className="w-20 h-20 rounded-full bg-neeva-purple-600/30 items-center justify-center mb-4 border border-neeva-glass-border">
+          <View className="w-20 h-20 rounded-full bg-velness-purple-600/30 items-center justify-center mb-4 border border-velness-glass-border">
             <User size={36} color="#8B5CF6" />
           </View>
           <Text className="text-white text-card-title font-semibold">
@@ -64,7 +64,7 @@ export default function ProfileScreen() {
             <Pressable
               key={index}
               onPress={() => router.push(`/(tabs)/profile/${item.route}` as any)}
-              className="bg-neeva-glass-dark/20 rounded-glass p-4 mb-3 border border-neeva-glass-border flex-row items-center active:opacity-70"
+              className="bg-velness-glass-dark/20 rounded-glass p-4 mb-3 border border-velness-glass-border flex-row items-center active:opacity-70"
             >
               <View
                 className="w-10 h-10 rounded-full items-center justify-center"
@@ -83,7 +83,7 @@ export default function ProfileScreen() {
         <Pressable
           onPress={handleSignOut}
           disabled={signingOut}
-          className="mt-6 bg-neeva-glass-dark/20 rounded-glass p-4 border border-neeva-glass-border flex-row items-center justify-center active:opacity-70"
+          className="mt-6 bg-velness-glass-dark/20 rounded-glass p-4 border border-velness-glass-border flex-row items-center justify-center active:opacity-70"
         >
           {signingOut ? (
             <ActivityIndicator color="#F87171" size="small" />

@@ -385,14 +385,20 @@ export class JourneyRepository {
     }
 
     try {
-      const snap = await getDoc(ref);
+      const snap = await getDocFromServer(ref);
       if (snap.exists()) return streakFromDoc(snap);
-
-      return { currentStreak: 0, longestStreak: 0, lastActivityDate: null, streakHistory: [] };
-    } catch (error) {
-      logger.error('journey', 'Failed to load streak', { uid, error: String(error) });
-      return { currentStreak: 0, longestStreak: 0, lastActivityDate: null, streakHistory: [] };
+    } catch (serverError) {
+      // Fall back to cache when offline
+      try {
+        const cached = await getDocFromCache(ref);
+        if (cached.exists()) return streakFromDoc(cached);
+      } catch {
+        // No cache available either
+      }
+      logger.warn('journey', 'Could not load streak from cloud', { uid, error: String(serverError) });
     }
+
+    return { currentStreak: 0, longestStreak: 0, lastActivityDate: null, streakHistory: [] };
   }
 
   async saveStreak(uid: string, streak: Streak): Promise<void> {

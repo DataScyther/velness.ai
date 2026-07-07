@@ -41,11 +41,11 @@ export function HomeHeader({
       <View style={styles.brandRow}>
         <View style={styles.brandLeft}>
           <Image
-            source={require('@/shared/assets/neeva-logo.png')}
+            source={require('@/shared/assets/velness-logo.jpg')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.wordmark, { color: colors.text.primary }]}>Neeva</Text>
+          <Text style={[styles.wordmark, { color: colors.text.primary }]}>Velness</Text>
         </View>
 
         <View style={styles.brandRight}>
@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 32,
     height: 32,
+    borderRadius: 8,
   },
   wordmark: {
     fontSize: 20,

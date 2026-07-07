@@ -15,7 +15,7 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-app-dark" edges={['top']}>
       <StatusBar style="light" />
-      <View className="px-5 pt-4 pb-6 flex-row items-center border-b border-neeva-glass-border">
+      <View className="px-5 pt-4 pb-6 flex-row items-center border-b border-velness-glass-border">
         <Pressable onPress={() => router.back()} className="w-10 h-10 items-center justify-center active:opacity-70">
           <ArrowLeft size={22} color="white" />
         </Pressable>
@@ -26,7 +26,7 @@ export default function NotificationsScreen() {
         <Text className="text-white/50 text-label font-medium uppercase tracking-wider mt-6 mb-3">
           Push Notifications
         </Text>
-        <View className="bg-neeva-glass-dark/20 rounded-glass border border-neeva-glass-border overflow-hidden">
+        <View className="bg-velness-glass-dark/20 rounded-glass border border-velness-glass-border overflow-hidden">
           <NotificationRow
             icon={pushEnabled ? Bell : BellOff}
             label="Enable Push Notifications"
@@ -64,7 +64,7 @@ export default function NotificationsScreen() {
         </Text>
 
         {!pushEnabled && (
-          <View className="mt-6 bg-neeva-glass-dark/20 rounded-glass p-4 border border-neeva-glass-border">
+          <View className="mt-6 bg-velness-glass-dark/20 rounded-glass p-4 border border-velness-glass-border">
             <Text className="text-white/50 text-body-sm text-center">
               Notifications are currently disabled. Toggle "Enable Push Notifications" above to configure your preferences.
             </Text>
@@ -94,7 +94,7 @@ function NotificationRow({
 }) {
   return (
     <View
-      className={`flex-row items-center px-4 py-4 ${!isLast ? 'border-b border-neeva-glass-border/50' : ''}`}
+      className={`flex-row items-center px-4 py-4 ${!isLast ? 'border-b border-velness-glass-border/50' : ''}`}
     >
       <Icon size={18} color="rgba(255,255,255,0.4)" />
       <View className="flex-1 ml-3">

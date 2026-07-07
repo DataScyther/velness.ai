@@ -91,11 +91,12 @@ export function ForgotPasswordScreen() {
           >
             <View className="mb-4">
               <Image
-                source={require('@/shared/assets/neeva-logo.png')}
+                source={require('@/shared/assets/velness-logo.jpg')}
                 style={{
                   width: width * 0.28,
                   height: width * 0.28,
                   resizeMode: 'contain',
+                  borderRadius: 24,
                 }}
               />
             </View>

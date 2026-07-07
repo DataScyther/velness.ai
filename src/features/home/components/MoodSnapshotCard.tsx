@@ -16,7 +16,7 @@ function getMoodSnapshotSupport(rating: number): string {
   if (rating >= 5) return 'Keep up the great work!';
   if (rating >= 4) return 'A calm state of mind.';
   if (rating >= 3) return 'Taking time to check in matters.';
-  return 'It\'s okay — Neeva is here for you.';
+  return 'It\'s okay — Velness is here for you.';
 }
 
 export function MoodSnapshotCard({

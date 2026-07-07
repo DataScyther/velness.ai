@@ -56,7 +56,7 @@ export default function SubscriptionScreen() {
   return (
     <SafeAreaView className="flex-1 bg-app-dark" edges={['top']}>
       <StatusBar style="light" />
-      <View className="px-5 pt-4 pb-6 flex-row items-center border-b border-neeva-glass-border">
+      <View className="px-5 pt-4 pb-6 flex-row items-center border-b border-velness-glass-border">
         <Pressable onPress={() => router.back()} className="w-10 h-10 items-center justify-center active:opacity-70">
           <ArrowLeft size={22} color="white" />
         </Pressable>
@@ -76,8 +76,8 @@ export default function SubscriptionScreen() {
                 key={plan.name}
                 className={`mb-4 rounded-glass border p-5 ${
                   plan.popular
-                    ? 'bg-neeva-purple-600/15 border-neeva-purple-500/40'
-                    : 'bg-neeva-glass-dark/20 border-neeva-glass-border'
+                    ? 'bg-velness-purple-600/15 border-velness-purple-500/40'
+                    : 'bg-velness-glass-dark/20 border-velness-glass-border'
                 }`}
               >
                 <View className="flex-row items-center justify-between mb-3">
@@ -97,7 +97,7 @@ export default function SubscriptionScreen() {
                     </View>
                   </View>
                   {plan.popular && (
-                    <View className="bg-neeva-purple-600 rounded-full px-3 py-1">
+                    <View className="bg-velness-purple-600 rounded-full px-3 py-1">
                       <Text className="text-white text-label font-semibold">Popular</Text>
                     </View>
                   )}
@@ -115,8 +115,8 @@ export default function SubscriptionScreen() {
                 <Pressable
                   className={`mt-4 rounded-glass py-3 items-center ${
                     plan.popular
-                      ? 'bg-neeva-purple-600 active:opacity-70'
-                      : 'bg-neeva-glass-dark/40 border border-neeva-glass-border active:opacity-70'
+                      ? 'bg-velness-purple-600 active:opacity-70'
+                      : 'bg-velness-glass-dark/40 border border-velness-glass-border active:opacity-70'
                   }`}
                 >
                   <Text className={`text-body font-semibold ${plan.popular ? 'text-white' : 'text-white/80'}`}>
@@ -129,7 +129,7 @@ export default function SubscriptionScreen() {
         </View>
 
         {!features.subscriptions && (
-          <View className="mt-4 bg-neeva-glass-dark/20 rounded-glass p-4 border border-neeva-glass-border">
+          <View className="mt-4 bg-velness-glass-dark/20 rounded-glass p-4 border border-velness-glass-border">
             <Text className="text-white/50 text-body-sm text-center leading-relaxed">
               Subscription management is currently in development. Payment processing will be available soon with RevenueCat or Stripe integration. You are on the Free plan by default.
             </Text>

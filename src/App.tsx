@@ -40,7 +40,7 @@ function AppContent() {
     return (
       <View className="flex-1 bg-background-primary items-center justify-center">
         <Text className="text-text-primary text-lg font-semibold animate-pulse">
-          Loading Neeva AI...
+          Loading Velness...
         </Text>
       </View>
     );
@@ -87,7 +87,7 @@ function AppContent() {
               <Text className="text-white font-bold text-lg">N</Text>
             </View>
             <Text className="text-text-primary font-bold text-xl font-display">
-              Neeva AI
+              Velness
             </Text>
           </View>
 
@@ -127,7 +127,7 @@ function AppContent() {
               <Text className={`font-semibold text-sm ${
                 currentTab === 'chat' ? 'text-brand-primary' : 'text-text-secondary'
               }`}>
-                Neeva Chat
+                Velness Chat
               </Text>
             </Pressable>
           </View>

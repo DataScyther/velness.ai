@@ -62,7 +62,7 @@ function ChatScreenContent() {
         keyboardVerticalOffset={keyboardOffset}
       >
         <ChatHeader
-          title="Neeva AI"
+          title="Velness"
           showBackButton={inConversation}
           onBackPress={controller.clear}
           inConversation={inConversation}

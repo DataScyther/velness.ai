@@ -31,7 +31,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-app-dark" edges={['top']}>
       <StatusBar style="light" />
-      <View className="px-5 pt-4 pb-6 flex-row items-center border-b border-neeva-glass-border">
+      <View className="px-5 pt-4 pb-6 flex-row items-center border-b border-velness-glass-border">
         <Pressable onPress={() => router.back()} className="w-10 h-10 items-center justify-center active:opacity-70">
           <ArrowLeft size={22} color="white" />
         </Pressable>
@@ -42,7 +42,7 @@ export default function SettingsScreen() {
         <Text className="text-white/50 text-label font-medium uppercase tracking-wider mt-6 mb-3">
           Appearance
         </Text>
-        <View className="bg-neeva-glass-dark/20 rounded-glass border border-neeva-glass-border overflow-hidden">
+        <View className="bg-velness-glass-dark/20 rounded-glass border border-velness-glass-border overflow-hidden">
           {themeOptions.map((opt, i) => {
             const Icon = opt.icon;
             const selected = theme === opt.value;
@@ -50,13 +50,13 @@ export default function SettingsScreen() {
               <Pressable
                 key={opt.value}
                 onPress={() => setTheme(opt.value)}
-                className={`flex-row items-center px-4 py-4 ${i < themeOptions.length - 1 ? 'border-b border-neeva-glass-border/50' : ''} ${selected ? 'bg-neeva-purple-600/20' : ''} active:opacity-70`}
+                className={`flex-row items-center px-4 py-4 ${i < themeOptions.length - 1 ? 'border-b border-velness-glass-border/50' : ''} ${selected ? 'bg-velness-purple-600/20' : ''} active:opacity-70`}
               >
                 <Icon size={18} color={selected ? '#8B5CF6' : 'rgba(255,255,255,0.4)'} />
-                <Text className={`flex-1 ml-3 text-body ${selected ? 'text-neeva-purple-400 font-medium' : 'text-white/70'}`}>
+                <Text className={`flex-1 ml-3 text-body ${selected ? 'text-velness-purple-400 font-medium' : 'text-white/70'}`}>
                   {opt.label}
                 </Text>
-                {selected && <View className="w-2.5 h-2.5 rounded-full bg-neeva-purple-500" />}
+                {selected && <View className="w-2.5 h-2.5 rounded-full bg-velness-purple-500" />}
               </Pressable>
             );
           })}
@@ -65,19 +65,19 @@ export default function SettingsScreen() {
         <Text className="text-white/50 text-label font-medium uppercase tracking-wider mt-8 mb-3">
           Communication Tone
         </Text>
-        <View className="bg-neeva-glass-dark/20 rounded-glass border border-neeva-glass-border overflow-hidden">
+        <View className="bg-velness-glass-dark/20 rounded-glass border border-velness-glass-border overflow-hidden">
           {toneOptions.map((opt, i) => {
             const selected = false;
             return (
               <View
                 key={opt.value}
-                className={`flex-row items-center px-4 py-4 ${i < toneOptions.length - 1 ? 'border-b border-neeva-glass-border/50' : ''} ${selected ? 'bg-neeva-purple-600/20' : ''}`}
+                className={`flex-row items-center px-4 py-4 ${i < toneOptions.length - 1 ? 'border-b border-velness-glass-border/50' : ''} ${selected ? 'bg-velness-purple-600/20' : ''}`}
               >
                 <Volume2 size={18} color={selected ? '#8B5CF6' : 'rgba(255,255,255,0.4)'} />
-                <Text className={`flex-1 ml-3 text-body ${selected ? 'text-neeva-purple-400 font-medium' : 'text-white/70'}`}>
+                <Text className={`flex-1 ml-3 text-body ${selected ? 'text-velness-purple-400 font-medium' : 'text-white/70'}`}>
                   {opt.label}
                 </Text>
-                {selected && <View className="w-2.5 h-2.5 rounded-full bg-neeva-purple-500" />}
+                {selected && <View className="w-2.5 h-2.5 rounded-full bg-velness-purple-500" />}
               </View>
             );
           })}
@@ -89,7 +89,7 @@ export default function SettingsScreen() {
         <Text className="text-white/50 text-label font-medium uppercase tracking-wider mt-8 mb-3">
           Language
         </Text>
-        <View className="bg-neeva-glass-dark/20 rounded-glass border border-neeva-glass-border px-4 py-4 flex-row items-center">
+        <View className="bg-velness-glass-dark/20 rounded-glass border border-velness-glass-border px-4 py-4 flex-row items-center">
           <Languages size={18} color="rgba(255,255,255,0.4)" />
           <Text className="flex-1 ml-3 text-white/70 text-body">English</Text>
           <Text className="text-white/30 text-label">Only language</Text>
@@ -100,7 +100,7 @@ export default function SettingsScreen() {
         </Text>
         <Pressable
           onPress={handleDeleteAccount}
-          className="bg-neeva-glass-dark/20 rounded-glass border border-neeva-glass-border px-4 py-4 flex-row items-center active:opacity-70"
+          className="bg-velness-glass-dark/20 rounded-glass border border-velness-glass-border px-4 py-4 flex-row items-center active:opacity-70"
         >
           <Trash2 size={18} color="#F87171" />
           <Text className="flex-1 ml-3 text-red-400 text-body">Delete Account</Text>

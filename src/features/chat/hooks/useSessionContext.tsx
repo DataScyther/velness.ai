@@ -1,6 +1,24 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const OLD_SESSION_KEY = 'neeva_session_context';
+const SESSION_KEY = 'velness_session_context';
+
+async function getSessionMeta(): Promise<SessionMeta | null> {
+  const raw = await AsyncStorage.getItem(SESSION_KEY) || await AsyncStorage.getItem(OLD_SESSION_KEY);
+  if (!raw) return null;
+  if (await AsyncStorage.getItem(OLD_SESSION_KEY) !== null) {
+    await AsyncStorage.setItem(SESSION_KEY, raw);
+    await AsyncStorage.removeItem(OLD_SESSION_KEY);
+  }
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+async function setSessionMeta(data: SessionMeta): Promise<void> {
+  await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data));
+  await AsyncStorage.removeItem(OLD_SESSION_KEY);
+}
+
 interface SessionContext {
   mood: string | null;
   streak: number;
@@ -51,9 +69,8 @@ export function SessionContextProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const raw = await AsyncStorage.getItem('neeva_session_context');
-        if (raw) {
-          const data: SessionMeta = JSON.parse(raw);
+        const data = await getSessionMeta();
+        if (data) {
           const previousSessionAt = data.lastActiveAt ? new Date(data.lastActiveAt) : null;
           const streak = calculateStreak(data.lastActiveAt);
           
@@ -78,16 +95,13 @@ export function SessionContextProvider({ children }: { children: React.ReactNode
   const setMood = useCallback(async (mood: string) => {
     setSessionData(prev => ({ ...prev, mood }));
     try {
-      const existing = await AsyncStorage.getItem('neeva_session_context');
-      const existingData = existing ? JSON.parse(existing) as SessionMeta : {};
-      
+      const existing = await getSessionMeta();
       const updated: SessionMeta = {
-        ...existingData,
+        ...(existing || {}),
         mood,
         lastActiveAt: new Date().toISOString(),
       };
-      
-      await AsyncStorage.setItem('neeva_session_context', JSON.stringify(updated));
+      await setSessionMeta(updated);
     } catch (error) {
       console.error('[SessionContext] Failed to save mood:', error);
     }
@@ -102,12 +116,11 @@ export function SessionContextProvider({ children }: { children: React.ReactNode
         lastActiveAt: new Date().toISOString(),
       };
       
-      AsyncStorage.getItem('neeva_session_context').then(existing => {
-        const existingData = existing ? JSON.parse(existing) as SessionMeta : {};
-        AsyncStorage.setItem('neeva_session_context', JSON.stringify({
-          ...existingData,
+      getSessionMeta().then(existing => {
+        setSessionMeta({
+          ...(existing || {}),
           ...updated,
-        }));
+        });
       }).catch(err => console.error('[SessionContext] Failed to save streak:', err));
       
       return { ...prev, streak: newStreak };
@@ -117,16 +130,13 @@ export function SessionContextProvider({ children }: { children: React.ReactNode
   const setJourneyFocus = useCallback(async (focus: string) => {
     setSessionData(prev => ({ ...prev, journeyFocus: focus }));
     try {
-      const existing = await AsyncStorage.getItem('neeva_session_context');
-      const existingData = existing ? JSON.parse(existing) as SessionMeta : {};
-      
+      const existing = await getSessionMeta();
       const updated: SessionMeta = {
-        ...existingData,
+        ...(existing || {}),
         journeyFocus: focus,
         lastActiveAt: new Date().toISOString(),
       };
-      
-      await AsyncStorage.setItem('neeva_session_context', JSON.stringify(updated));
+      await setSessionMeta(updated);
     } catch (error) {
       console.error('[SessionContext] Failed to save journey focus:', error);
     }

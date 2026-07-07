@@ -6,19 +6,28 @@ import { DEFAULT_EXERCISES } from '@/features/journey/data/exercises';
 import { programToDoc, lessonToDoc, exerciseToDoc } from '@/features/journey/models/dto';
 import { logger } from '@/services/logging';
 
-const SEEDED_FLAG_KEY = 'neeva_journey_seeded_v1';
+const OLD_SEEDED_FLAG_KEY = 'neeva_journey_seeded_v1';
+const SEEDED_FLAG_KEY = 'velness_journey_seeded_v1';
 
 let seedingInProgress = false;
 
 async function hasBeenSeeded(): Promise<boolean> {
   const storage = await import('@/services/storage').then((m) => m.storageService);
   const flag = await storage.get(SEEDED_FLAG_KEY);
-  return flag === 'true';
+  if (flag === 'true') return true;
+  const oldFlag = await storage.get(OLD_SEEDED_FLAG_KEY);
+  if (oldFlag === 'true') {
+    await storage.set(SEEDED_FLAG_KEY, 'true');
+    await storage.delete(OLD_SEEDED_FLAG_KEY);
+    return true;
+  }
+  return false;
 }
 
 async function markSeeded(): Promise<void> {
   const storage = await import('@/services/storage').then((m) => m.storageService);
   await storage.set(SEEDED_FLAG_KEY, 'true');
+  await storage.delete(OLD_SEEDED_FLAG_KEY);
 }
 
 async function isCollectionEmpty(ref: ReturnType<typeof programsRef>): Promise<boolean> {

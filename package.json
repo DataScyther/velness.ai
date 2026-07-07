@@ -1,5 +1,5 @@
 {
-  "name": "neeva-ai",
+  "name": "velness",
   "version": "0.2.0",
   "private": true,
   "main": "index.js",
@@ -10,6 +10,7 @@
     "@expo/vector-icons": "^15.0.3",
     "@hookform/resolvers": "^3.9.1",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "^2.110.1",
     "@tanstack/react-query": "^5.62.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -69,6 +70,7 @@
     "ios": "expo run:ios",
     "web:expo": "expo start --web",
     "test": "vitest run",
+    "test:integration": "vitest run --config backend/integration-tests/vitest.config.ts",
     "firebase:sync-env": "node scripts/sync-firebase-env.mjs"
   },
   "allowScripts": {

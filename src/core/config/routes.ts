@@ -1,5 +1,5 @@
 /**
- * Neeva AI — Route Constants
+ * Velness — Route Constants
  *
  * Centralised route names for Expo Router navigation.
  * Prevents hardcoded strings across the codebase.

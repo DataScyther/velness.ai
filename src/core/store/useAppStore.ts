@@ -1,5 +1,5 @@
 /**
- * Neeva AI — Global Application Store (Zustand)
+ * Velness — Global Application Store (Zustand)
  *
  * Manages UI state only. Server state belongs in TanStack Query.
  * NEVER duplicate server data inside this store.
@@ -426,7 +426,7 @@ export const useAppStore = create<AppStore>()(
         }),
     }),
     {
-      name: 'neeva-app-store',
+      name: 'velness-app-store',
       partialize: (state) => ({
         session: {
           onboardingCompleted: state.session.onboardingCompleted,

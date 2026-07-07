@@ -1,5 +1,5 @@
 /**
- * Neeva AI — Shared Type Definitions
+ * Velness — Shared Type Definitions
  *
  * Core application types shared across features.
  * Feature-specific types live in their respective feature folders.

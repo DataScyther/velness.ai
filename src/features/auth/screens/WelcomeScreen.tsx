@@ -80,11 +80,11 @@ export function WelcomeScreen() {
           {/* Top Branding */}
           <Animated.View entering={FadeInDown.duration(700)} style={styles.topBrand}>
             <Image
-              source={require('@/shared/assets/neeva-logo.png')}
+              source={require('@/shared/assets/velness-logo.jpg')}
               style={styles.smallLogo}
             />
             <Text style={[typography.titleLarge, { color: themeColors.text.primary, fontWeight: '700' }]}>
-              Neeva
+              Velness
             </Text>
           </Animated.View>
 
@@ -104,7 +104,7 @@ export function WelcomeScreen() {
             >
               <View style={styles.glowRing}>
                 <Image
-                  source={require('@/shared/assets/neeva-logo.png')}
+                  source={require('@/shared/assets/velness-logo.jpg')}
                   style={styles.mainLogo}
                 />
               </View>
@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     resizeMode: 'contain',
+    borderRadius: 8,
   },
   mainContent: {
     alignItems: 'center',
@@ -196,6 +197,7 @@ const styles = StyleSheet.create({
     width: 118,
     height: 118,
     resizeMode: 'contain',
+    borderRadius: 24,
   },
   actionContainer: {
     gap: 14,
