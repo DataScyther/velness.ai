@@ -53,7 +53,7 @@ export class GuidedProgressRepository extends BaseRepository<'guided_exercise_pr
     breathingCycle?: number | null
   ): Promise<Row> {
     try {
-      const uid = await this.getCurrentUserId();
+      const uid = await this.requireUserId();
       const payload = {
         user_id: uid,
         exercise_id: exerciseId,
@@ -90,7 +90,7 @@ export class GuidedProgressRepository extends BaseRepository<'guided_exercise_pr
    */
   async remove(exerciseId: string): Promise<void> {
     try {
-      const uid = await this.getCurrentUserId();
+      const uid = await this.requireUserId();
       const { error } = await this.client
         .from('guided_exercise_progress')
         .delete()

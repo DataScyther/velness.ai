@@ -162,6 +162,13 @@ import {
   type UserConvPatch,
 } from './UserConversationRepository';
 
+import {
+  MissionRepository,
+  missionRepository,
+  type MissionInput,
+  type MissionPatch,
+} from './MissionRepository';
+
 // ── Re-exports ─────────────────────────────────────────────────────────────
 export {
   BaseRepository,
@@ -254,6 +261,10 @@ export {
   userConversationRepository,
   type UserConvInput,
   type UserConvPatch,
+  MissionRepository,
+  missionRepository,
+  type MissionInput,
+  type MissionPatch,
 };
 
 // ── Convenience namespace ──────────────────────────────────────────────────
@@ -281,6 +292,7 @@ export const repositories = {
   conversationParticipant: conversationParticipantRepository,
   conversationMessage: conversationMessageRepository,
   userConversation: userConversationRepository,
+  mission: missionRepository,
 } as const;
 
 export default repositories;

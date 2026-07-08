@@ -46,7 +46,7 @@ export class MoodRepository extends BaseRepository<'moods'> {
   }
 
   async create(input: MoodInput): Promise<MoodRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('moods')
       .insert({ ...input, user_id: uid })
@@ -58,7 +58,7 @@ export class MoodRepository extends BaseRepository<'moods'> {
   }
 
   async update(id: string, patch: MoodPatch): Promise<MoodRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('moods')
       .update(patch)
@@ -72,7 +72,7 @@ export class MoodRepository extends BaseRepository<'moods'> {
   }
 
   async remove(id: string): Promise<void> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { error } = await this.client
       .from('moods')
       .delete()

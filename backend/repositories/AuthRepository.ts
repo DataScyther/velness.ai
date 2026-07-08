@@ -96,11 +96,14 @@ export class AuthRepository extends BaseRepository<'profiles'> {
   /** Start an OAuth sign-in flow (redirect-based). */
   async signInWithProvider(
     provider: OAuthProvider,
-    redirectTo?: string,
+    options: { redirectTo?: string; skipBrowserRedirect?: boolean } = {},
   ): Promise<{ url: string | null }> {
     const { data, error } = await this.client.auth.signInWithOAuth({
       provider,
-      options: redirectTo ? { redirectTo } : {},
+      options: {
+        ...(options.redirectTo ? { redirectTo: options.redirectTo } : {}),
+        ...(options.skipBrowserRedirect ? { skipBrowserRedirect: true } : {}),
+      },
     });
     if (error) this.mapAuthError(error, 'signInWithProvider');
     return { url: data.url ?? null };
@@ -108,7 +111,55 @@ export class AuthRepository extends BaseRepository<'profiles'> {
 
   /** Convenience: Google OAuth sign-in (MVP requirement). */
   async signInWithGoogle(redirectTo?: string): Promise<{ url: string | null }> {
-    return this.signInWithProvider('google', redirectTo);
+    return this.signInWithProvider('google', { redirectTo });
+  }
+
+  /**
+   * Exchange an OAuth redirect URL (returned to the app's deep link after a
+   * browser-based sign-in) for a Supabase session. Handles both the implicit
+   * grant (tokens in the URL fragment) and the PKCE flow (`?code=`). Used by
+   * the Expo/`expo-web-browser` Google sign-in flow.
+   */
+  async getSessionFromUrl(url: string): Promise<AuthSession | null> {
+    let accessToken: string | null = null;
+    let refreshToken: string | null = null;
+    let code: string | null = null;
+    try {
+      const parsed = new URL(url);
+      const fromHash = parsed.hash.startsWith('#')
+        ? new URLSearchParams(parsed.hash.slice(1))
+        : null;
+      const get = (key: string): string | null =>
+        (fromHash?.get(key) ?? null) ?? parsed.searchParams.get(key) ?? null;
+      accessToken = get('access_token');
+      refreshToken = get('refresh_token');
+      code = get('code');
+    } catch (error) {
+      throw new RepositoryError(
+        `getSessionFromUrl: ${error instanceof Error ? error.message : 'invalid redirect url'}`,
+        { code: 'invalid_redirect' },
+      );
+    }
+
+    if (accessToken && refreshToken) {
+      const { data, error } = await this.client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (error) this.mapAuthError(error, 'getSessionFromUrl');
+      return data.session ?? null;
+    }
+
+    if (code) {
+      const { data, error } = await this.client.auth.exchangeCodeForSession(code);
+      if (error) this.mapAuthError(error, 'getSessionFromUrl');
+      return data.session ?? null;
+    }
+
+    throw new RepositoryError(
+      'getSessionFromUrl: redirect url contained no access tokens or code.',
+      { code: 'invalid_redirect' },
+    );
   }
 
   /**
@@ -119,7 +170,10 @@ export class AuthRepository extends BaseRepository<'profiles'> {
   async signInAnonymously(): Promise<AuthResponse> {
     const { data, error } = await this.client.auth.signInAnonymously();
     if (error) this.mapAuthError(error, 'signInAnonymously');
-    return { user: data.user ?? null, session: data.session ?? null };
+    // `signInAnonymously` types only expose `user`; the session is present at
+    // runtime, so read it defensively.
+    const session = (data as { session?: AuthSession | null }).session ?? null;
+    return { user: data.user ?? null, session };
   }
 
   /** Sign out the current session. */
@@ -143,6 +197,34 @@ export class AuthRepository extends BaseRepository<'profiles'> {
   async updatePassword(newPassword: string): Promise<void> {
     const { error } = await this.client.auth.updateUser({ password: newPassword });
     if (error) this.mapAuthError(error, 'updatePassword');
+  }
+
+  /**
+   * Promote the current anonymous (guest) session into a permanent
+   * email/password account, keeping the same `auth.uid()`. All RLS-scoped rows
+   * written during the guest session (recommendations, progress, moods, ...) are
+   * therefore inherited rather than orphaned.
+   */
+  async convertAnonymousToEmail(
+    email: string,
+    password: string,
+    meta?: { display_name?: string; name?: string; [key: string]: unknown },
+  ): Promise<AuthResponse> {
+    const { data, error } = await this.client.auth.updateUser({
+      email,
+      password,
+      data: meta,
+    });
+    if (error) this.mapAuthError(error, 'convertAnonymousToEmail');
+    // `updateUser` returns the user but not a fresh session; the existing
+    // anonymous session is preserved in place.
+    return { user: data.user ?? null, session: null };
+  }
+
+  /** True when the active session is an anonymous (guest) Supabase user. */
+  async isAnonymous(): Promise<boolean> {
+    const user = await this.getCurrentUser();
+    return !!user && (user as { is_anonymous?: boolean }).is_anonymous === true;
   }
 
   /**

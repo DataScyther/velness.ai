@@ -154,6 +154,7 @@ module.exports = {
       'expo-secure-store',
       'expo-speech-recognition',
       'expo-system-ui',
+      'expo-web-browser',
       // '@sentry/react-native/expo',  // uncomment when @sentry/react-native is installed
     ],
     extra: {

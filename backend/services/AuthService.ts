@@ -121,6 +121,39 @@ class AuthService {
     return authRepository.signInAnonymously();
   }
 
+  /** Promote the current anonymous session to a real email/password account. */
+  convertAnonymousToEmail(
+    email: string,
+    password: string,
+    meta?: { display_name?: string; name?: string; [key: string]: unknown },
+  ) {
+    return authRepository.convertAnonymousToEmail(email, password, meta);
+  }
+
+  /** Generic OAuth sign-in. `options.skipBrowserRedirect` prevents Supabase
+   *  from auto-opening the browser so the caller (e.g. Expo `WebBrowser`) can
+   *  control the redirect. */
+  signInWithProvider(
+    provider: Parameters<typeof authRepository.signInWithProvider>[0],
+    options?: Parameters<typeof authRepository.signInWithProvider>[1],
+  ) {
+    return authRepository.signInWithProvider(provider, options);
+  }
+
+  /**
+   * Exchange an OAuth redirect URL (returned to the app's deep link after a
+   * browser-based sign-in) for a Supabase session. Used by the Expo Google
+   * sign-in flow once `WebBrowser.openAuthSessionAsync` resolves.
+   */
+  getSessionFromUrl(url: string) {
+    return authRepository.getSessionFromUrl(url);
+  }
+
+  /** Whether the active session is an anonymous (guest) Supabase user. */
+  isAnonymous() {
+    return authRepository.isAnonymous();
+  }
+
   signOut(): Promise<void> {
     return authRepository.signOut();
   }

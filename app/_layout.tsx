@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import '../src/global.css';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { VelnessProvider } from '@/core/providers/VelnessProvider';
 import { ToastContainer } from '@/shared/components/Toast';
+import { ThemeStatusBar } from '@/shared/components/ThemeStatusBar';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { crashReporting } from '@/services/crashReporting';
 import { analyticsService } from '@/services/analytics';
@@ -50,7 +50,7 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <VelnessProvider>
-        <StatusBar style="light" />
+        <ThemeStatusBar />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" options={{ animation: 'fade' }} />
           <Stack.Screen name="auth/welcome" options={{ animation: 'fade' }} />

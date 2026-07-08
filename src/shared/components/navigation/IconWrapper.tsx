@@ -100,11 +100,11 @@ export function IconWrapper({
 
   let iconColor: string;
   if (isDisabled) {
-    iconColor = colors.text.secondary + '40';
+    iconColor = colors.text.disabled;
   } else if (isActive) {
-    iconColor = colors.text.primary;
+    iconColor = colors.brand.primary;
   } else if (isPressed) {
-    iconColor = colors.text.primary + 'B3';
+    iconColor = colors.text.primary;
   } else {
     iconColor = colors.text.secondary;
   }

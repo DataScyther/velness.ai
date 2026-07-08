@@ -46,7 +46,7 @@ export class JournalRepository extends BaseRepository<'journal_entries'> {
   }
 
   async create(input: JournalInput): Promise<JournalRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('journal_entries')
       .insert({ ...input, user_id: uid })
@@ -58,7 +58,7 @@ export class JournalRepository extends BaseRepository<'journal_entries'> {
   }
 
   async update(id: string, patch: JournalPatch): Promise<JournalRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('journal_entries')
       .update(patch)
@@ -72,7 +72,7 @@ export class JournalRepository extends BaseRepository<'journal_entries'> {
   }
 
   async remove(id: string): Promise<void> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { error } = await this.client
       .from('journal_entries')
       .delete()

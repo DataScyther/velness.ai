@@ -50,6 +50,7 @@ export class ProfileRepository extends BaseRepository<'profiles'> {
 
   /** Update a profile by id (only succeeds for the caller's own profile). */
   async update(id: string, patch: ProfilePatch): Promise<ProfileRow> {
+    await this.requireUserId();
     const { data, error } = await this.client
       .from('profiles')
       .update(patch)
@@ -74,7 +75,7 @@ export class ProfileRepository extends BaseRepository<'profiles'> {
 
   /** Convenience helper: set the avatar (storage path or URL) for the user. */
   async updateAvatar(path: string): Promise<ProfileRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     return this.update(uid, { avatar_url: path });
   }
 }

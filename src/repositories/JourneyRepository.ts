@@ -6,6 +6,7 @@ import { lessonRepository } from '../../backend/repositories/LessonRepository';
 import { exerciseRepository } from '../../backend/repositories/ExerciseRepository';
 import { progressRepository } from '../../backend/repositories/ProgressRepository';
 import { recommendationRepository } from '../../backend/repositories/RecommendationRepository';
+import { NotAuthenticatedError } from '../../backend/repositories/baseRepository';
 import { programLessonProgressRepository } from '../../backend/repositories/ProgramLessonProgressRepository';
 import { slugToUUID, uuidToSlug } from '@/features/journey/utils/uuidMapping';
 import {
@@ -471,6 +472,7 @@ export class JourneyRepository {
         expires_at: null,
       });
     } catch (error) {
+      if (error instanceof NotAuthenticatedError) return;
       logger.error('journey', 'Failed to save recommendation', { uid, recId: rec.id, error: String(error) });
     }
   }

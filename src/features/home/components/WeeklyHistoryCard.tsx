@@ -1,21 +1,24 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Animated, { FadeInDown, ZoomIn, FadeIn } from 'react-native-reanimated';
-import { Calendar, CalendarDays } from 'lucide-react-native';
+// src/features/home/components/WeeklyHistoryCard.tsx
+//
+// Compact mood timeline card — ~40% shorter than the previous version.
+// - 7 emoji dots in a single row (no large circles)
+// - Inline empty state (2 lines + CTA, no full-height blank area)
+// - Removed tab toggle (moved to a future detail view)
+// - MoodTimeline SVG chart above the dots
+
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
-import { spacing, borderRadius, shadows } from '@/core/theme';
 import { type Mood, type MoodRating, MOOD_MAP } from '@/shared/types';
-import { WeeklyHistoryHeader } from './WeeklyHistoryHeader';
-import { EmptyState } from './EmptyState';
-import { DayLabel } from './DayLabel';
+import { MoodTimeline } from './MoodTimeline';
 
 interface WeeklyHistoryCardProps {
   moodEntries: Mood[];
-  isLoading?: boolean;
   onCheckIn?: () => void;
 }
 
-const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 const MOOD_COLORS: Record<number, string> = {
   1: '#FF453A',
@@ -25,130 +28,132 @@ const MOOD_COLORS: Record<number, string> = {
   5: '#30D158',
 };
 
-const withAlpha = (hex: string, alpha: string) => `${hex}${alpha}`;
+const SVG_WIDTH = 300;
+const SVG_HEIGHT = 56;
 
 export const WeeklyHistoryCard = React.memo(({
   moodEntries,
-  isLoading = false,
   onCheckIn,
 }: WeeklyHistoryCardProps) => {
   const { colors } = useTheme();
-  const [activeTab, setActiveTab] = useState<'7days' | '30days'>('7days');
 
-  const timelineData = useMemo(() => {
+  const weekData = useMemo(() => {
     const today = new Date();
-    const numDays = activeTab === '7days' ? 7 : 30;
-    const data: { moodLevel: number | null; date: Date }[] = [];
-    for (let i = numDays - 1; i >= 0; i--) {
+    return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today);
-      d.setDate(d.getDate() - i);
+      d.setDate(today.getDate() - (6 - i));
       const dayEntries = moodEntries.filter(
-        (e) => new Date(e.timestamp).toDateString() === d.toDateString()
+        (e) => new Date(e.timestamp).toDateString() === d.toDateString(),
       );
       const latest = dayEntries.length > 0 ? dayEntries[dayEntries.length - 1] : null;
-      data.push({ moodLevel: latest ? latest.rating : null, date: d });
-    }
-    return data;
-  }, [moodEntries, activeTab]);
+      return { moodLevel: latest ? latest.rating : null, date: d };
+    });
+  }, [moodEntries]);
 
-  const hasData = useMemo(() => timelineData.some((d) => d.moodLevel !== null), [timelineData]);
+  const hasData = weekData.some((d) => d.moodLevel !== null);
 
-  if (isLoading) {
-    return (
-      <Animated.View
-        entering={FadeInDown.delay(200).duration(600).springify()}
-        style={styles.container}
-      >
-        <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
-          <WeeklyHistoryHeader />
-          <View style={styles.skeletonBody}>
-            <View style={styles.skeletonRow}>
-              {Array.from({ length: 7 }).map((_, i) => (
-                <View key={i} style={styles.skeletonDay}>
-                  <View style={[styles.skeletonCircle, { backgroundColor: colors.surface.secondary }]} />
-                  <View style={[styles.skeletonLabel, { backgroundColor: colors.surface.secondary }]} />
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-      </Animated.View>
-    );
-  }
+  // Build SVG points from weekData
+  const svgPoints = useMemo(() => {
+    const colWidth = SVG_WIDTH / 7;
+    return weekData.map((d, i) => {
+      const x = colWidth * i + colWidth / 2;
+      // Invert: rating 1 = bottom, 5 = top
+      const y = d.moodLevel != null
+        ? SVG_HEIGHT - 8 - ((d.moodLevel - 1) / 4) * (SVG_HEIGHT - 16)
+        : SVG_HEIGHT / 2;
+      return { x, y, moodLevel: d.moodLevel };
+    });
+  }, [weekData]);
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(200).duration(600).springify()}
-      style={styles.container}
-    >
-      <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
-        <WeeklyHistoryHeader />
-
-        <View
-          style={[
-            styles.segment,
-            { backgroundColor: colors.surface.secondary, borderColor: colors.border.default },
-          ]}
-        >
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeTab === '7days' }}
-            style={({ pressed }) => [
-              styles.segmentTab,
-              activeTab === '7days' && { backgroundColor: colors.surface.primary },
-              activeTab === '7days' && shadows.sm,
-              pressed && activeTab === '7days' && styles.segmentPressed,
-            ]}
-            onPress={() => setActiveTab('7days')}
-          >
-            <Calendar
-              size={14}
-              color={activeTab === '7days' ? colors.brand.primary : colors.text.secondary}
-              style={styles.segmentIcon}
-            />
-            <Text
-              style={[
-                styles.segmentText,
-                { color: activeTab === '7days' ? colors.brand.primary : colors.text.secondary },
-              ]}
-            >
-              Week
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeTab === '30days' }}
-            style={({ pressed }) => [
-              styles.segmentTab,
-              activeTab === '30days' && { backgroundColor: colors.surface.primary },
-              activeTab === '30days' && shadows.sm,
-              pressed && activeTab === '30days' && styles.segmentPressed,
-            ]}
-            onPress={() => setActiveTab('30days')}
-          >
-            <CalendarDays
-              size={14}
-              color={activeTab === '30days' ? colors.brand.primary : colors.text.secondary}
-              style={styles.segmentIcon}
-            />
-            <Text
-              style={[
-                styles.segmentText,
-                { color: activeTab === '30days' ? colors.brand.primary : colors.text.secondary },
-              ]}
-            >
-              Month
-            </Text>
-          </Pressable>
+    <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.surface.primary, borderColor: colors.border.default },
+        ]}
+      >
+        {/* Header row */}
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.text.primary }]}>Mood History</Text>
+          <Text style={[styles.range, { color: colors.text.secondary }]}>7 days</Text>
         </View>
 
-        {!hasData ? (
-          <EmptyState onCheckIn={onCheckIn} />
-        ) : activeTab === '7days' ? (
-          <SevenDayTimeline data={timelineData} />
+        {hasData ? (
+          <>
+            {/* Mini chart */}
+            <View style={styles.chartContainer}>
+              <MoodTimeline
+                points={svgPoints}
+                svgWidth={SVG_WIDTH}
+                svgHeight={SVG_HEIGHT}
+              />
+            </View>
+
+            {/* Day dots row */}
+            <View style={styles.dotsRow}>
+              {weekData.map((item, i) => {
+                const rating = item.moodLevel as MoodRating | null;
+                const isToday = i === 6;
+                const color = rating ? MOOD_COLORS[rating] : null;
+                const emoji = rating ? MOOD_MAP[rating].emoji : null;
+
+                return (
+                  <Animated.View
+                    key={i}
+                    entering={ZoomIn.delay(i * 35).duration(300).springify().damping(16)}
+                    style={styles.dayCol}
+                  >
+                    <View
+                      style={[
+                        styles.dot,
+                        color
+                          ? { backgroundColor: `${color}22`, borderColor: `${color}44` }
+                          : { backgroundColor: 'transparent', borderColor: colors.border.default },
+                        isToday && color && { borderColor: color },
+                      ]}
+                    >
+                      {emoji ? (
+                        <Text style={styles.emoji}>{emoji}</Text>
+                      ) : (
+                        <View style={[styles.emptyDot, { backgroundColor: colors.border.default }]} />
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.dayLabel,
+                        { color: isToday ? colors.brand.primary : colors.text.secondary },
+                        isToday && styles.dayLabelToday,
+                      ]}
+                    >
+                      {isToday ? 'Now' : DAY_LETTERS[item.date.getDay()]}
+                    </Text>
+                  </Animated.View>
+                );
+              })}
+            </View>
+          </>
         ) : (
-          <ThirtyDayTimeline data={timelineData} />
+          /* Compact empty state */
+          <View style={styles.emptyRow}>
+            <View style={styles.emptyText}>
+              <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
+                No entries yet
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: colors.text.secondary }]}>
+                Complete today's check-in to start your mood history
+              </Text>
+            </View>
+            {onCheckIn && (
+              <Pressable
+                onPress={onCheckIn}
+                style={[styles.emptyBtn, { backgroundColor: colors.brand.primary }]}
+                accessibilityRole="button"
+              >
+                <Text style={styles.emptyBtnText}>Check in</Text>
+              </Pressable>
+            )}
+          </View>
         )}
       </View>
     </Animated.View>
@@ -157,245 +162,97 @@ export const WeeklyHistoryCard = React.memo(({
 
 WeeklyHistoryCard.displayName = 'WeeklyHistoryCard';
 
-function SevenDayTimeline({ data }: { data: { moodLevel: number | null; date: Date }[] }) {
-  const { colors } = useTheme();
-
-  return (
-    <View style={styles.weekWrap}>
-      {/* subtle engineered baseline */}
-      <View style={[styles.weekBaseline, { backgroundColor: colors.surface.secondary }]} />
-      <Animated.View entering={FadeIn.duration(300)} style={styles.timeline}>
-        {data.map((item, i) => {
-          const rating = item.moodLevel as MoodRating | null;
-          const moodInfo = rating ? MOOD_MAP[rating] : null;
-          const color = rating ? MOOD_COLORS[rating] : null;
-          const isToday = i === data.length - 1;
-
-          return (
-            <Animated.View
-              key={i}
-              entering={ZoomIn.delay(i * 50).duration(350).springify().damping(14).stiffness(120)}
-              style={styles.dayColumn}
-            >
-              <DayLabel label={isToday ? 'Now' : DAY_NAMES[item.date.getDay()]} isToday={isToday} />
-              {rating ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${moodInfo?.label} mood`}
-                  style={({ pressed }) => [
-                    styles.moodCircle,
-                    { backgroundColor: withAlpha(color, '18'), borderColor: withAlpha(color, '30') },
-                    isToday && { borderColor: color, ...shadows.sm },
-                    pressed && styles.moodPressed,
-                  ]}
-                >
-                  <Text style={styles.moodEmoji}>{moodInfo?.emoji}</Text>
-                </Pressable>
-              ) : (
-                <View
-                  style={[
-                    styles.moodCircle,
-                    styles.moodEmpty,
-                    { borderColor: colors.border.default, backgroundColor: 'transparent' },
-                  ]}
-                />
-              )}
-            </Animated.View>
-          );
-        })}
-      </Animated.View>
-    </View>
-  );
-}
-
-function ThirtyDayTimeline({ data }: { data: { moodLevel: number | null; date: Date }[] }) {
-  const { colors } = useTheme();
-  const COLUMNS = 7;
-  const TOTAL_CELLS = 35;
-
-  return (
-    <View style={styles.monthWrap}>
-      <Animated.View entering={FadeIn.duration(300)} style={styles.gridContainer}>
-        {Array.from({ length: Math.ceil(TOTAL_CELLS / COLUMNS) }).map((_, ri) => (
-          <View key={ri} style={styles.gridRow}>
-            {Array.from({ length: COLUMNS }).map((_, ci) => {
-              const globalIndex = ri * COLUMNS + ci;
-              const item = globalIndex < data.length ? data[globalIndex] : null;
-              const rating = item?.moodLevel ?? null;
-              const color = rating ? MOOD_COLORS[rating] : null;
-              const isEmpty = item === null;
-
-              return (
-                <Animated.View
-                  key={ci}
-                  entering={
-                    globalIndex < data.length
-                      ? ZoomIn.delay(globalIndex * 15).duration(250).springify().damping(16)
-                      : undefined
-                  }
-                  style={styles.gridCell}
-                >
-                  {!isEmpty ? (
-                    rating ? (
-                      <View
-                        style={[
-                          styles.gridDot,
-                          { backgroundColor: color },
-                          { shadowColor: color, ...shadows.sm },
-                        ]}
-                      />
-                    ) : (
-                      <View style={[styles.gridDotEmpty, { borderColor: colors.border.default }]} />
-                    )
-                  ) : (
-                    <View style={styles.gridCellSpacer} />
-                  )}
-                </Animated.View>
-              );
-            })}
-          </View>
-        ))}
-      </Animated.View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
-    marginVertical: spacing.sm,
-  },
   card: {
-    borderRadius: borderRadius['2xl'],
+    borderRadius: 16,
     borderWidth: 1,
-    padding: spacing.lg,
+    padding: 14,
+    paddingBottom: 12,
     overflow: 'hidden',
   },
-
-  segment: {
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    padding: 3,
-    marginBottom: spacing.lg,
+  headerRow: {
     flexDirection: 'row',
-    gap: 3,
-  },
-  segmentTab: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingVertical: spacing.xs,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.sm,
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
+  range: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  chartContainer: {
+    marginHorizontal: -4,
+    marginBottom: 6,
+    // Fixed height matching SVG_HEIGHT
+    height: SVG_HEIGHT,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  dayCol: {
+    flex: 1,
+    alignItems: 'center',
     gap: 4,
   },
-  segmentPressed: {
-    opacity: 0.85,
+  dot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  segmentIcon: {
-    marginRight: 2,
+  emoji: {
+    fontSize: 15,
   },
-  segmentText: {
-    fontSize: 12,
+  emptyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    opacity: 0.4,
+  },
+  dayLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  dayLabelToday: {
     fontWeight: '700',
-    letterSpacing: 0.2,
   },
-
-  weekWrap: {
-    position: 'relative',
-  },
-  weekBaseline: {
-    height: 1,
-    marginHorizontal: 8,
-    marginBottom: spacing.sm,
-    opacity: 1,
-  },
-
-  timeline: {
+  // Compact inline empty state
+  emptyRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-  },
-  dayColumn: {
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 12,
+    paddingVertical: 4,
+  },
+  emptyText: {
     flex: 1,
-    minWidth: 28,
+    gap: 3,
   },
-  moodCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '600',
   },
-  moodEmpty: {
-    borderStyle: 'dashed',
+  emptySubtitle: {
+    fontSize: 12,
+    lineHeight: 17,
   },
-  moodPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.95 }],
+  emptyBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
-  moodEmoji: {
-    fontSize: 18,
-  },
-
-  monthWrap: {
-    paddingBottom: spacing.xs,
-  },
-
-  gridContainer: {
-    paddingVertical: spacing.xs,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  gridCell: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gridCellSpacer: {
-    width: 12,
-    height: 12,
-  },
-  gridDot: {
-    width: 12,
-    height: 12,
-    borderRadius: borderRadius.full,
-  },
-  gridDotEmpty: {
-    width: 8,
-    height: 8,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-  },
-
-  skeletonBody: {
-    paddingVertical: spacing.md,
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  skeletonDay: {
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  skeletonCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  skeletonLabel: {
-    width: 20,
-    height: 7,
-    borderRadius: 2,
+  emptyBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

@@ -21,7 +21,7 @@ import { GlassCard } from '@/shared/components/GlassCard';
 import { useTheme } from '@/hooks/useTheme';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/features/auth/validators';
 import { AUTH_STRINGS } from '@/features/auth/constants';
-import { spacing, colors, typography } from '@/theme/tokens';
+import { spacing, typography } from '@/theme/tokens';
 import { Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');

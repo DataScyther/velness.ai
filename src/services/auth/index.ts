@@ -1,4 +1,6 @@
 import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import {
   authService as backendAuthService,
   type AuthUser,
@@ -188,33 +190,127 @@ class AuthService {
   }
 
   async signInWithGoogle(): Promise<UserProfile> {
-    if (Platform.OS !== 'web') {
-      throw new Error('Google sign-in in Expo Go is not configured yet. Use email/password for now.');
+    // Build the post-auth redirect target. On web we use the browser origin; on
+    // native we use the app's deep link (e.g. `velness://auth/callback`).
+    const redirectTo =
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.origin
+        : Linking.createURL('auth/callback');
+
+    if (Platform.OS === 'web') {
+      try {
+        const { url } = await backendAuthService.signInWithGoogle(redirectTo);
+
+        if (url) {
+          window.location.href = url;
+          throw new Error('Redirecting to Google sign-in...');
+        }
+
+        throw new Error('Failed to start Google sign-in.');
+      } catch (error: any) {
+        if (error?.message?.includes('Redirecting')) throw error;
+        throw new Error(mapSupabaseError(error));
+      }
     }
 
+    // Native (Expo): open the provider URL in an in-app browser and capture the
+    // redirect back to our deep link, then exchange it for a session.
     try {
-      const { url } = await backendAuthService.signInWithGoogle(
-        typeof window !== 'undefined' ? window.location.origin : undefined,
-      );
+      const { url } = await backendAuthService.signInWithProvider('google', {
+        redirectTo,
+        skipBrowserRedirect: true,
+      });
+      if (!url) throw new Error('Failed to start Google sign-in.');
 
-      if (url) {
-        window.location.href = url;
-        throw new Error('Redirecting to Google sign-in...');
+      const result = await WebBrowser.openAuthSessionAsync(url, redirectTo);
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        throw new Error('Google sign-in was cancelled.');
+      }
+      if (result.type !== 'success' || !result.url) {
+        throw new Error('Google sign-in did not complete.');
       }
 
-      throw new Error('Failed to start Google sign-in.');
+      await backendAuthService.getSessionFromUrl(result.url);
+
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if (!user) throw new Error('Google sign-in failed: no user returned.');
+
+      this.currentUser = user;
+      this.userProfile = await this.hydrateProfile(user);
+
+      this.notifyListeners(this.userProfile);
+      analyticsService.trackEvent('auth_signin' as never, { method: 'google' });
+
+      if (!this.userProfile) throw new Error('Failed to load profile');
+      return this.userProfile;
     } catch (error: any) {
-      if (error?.message?.includes('Redirecting')) throw error;
+      if (error?.message?.includes('cancelled')) throw error;
       throw new Error(mapSupabaseError(error));
+    }
+  }
+
+  async signInAnonymously(): Promise<UserProfile> {
+    try {
+      const { user } = await backendAuthService.signInAnonymously();
+      if (!user) throw new Error('Anonymous sign-in failed: no user returned.');
+
+      this.currentUser = user;
+      this.userProfile = await this.hydrateProfile(user);
+
+      this.notifyListeners(this.userProfile);
+      analyticsService.trackEvent('auth_guest' as never, { method: 'anonymous' });
+
+      if (!this.userProfile) throw new Error('Failed to load profile');
+      return this.userProfile;
+    } catch (error) {
+      throw new Error(mapSupabaseError(error));
+    }
+  }
+
+  /**
+   * Enter guest mode via Supabase anonymous auth so guest data persists under
+   * RLS (recommendations, progress, ...). If anonymous sign-in is unavailable
+   * (e.g. not enabled in the Supabase project) it falls back to a purely local
+   * guest profile, keeping the app usable with degraded (non-persisted) data.
+   */
+  async signInAsGuest(): Promise<UserProfile> {
+    try {
+      return await this.signInAnonymously();
+    } catch {
+      const fallback: UserProfile = {
+        uid: `guest-${Date.now()}`,
+        name: 'Guest User',
+        email: `guest-${Date.now()}@example.com`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastLoginAt: new Date(),
+        preferences: { theme: 'light', notifications: false, language: 'en', tone: 'auto' },
+        stats: { totalSessions: 1, totalMinutes: 0, streakDays: 0, lastActivityDate: new Date() },
+        onboardingCompleted: true,
+      };
+      this.currentUser = null;
+      this.userProfile = fallback;
+      this.notifyListeners(this.userProfile);
+      return this.userProfile;
     }
   }
 
   async signUp(data: SignUpData): Promise<UserProfile> {
     try {
-      const result = await backendAuthService.signUp(data.email, data.password, {
-        display_name: data.name,
-        name: data.name,
-      });
+      // If the current session is an anonymous (guest) one, promote it in place
+      // so all RLS-scoped guest data (recommendations, progress, ...) is kept
+      // and re-attached to the now-real account. Otherwise create a new account.
+      const isAnon = await backendAuthService.isAnonymous();
+      const result = isAnon
+        ? await backendAuthService.convertAnonymousToEmail(data.email, data.password, {
+            display_name: data.name,
+            name: data.name,
+          })
+        : await backendAuthService.signUp(data.email, data.password, {
+            display_name: data.name,
+            name: data.name,
+          });
 
       if (result.user) {
         this.currentUser = result.user;

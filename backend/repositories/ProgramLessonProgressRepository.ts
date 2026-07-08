@@ -73,7 +73,7 @@ export class ProgramLessonProgressRepository extends BaseRepository<'program_les
     completedAt?: Date | null
   ): Promise<Row> {
     try {
-      const uid = await this.getCurrentUserId();
+      const uid = await this.requireUserId();
       const payload: Record<string, any> = {
         user_id: uid,
         program_id: programId,
@@ -112,7 +112,7 @@ export class ProgramLessonProgressRepository extends BaseRepository<'program_les
    */
   async remove(programId: string, lessonId: string | null = null): Promise<void> {
     try {
-      const uid = await this.getCurrentUserId();
+      const uid = await this.requireUserId();
       let query = this.client
         .from('program_lesson_progress')
         .delete()

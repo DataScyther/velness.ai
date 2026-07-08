@@ -44,7 +44,7 @@ export class ProgressRepository extends BaseRepository<'progress'> {
   }
 
   async create(input: ProgressInput): Promise<ProgressRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('progress')
       .insert({ ...input, user_id: uid })
@@ -56,7 +56,7 @@ export class ProgressRepository extends BaseRepository<'progress'> {
   }
 
   async update(id: string, patch: ProgressPatch): Promise<ProgressRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('progress')
       .update(patch)
@@ -70,7 +70,7 @@ export class ProgressRepository extends BaseRepository<'progress'> {
   }
 
   async remove(id: string): Promise<void> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { error } = await this.client
       .from('progress')
       .delete()

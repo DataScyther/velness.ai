@@ -413,7 +413,9 @@ Their evidence: "${userInput}"`;
           ] as any,
         });
       } catch (err) {
-        console.warn('Failed to save reflection to journal_entries:', err);
+        if ((err as { name?: string })?.name !== 'NotAuthenticatedError') {
+          console.warn('Failed to save reflection to journal_entries:', err);
+        }
       }
 
       // 4. Track completion in analytics_events
@@ -446,7 +448,9 @@ Their evidence: "${userInput}"`;
           await recommendationRepository.complete(rec.id);
         });
       } catch (err) {
-        console.warn('Failed to record completion in recommendations:', err);
+        if ((err as { name?: string })?.name !== 'NotAuthenticatedError') {
+          console.warn('Failed to record completion in recommendations:', err);
+        }
       }
 
       // Transition to celebrate

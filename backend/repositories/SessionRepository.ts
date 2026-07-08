@@ -44,7 +44,7 @@ export class SessionRepository extends BaseRepository<'sessions'> {
   }
 
   async start(input: SessionInput): Promise<SessionRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('sessions')
       .insert({ ...input, user_id: uid, status: 'active' })
@@ -56,7 +56,7 @@ export class SessionRepository extends BaseRepository<'sessions'> {
   }
 
   async complete(id: string, patch: SessionPatch = {}): Promise<SessionRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('sessions')
       .update({
@@ -74,7 +74,7 @@ export class SessionRepository extends BaseRepository<'sessions'> {
   }
 
   async cancel(id: string): Promise<SessionRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('sessions')
       .update({

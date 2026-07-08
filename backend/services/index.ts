@@ -25,6 +25,7 @@ import { journalService } from './JournalService';
 import { notificationService } from './NotificationService';
 import { userPreferencesService } from './UserPreferencesService';
 import { analyticsService } from './AnalyticsService';
+import { missionService } from './MissionService';
 
 // ── Auth (pre-existing, keep intact) ─────────────────────────────────────────
 export { authService } from './AuthService';
@@ -52,6 +53,7 @@ export {
   notificationService,
   userPreferencesService,
   analyticsService,
+  missionService,
 };
 
 // Row types surfaced by the service boundary (sourced from each service file).
@@ -69,6 +71,7 @@ export type {
   AchievementRow,
   JournalRow,
   NotificationRow,
+  MissionRow,
   PreferencesRow,
   AnalyticsRow,
 } from './rowTypes';
@@ -97,6 +100,8 @@ export type {
   JournalPatch,
   NotificationInput,
   NotificationPatch,
+  MissionInput,
+  MissionPatch,
   PreferencesInput,
   PreferencesPatch,
   AnalyticsEventInput,
@@ -108,6 +113,7 @@ export type JourneyStatus = Database['public']['Enums']['journey_status'];
 export type RecommendationStatus = Database['public']['Enums']['recommendation_status'];
 export type AchievementType = Database['public']['Enums']['achievement_type'];
 export type ExerciseType = Database['public']['Enums']['exercise_type'];
+export type MissionStatus = Database['public']['Enums']['mission_status'];
 
 // ── Convenience namespace ────────────────────────────────────────────────────
 /** Bundles every service singleton for convenient `services.journey.list()` style imports. */
@@ -127,6 +133,7 @@ export const services = {
   notification: notificationService,
   userPreferences: userPreferencesService,
   analytics: analyticsService,
+  mission: missionService,
 } as const;
 
 export default services;

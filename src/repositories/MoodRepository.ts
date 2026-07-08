@@ -1,4 +1,5 @@
 import { moodRepository as backendMoodRepo } from '../../backend/repositories/MoodRepository';
+import { NotAuthenticatedError } from '../../backend/repositories/baseRepository';
 import { storageService } from '@/services/storage';
 import type { Mood } from '@/shared/types';
 
@@ -39,6 +40,7 @@ export class MoodRepository {
         ...(entry.label !== undefined ? { label: entry.label } : {}),
       });
     } catch (error) {
+      if (error instanceof NotAuthenticatedError) return;
       console.error('Error syncing mood to cloud:', error);
       throw error;
     }

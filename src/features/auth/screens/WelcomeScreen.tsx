@@ -6,9 +6,9 @@ import { Svg, Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/core/store/useAppStore';
-import type { UserProfile } from '@/services/auth/types';
+import { authService } from '@/services/auth';
 import { analyticsService } from '@/services/analytics';
-import { spacing, colors, typography, borderRadius } from '@/theme/tokens';
+import { spacing, typography, borderRadius } from '@/theme/tokens';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -31,24 +31,13 @@ export function WelcomeScreen() {
     router.push('/auth/signup');
   }, [router]);
 
-  const handleGuestMode = useCallback(() => {
+  const handleGuestMode = useCallback(async () => {
     analyticsService.trackEvent('login_attempt', { action: 'welcome_guest' });
-    
-    const guestProfile: UserProfile = {
-      uid: `guest-${Date.now()}`,
-      name: 'Guest User',
-      email: `guest-${Date.now()}@example.com`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastLoginAt: new Date(),
-      preferences: { theme: 'light', notifications: false, language: 'en', tone: 'auto' },
-      stats: { totalSessions: 1, totalMinutes: 0, streakDays: 0, lastActivityDate: new Date() },
-    };
 
+    const guestProfile = await authService.signInAsGuest();
     setUser(guestProfile);
     setEmailVerified(true);
     setOnboardingCompleted(true);
-    useAppStore.getState().setPreviousGuestUid(guestProfile.uid);
     router.replace('/(tabs)');
   }, [setUser, setEmailVerified, setOnboardingCompleted, router]);
 
@@ -91,8 +80,8 @@ export function WelcomeScreen() {
           {/* Main Content */}
           <View style={styles.mainContent}>
             <Animated.View entering={FadeInDown.delay(100).duration(800).springify()}>
-              <Text style={styles.welcomeText}>Welcome!</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.welcomeText, { color: themeColors.text.primary }]}>Welcome!</Text>
+              <Text style={[styles.subtitle, { color: themeColors.text.secondary }]}>
                 Your personal AI wellness companion
               </Text>
             </Animated.View>
@@ -102,7 +91,7 @@ export function WelcomeScreen() {
               entering={FadeInUp.delay(400).duration(1000).springify()}
               style={styles.logoContainer}
             >
-              <View style={styles.glowRing}>
+              <View style={[styles.glowRing, { backgroundColor: themeColors.surface.primary }]}>
                 <Image
                   source={require('@/shared/assets/velness-logo.jpg')}
                   style={styles.mainLogo}
@@ -125,7 +114,7 @@ export function WelcomeScreen() {
             </Pressable>
 
             <Pressable style={styles.guestButton} onPress={handleGuestMode}>
-              <Text style={styles.guestButtonText}>Continue as Guest</Text>
+              <Text style={[styles.guestButtonText, { color: themeColors.text.secondary }]}>Continue as Guest</Text>
             </Pressable>
           </Animated.View>
         </View>
@@ -162,13 +151,11 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 42,
     fontWeight: '700',
-    color: colors.text.primary,
     textAlign: 'center',
     letterSpacing: -1.2,
   },
   subtitle: {
     fontSize: 17,
-    color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: 26,
     maxWidth: 280,
@@ -182,7 +169,6 @@ const styles = StyleSheet.create({
     width: 148,
     height: 148,
     borderRadius: 999,
-    backgroundColor: colors.surface.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#6366F1',
@@ -242,7 +228,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   guestButtonText: {
-    color: colors.text.secondary,
     fontSize: 15.5,
     fontWeight: '500',
   },

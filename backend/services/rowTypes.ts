@@ -18,5 +18,6 @@ export type { ProgressRow } from './ProgressService';
 export type { AchievementRow } from './AchievementService';
 export type { JournalRow } from './JournalService';
 export type { NotificationRow } from './NotificationService';
+export type { MissionRow } from './MissionService';
 export type { PreferencesRow } from './UserPreferencesService';
 export type { AnalyticsRow } from './AnalyticsService';

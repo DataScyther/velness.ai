@@ -62,11 +62,11 @@ export function NavigationItem({ name, label, hint }: NavigationItemProps) {
 
   let textColor: string;
   if (isDisabled) {
-    textColor = colors.text.secondary + '40';
+    textColor = colors.text.disabled;
   } else if (isActive) {
-    textColor = colors.text.primary;
+    textColor = colors.brand.primary;
   } else {
-    textColor = colors.text.secondary + 'B3';
+    textColor = colors.text.secondary;
   }
 
   return (
@@ -81,6 +81,12 @@ export function NavigationItem({ name, label, hint }: NavigationItemProps) {
       accessibilityHint={hint}
       style={styles.pressable}
     >
+      {isActive && !isDisabled && (
+        <View
+          pointerEvents="none"
+          style={[styles.activePill, { backgroundColor: colors.brand.subtle }]}
+        />
+      )}
       <Animated.View style={[styles.container, animatedStyle]}>
         <View style={styles.iconContainer}>
           <IconWrapper
@@ -109,6 +115,16 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
+  },
+  activePill: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    left: 6,
+    right: 6,
+    borderRadius: 16,
+    zIndex: 0,
   },
   iconContainer: {
     position: 'relative',

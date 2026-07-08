@@ -10,13 +10,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
-import { spacing, typography, colors } from '@/theme/tokens';
+import { useTheme } from '@/hooks/useTheme';
+import { spacing, typography } from '@/theme/tokens';
 
 interface SplashScreenProps {
   onComplete: (destination: 'auth' | 'home') => void;
 }
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
+  const { colors } = useTheme();
   const { initialized, isAuthenticated, initialize } = useAuth();
   const logoScale = useSharedValue(0.3);
   const logoOpacity = useSharedValue(0);

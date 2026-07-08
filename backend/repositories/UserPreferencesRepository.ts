@@ -38,7 +38,7 @@ export class UserPreferencesRepository extends BaseRepository<'user_preferences'
 
   /** Insert preferences, or update the existing row (unique `user_id`). */
   async upsert(input: PreferencesInput): Promise<PreferencesRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('user_preferences')
       .upsert({ ...input, user_id: uid })
@@ -50,7 +50,7 @@ export class UserPreferencesRepository extends BaseRepository<'user_preferences'
   }
 
   async update(patch: PreferencesPatch): Promise<PreferencesRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('user_preferences')
       .update(patch)

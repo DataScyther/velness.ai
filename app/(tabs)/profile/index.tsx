@@ -91,7 +91,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleOpenEdit}
-              style={[styles.editButtonBadge, { backgroundColor: colors.brand.primary }]}
+              style={[styles.editButtonBadge, { backgroundColor: colors.brand.primary, borderColor: colors.border.default }]}
             >
               <Edit2 size={12} color={colors.brand.contrastText} />
             </TouchableOpacity>
@@ -264,7 +264,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
     elevation: 3,
     shadowColor: '#000000',
     shadowOpacity: 0.15,

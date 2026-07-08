@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -51,10 +50,10 @@ export function NavigationContainer({
 
   const containerBorderColor =
     theme === 'dark'
-      ? 'rgba(255, 255, 255, 0.15)'
-      : 'rgba(0, 0, 0, 0.07)';
+      ? 'rgba(255, 255, 255, 0.14)'
+      : 'rgba(15, 23, 42, 0.08)';
 
-  const shadowColor = theme === 'dark' ? '#000000' : '#475569';
+  const shadowColor = theme === 'dark' ? '#000000' : '#334155';
   const bottomPosition = Math.max(LAYOUT.TAB_BAR_MARGIN, insets.bottom);
 
   return (
@@ -74,33 +73,26 @@ export function NavigationContainer({
       ]}
     >
       <BlurView
-        intensity={theme === 'dark' ? 75 : 90}
+        intensity={theme === 'dark' ? 70 : 90}
         tint={theme === 'dark' ? 'dark' : 'light'}
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Svg width="100%" height="100%">
-          <Defs>
-            <LinearGradient id="glassGradientDark" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor="rgba(255, 255, 255, 0.06)" stopOpacity={1} />
-              <Stop offset="50%" stopColor="rgba(26, 20, 42, 0.55)" stopOpacity={1} />
-              <Stop offset="100%" stopColor="rgba(11, 8, 20, 0.92)" stopOpacity={1} />
-            </LinearGradient>
-            <LinearGradient id="glassGradientLight" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor="rgba(255, 255, 255, 0.55)" stopOpacity={1} />
-              <Stop offset="40%" stopColor="rgba(240, 244, 248, 0.50)" stopOpacity={1} />
-              <Stop offset="100%" stopColor="rgba(255, 255, 255, 0.92)" stopOpacity={1} />
-            </LinearGradient>
-          </Defs>
-          <Rect
-            width="100%"
-            height="100%"
-            rx={PILL_RADIUS}
-            fill={theme === 'dark' ? 'url(#glassGradientDark)' : 'url(#glassGradientLight)'}
-          />
-        </Svg>
-      </View>
+      {/* Clean, theme-fitted surface. This sits over the BlurView so the bar
+          looks intentional and consistent in BOTH themes and on web (where
+          BlurView has no effect). No white/silver gradient sheen. */}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            backgroundColor:
+              theme === 'dark'
+                ? 'rgba(18, 18, 27, 0.88)'
+                : 'rgba(255, 255, 255, 0.88)',
+          },
+        ]}
+        pointerEvents="none"
+      />
 
       <View
         style={[
@@ -108,10 +100,11 @@ export function NavigationContainer({
           {
             backgroundColor:
               theme === 'dark'
-                ? 'rgba(255, 255, 255, 0.12)'
-                : 'rgba(255, 255, 255, 0.70)',
+                ? 'rgba(255, 255, 255, 0.06)'
+                : 'rgba(255, 255, 255, 0.7)',
           },
         ]}
+        pointerEvents="none"
       />
 
       <View style={styles.contentRow}>{children}</View>

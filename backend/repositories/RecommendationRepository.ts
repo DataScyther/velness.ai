@@ -54,7 +54,7 @@ export class RecommendationRepository extends BaseRepository<'recommendations'> 
   }
 
   async create(input: RecommendationInput): Promise<RecommendationRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('recommendations')
       .insert({ ...input, user_id: uid, status: 'pending' })
@@ -82,7 +82,7 @@ export class RecommendationRepository extends BaseRepository<'recommendations'> 
     status: RecommendationStatus,
     patch: RecommendationPatch,
   ): Promise<RecommendationRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('recommendations')
       .update({ status, ...patch })

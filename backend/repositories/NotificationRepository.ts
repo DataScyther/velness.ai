@@ -51,7 +51,7 @@ export class NotificationRepository extends BaseRepository<'notifications'> {
   }
 
   async create(input: NotificationInput): Promise<NotificationRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('notifications')
       .insert({ ...input, user_id: uid, read: false })
@@ -63,7 +63,7 @@ export class NotificationRepository extends BaseRepository<'notifications'> {
   }
 
   async update(id: string, patch: NotificationPatch): Promise<NotificationRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('notifications')
       .update(patch)
@@ -81,7 +81,7 @@ export class NotificationRepository extends BaseRepository<'notifications'> {
   }
 
   async markAllRead(): Promise<void> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { error } = await this.client
       .from('notifications')
       .update({ read: true })
@@ -91,7 +91,7 @@ export class NotificationRepository extends BaseRepository<'notifications'> {
   }
 
   async remove(id: string): Promise<void> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { error } = await this.client
       .from('notifications')
       .delete()

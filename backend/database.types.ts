@@ -608,6 +608,73 @@ export type Database = {
           },
         ]
       }
+      missions: {
+        Row: {
+          assigned_for_date: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          lesson_id: string | null
+          program_id: string | null
+          source: string
+          status: Database["public"]["Enums"]["mission_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_for_date?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          lesson_id?: string | null
+          program_id?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["mission_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_for_date?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          lesson_id?: string | null
+          program_id?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["mission_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missions_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missions_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1062,6 +1129,7 @@ export type Database = {
       exercise_type: "guided" | "journal" | "adhd_game" | "breathing"
       journey_status: "active" | "completed" | "paused" | "archived"
       lesson_status: "locked" | "unlocked" | "in_progress" | "completed"
+      mission_status: "pending" | "active" | "completed" | "skipped"
       mood_level: "very_low" | "low" | "neutral" | "good" | "great"
       notification_channel: "push" | "in_app" | "email"
       notification_type:

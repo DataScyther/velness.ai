@@ -79,6 +79,7 @@ android/local.properties
 .claude/
 .kilocode/
 .kilo/
+kilo.json
 skills-lock.json
 icon.png
 

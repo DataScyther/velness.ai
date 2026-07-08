@@ -63,7 +63,7 @@ export class AchievementRepository extends BaseRepository<'achievements'> {
   }
 
   async create(input: AchievementInput): Promise<AchievementRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('achievements')
       .insert({ ...input, user_id: uid })
@@ -75,7 +75,7 @@ export class AchievementRepository extends BaseRepository<'achievements'> {
   }
 
   async update(id: string, patch: AchievementPatch): Promise<AchievementRow> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { data, error } = await this.client
       .from('achievements')
       .update(patch)
@@ -89,7 +89,7 @@ export class AchievementRepository extends BaseRepository<'achievements'> {
   }
 
   async remove(id: string): Promise<void> {
-    const uid = await this.getCurrentUserId();
+    const uid = await this.requireUserId();
     const { error } = await this.client
       .from('achievements')
       .delete()

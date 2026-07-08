@@ -65,6 +65,20 @@ export class RepositoryError extends Error {
   }
 }
 
+/**
+ * Thrown by repository **write** methods when there is no real Supabase session
+ * (e.g. fallback guest mode, where `auth.uid()` is null). Callers treat this as a
+ * benign "cloud unavailable, keep local" signal rather than a DB failure so we
+ * never hit RLS and never spam RLS-violation errors for unauthenticated users.
+ */
+export class NotAuthenticatedError extends Error {
+  constructor(message = 'No authenticated Supabase session; cloud write skipped.') {
+    super(message);
+    this.name = 'NotAuthenticatedError';
+    Object.setPrototypeOf(this, NotAuthenticatedError.prototype);
+  }
+}
+
 /** Normalize an unknown thrown value into a `RepositoryError`. */
 export function toRepositoryError(error: unknown, context: string): RepositoryError {
   if (error && typeof error === 'object' && 'message' in error) {
@@ -99,9 +113,32 @@ export class BaseRepository<TTable extends TableName> {
   }
 
   /**
+   * Return true when there is a real Supabase session (signed-in *or* working
+   * anonymous auth). Fallback local guests have no session and return false.
+   */
+  protected async isAuthenticated(): Promise<boolean> {
+    const { data, error } = await this.client.auth.getUser();
+    return !error && !!data.user;
+  }
+
+  /**
+   * Like `getCurrentUserId()` but for **write** paths: throws
+   * `NotAuthenticatedError` when there is no real session instead of stamping
+   * the GUEST_UID sentinel (which would fail RLS `user_id = auth.uid()`).
+   */
+  protected async requireUserId(): Promise<string> {
+    const { data, error } = await this.client.auth.getUser();
+    if (error || !data.user) {
+      throw new NotAuthenticatedError();
+    }
+    return data.user.id;
+  }
+
+  /**
    * Return the id of the currently authenticated user, or the sentinel
    * GUEST_UID when there is no active session. This avoids PostgREST UUID
    * parse errors when callers pass the result to `.eq('user_id', ...)`.
+   * Reads should use this; writes should use `requireUserId()`.
    */
   protected async getCurrentUserId(): Promise<string> {
     const { data, error } = await this.client.auth.getUser();

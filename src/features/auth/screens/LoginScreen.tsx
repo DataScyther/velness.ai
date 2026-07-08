@@ -18,7 +18,6 @@ import Svg, { Path } from 'react-native-svg';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { authService } from '@/services/auth';
-import type { UserProfile } from '@/services/auth/types';
 import { analyticsService } from '@/services/analytics';
 import { useAppStore } from '@/core/store/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
@@ -28,7 +27,7 @@ import { PasswordField } from '@/shared/components/PasswordField';
 import { GoogleSignInButton } from '@/features/auth/components/GoogleSignInButton';
 import { loginSchema, type LoginFormData } from '@/features/auth/validators';
 import { AUTH_STRINGS } from '@/features/auth/constants';
-import { spacing, colors, typography, borderRadius } from '@/theme/tokens';
+import { spacing, typography, borderRadius } from '@/theme/tokens';
 
 const { width } = Dimensions.get('window');
 
@@ -98,13 +97,6 @@ export function LoginScreen() {
     clearError();
     analyticsService.trackEvent('login_attempt', { action: 'google' });
     try {
-      if (Platform.OS !== 'web') {
-        addToast({
-          type: 'error',
-          message: 'Google Sign-In is not configured for mobile yet. Please use email/password.',
-        });
-        return;
-      }
       await authService.signInWithGoogle();
       analyticsService.trackEvent('login_success', { method: 'google' });
     } catch (err: any) {
@@ -130,23 +122,13 @@ export function LoginScreen() {
     }
   }, [clearError, addToast]);
 
-  const handleGuestMode = useCallback(() => {
+  const handleGuestMode = useCallback(async () => {
     analyticsService.trackEvent('login_attempt', { action: 'guest' });
-    const guestProfile: UserProfile = {
-      uid: `guest-${Date.now()}`,
-      name: 'Guest User',
-      email: `guest-${Date.now()}@example.com`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastLoginAt: new Date(),
-      preferences: { theme: 'dark', notifications: false, language: 'en', tone: 'auto' },
-      stats: { totalSessions: 1, totalMinutes: 0, streakDays: 0, lastActivityDate: new Date() },
-    };
+
+    const guestProfile = await authService.signInAsGuest();
     setUser(guestProfile);
     setEmailVerified(true);
     setOnboardingCompleted(true);
-    const store = useAppStore.getState();
-    store.setPreviousGuestUid(guestProfile.uid);
     router.replace('/(tabs)');
   }, [setUser, setEmailVerified, setOnboardingCompleted, router]);
 
