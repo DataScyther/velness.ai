@@ -47,7 +47,7 @@ export function HomeHeader({ onNotificationPress, unreadCount = 0 }: HomeHeaderP
         >
           <Bell size={20} color={colors.text.secondary} />
           {unreadCount > 0 && (
-            <View style={[styles.notificationDot, { backgroundColor: colors.brand.primary }]} />
+            <View style={[styles.notificationDot, { backgroundColor: colors.danger }]} />
           )}
         </Pressable>
 

@@ -17,10 +17,10 @@ export function getTimeOfDay(): TimeOfDay {
 
 export function getTimeEmoji(timeOfDay: TimeOfDay): string {
   const map: Record<TimeOfDay, string> = {
-    morning: '🌤',
-    afternoon: '☀️',
-    evening: '🌙',
-    night: '✨',
+    morning: 'sunny',
+    afternoon: 'sun',
+    evening: 'moon',
+    night: 'stars',
   };
   return map[timeOfDay];
 }

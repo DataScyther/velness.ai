@@ -14,7 +14,9 @@ import { EXERCISE_TYPE } from '@/features/journey/constants';
 import type { ExerciseWithProgress } from '@/features/journey/models';
 import { GuidedExerciseEngine } from '../components/GuidedExerciseEngine';
 import { GUIDED_STEPS_CONFIG } from '../data/guidedSteps';
+import { JourneyNavigationGuard } from '../services/JourneyNavigationGuard';
 import { DEFAULT_LESSONS } from '@/features/journey/data/programs';
+import { analyticsService } from '@/services/analytics';
 
 type LifecycleStage = 'introduction' | 'preparation' | 'exercise' | 'pause' | 'completion' | 'reflection' | 'saving';
 
@@ -337,6 +339,11 @@ export function ExerciseScreen() {
     return exercises.find((ex: ExerciseWithProgress) => ex.id === targetId) || null;
   }, [exercises, targetId]);
 
+  const lesson = useMemo(() => {
+    if (!exercise) return null;
+    return DEFAULT_LESSONS.find((l) => l.id === exercise.lessonId) || null;
+  }, [exercise]);
+
   // Lifecycle stage state
   const [stage, setStage] = useState<LifecycleStage>('introduction');
   const [prepSeconds, setPrepSeconds] = useState(5);
@@ -379,16 +386,62 @@ export function ExerciseScreen() {
     return () => clearInterval(timer);
   }, [stage, transitionToStage]);
 
+  // Log exercise start event
+  useEffect(() => {
+    if (stage === 'exercise' && exercise && uid) {
+      const isSleep = exercise.lessonId?.startsWith('sleep-preparation') || targetId.startsWith('sleep-preparation');
+      const eventName = isSleep
+        ? 'sleep_session_started'
+        : exercise.type === EXERCISE_TYPE.BREATHING
+        ? 'breathing_session_started'
+        : exercise.type === EXERCISE_TYPE.MEDITATION
+        ? 'meditation_session_started'
+        : null;
+
+      if (eventName) {
+        analyticsService.trackEvent(eventName as any, {
+          exercise_id: exercise.id,
+          program_id: lesson?.programId || '',
+          lesson_id: exercise.lessonId || '',
+          session_id: targetId,
+        });
+      }
+    }
+  }, [stage, exercise, uid, targetId, lesson?.programId]);
+
   const handleSave = useCallback(async () => {
     if (!uid || !targetId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     transitionToStage('saving');
     try {
       await journeyRepository.saveProgress(uid, targetId, 1);
+
+      // Log completion event
+      if (exercise) {
+        const isSleep = exercise.lessonId?.startsWith('sleep-preparation') || targetId.startsWith('sleep-preparation');
+        const eventName = isSleep
+          ? 'sleep_session_completed'
+          : exercise.type === EXERCISE_TYPE.BREATHING
+          ? 'breathing_session_completed'
+          : exercise.type === EXERCISE_TYPE.MEDITATION
+          ? 'meditation_completed'
+          : null;
+
+        if (eventName) {
+          analyticsService.trackEvent(eventName as any, {
+            exercise_id: exercise.id,
+            program_id: lesson?.programId || '',
+            lesson_id: exercise.lessonId || '',
+            session_id: targetId,
+          });
+        }
+      }
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       await queryClient.invalidateQueries({ queryKey: ['journey', 'exercises', uid] });
       await queryClient.invalidateQueries({ queryKey: ['journey', 'user-progress', uid] });
       await queryClient.invalidateQueries({ queryKey: ['journey', 'legacy', uid] });
+      await queryClient.invalidateQueries({ queryKey: ['homeState'] });
       
       const title = exercise?.title || 'Exercise';
       const duration = exercise?.estimatedTime || 0;
@@ -397,7 +450,7 @@ export function ExerciseScreen() {
       console.error('[ExerciseScreen] Save failed:', err);
       transitionToStage('reflection'); // fallback
     }
-  }, [uid, exerciseId, exercise, queryClient, transitionToStage]);
+  }, [uid, targetId, exercise, lesson?.programId, queryClient, transitionToStage]);
 
   const handleExerciseComplete = (data?: string) => {
     if (data) {
@@ -422,10 +475,7 @@ export function ExerciseScreen() {
     );
   }
 
-  const lesson = useMemo(() => {
-    if (!exercise) return null;
-    return DEFAULT_LESSONS.find((l) => l.id === exercise.lessonId) || null;
-  }, [exercise]);
+
 
   const isGuided = useMemo(() => {
     if (!exercise) return false;
@@ -444,6 +494,7 @@ export function ExerciseScreen() {
             await queryClient.invalidateQueries({ queryKey: ['journey', 'exercises', uid] });
             await queryClient.invalidateQueries({ queryKey: ['journey', 'user-progress', uid] });
             await queryClient.invalidateQueries({ queryKey: ['journey', 'legacy', uid] });
+            await queryClient.invalidateQueries({ queryKey: ['homeState'] });
             router.replace('/(tabs)/journey');
           }}
         />

@@ -3,7 +3,7 @@
 // The primary "continue" card — medium size, gradient accent border.
 // Progress bar animates from 0 → current value on mount.
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   FadeInUp,
@@ -14,9 +14,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Play } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { shadows } from '@/core/theme';
 
 interface ContinueJourneyCardProps {
   title: string;
+  status?: 'not_started' | 'active' | 'completed';
+  lastActivity?: string | null;
   currentStep: number;
   totalSteps: number;
   percent: number;
@@ -26,6 +29,8 @@ interface ContinueJourneyCardProps {
 
 export const ContinueJourneyCard = React.memo(({
   title,
+  status = 'active',
+  lastActivity = null,
   currentStep,
   totalSteps,
   percent,
@@ -48,6 +53,33 @@ export const ContinueJourneyCard = React.memo(({
     width: `${progress.value}%`,
   }));
 
+  const { eyebrowText, pausedText } = useMemo(() => {
+    if (status === 'completed' || percent === 100) {
+      return { eyebrowText: 'Next Recommendation', pausedText: null };
+    }
+    if (status === 'not_started' || percent === 0) {
+      return { eyebrowText: 'Begin Journey', pausedText: null };
+    }
+    
+    // Active or Paused
+    let isPaused = false;
+    let daysStr = '';
+    if (lastActivity) {
+      const diffMs = Date.now() - new Date(lastActivity).getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays >= 2) {
+        isPaused = true;
+        daysStr = diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+      }
+    }
+
+    if (isPaused) {
+      return { eyebrowText: 'Resume', pausedText: daysStr };
+    }
+
+    return { eyebrowText: `Continue Lesson ${currentStep}`, pausedText: null };
+  }, [status, percent, lastActivity, currentStep]);
+
   return (
     <Animated.View
       entering={FadeInUp.delay(100).duration(500)}
@@ -62,6 +94,7 @@ export const ContinueJourneyCard = React.memo(({
             backgroundColor: colors.surface.primary,
             borderColor: colors.border.default,
           },
+          shadows.sm,
           pressed && { opacity: 0.88 },
         ]}
         accessibilityRole="button"
@@ -72,9 +105,16 @@ export const ContinueJourneyCard = React.memo(({
           <Play size={18} color={colors.brand.primary} fill={colors.brand.primary} />
         </View>
 
-        <Text style={[styles.eyebrow, { color: colors.brand.primary }]}>
-          Continue
-        </Text>
+        <View style={styles.eyebrowRow}>
+          <Text style={[styles.eyebrow, { color: colors.brand.primary }]}>
+            {eyebrowText}
+          </Text>
+          {pausedText && (
+            <Text style={[styles.pausedBadge, { color: colors.text.secondary }]}>
+              {pausedText}
+            </Text>
+          )}
+        </View>
 
         <Text style={[styles.title, { color: colors.text.primary }]} numberOfLines={2}>
           {title}
@@ -115,6 +155,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
     gap: 5,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pausedBadge: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   iconRow: {
     width: 36,

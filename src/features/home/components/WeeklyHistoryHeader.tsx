@@ -46,32 +46,32 @@ export const WeeklyHistoryHeader = React.memo(() => {
   const orbAStyle = useAnimatedStyle(() => ({
     opacity: interpolate(liquid.value, [0, 1], [0.55, 0.82]),
     transform: [
-      { translateX: interpolate(liquid.value, [0, 1], [-10, 18]) },
-      { translateY: interpolate(liquid.value, [0, 1], [4, -12]) },
-      { scale: interpolate(liquid.value, [0, 1], [0.94, 1.08]) },
+      { translateX: interpolate(liquid.value, [0, 1], [-10, 18]) } as any,
+      { translateY: interpolate(liquid.value, [0, 1], [4, -12]) } as any,
+      { scale: interpolate(liquid.value, [0, 1], [0.94, 1.08]) } as any,
     ],
   }));
 
   const orbBStyle = useAnimatedStyle(() => ({
     opacity: interpolate(liquid.value, [0, 1], [0.26, 0.48]),
     transform: [
-      { translateX: interpolate(liquid.value, [0, 1], [14, -16]) },
-      { translateY: interpolate(liquid.value, [0, 1], [-8, 10]) },
-      { scale: interpolate(liquid.value, [0, 1], [1.06, 0.96]) },
+      { translateX: interpolate(liquid.value, [0, 1], [14, -16]) } as any,
+      { translateY: interpolate(liquid.value, [0, 1], [-8, 10]) } as any,
+      { scale: interpolate(liquid.value, [0, 1], [1.06, 0.96]) } as any,
     ],
   }));
 
   const sheenStyle = useAnimatedStyle(() => ({
     opacity: interpolate(liquid.value, [0, 0.5, 1], [0.12, 0.38, 0.12]),
     transform: [
-      { translateX: interpolate(liquid.value, [0, 1], [-230, 230]) },
-      { rotate: '-18deg' },
+      { translateX: interpolate(liquid.value, [0, 1], [-230, 230]) } as any,
+      { rotate: '-18deg' } as any,
     ],
   }));
 
   const borderColors = isDark
-    ? ['rgba(255,255,255,0.34)', 'rgba(125,211,252,0.18)', 'rgba(255,255,255,0.06)']
-    : ['rgba(255,255,255,0.92)', 'rgba(96,165,250,0.28)', 'rgba(255,255,255,0.46)'];
+    ? (['rgba(255,255,255,0.34)', 'rgba(125,211,252,0.18)', 'rgba(255,255,255,0.06)'] as const)
+    : (['rgba(255,255,255,0.92)', 'rgba(96,165,250,0.28)', 'rgba(255,255,255,0.46)'] as const);
 
   const glassBackground = isDark
     ? 'rgba(10, 16, 30, 0.58)'

@@ -29,8 +29,11 @@ export class AnalyticsRepository extends BaseRepository<'analytics_events'> {
       .insert({ ...input, user_id: uid })
       .select('*')
       .single();
-    if (error) throw toRepositoryError(error, 'AnalyticsRepository.track');
-    if (!data) throw new Error('AnalyticsRepository.track: no row returned.');
+    if (error) {
+      console.warn('[Analytics] track failed (non-fatal):', error.message);
+      return null;
+    }
+    if (!data) return null;
     return data;
   }
 

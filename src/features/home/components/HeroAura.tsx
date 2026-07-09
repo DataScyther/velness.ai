@@ -27,6 +27,7 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  cancelAnimation,
   Easing,
   useReducedMotion,
 } from 'react-native-reanimated';
@@ -102,6 +103,11 @@ export function HeroAura({ timeOfDay, size = 120 }: HeroAuraProps) {
       -1,
       false,
     );
+    return () => {
+      cancelAnimation(breathe);
+      cancelAnimation(scale);
+      cancelAnimation(rotate);
+    };
   }, [breathe, scale, rotate, reduced]);
 
   const glowStyle = useAnimatedStyle(() => ({

@@ -20,7 +20,12 @@ import type { RecommendationRow } from '../../../../backend/services/Recommendat
 import type { AnalyticsRow } from '../../../../backend/services/AnalyticsService';
 import type { ProfileRow } from '../../../../backend/services/ProfileService';
 
+import type { JourneyProgress } from '@/features/journey/types/JourneyProgress';
+import { journeyRepository } from '@/repositories/JourneyRepository';
+
 import type { Mood, MoodRating } from '@/shared/types';
+import { getTimeOfDay } from '@/features/home/utils/adaptiveContext';
+import type { TimeOfDay } from '@/features/home/utils/adaptiveContext';
 
 // ─── Narrative Moment ─────────────────────────────────────────────────────────
 
@@ -37,6 +42,118 @@ export interface AdaptiveContent {
   headline: string;
   subline: string;
   ctaLabel: string;
+}
+
+// ─── Smart Welcome Card (MODULE 1) ─────────────────────────────────────────────
+//
+// The greeting becomes a "living dashboard": instead of a single static message,
+// the most salient message for *today* is chosen from a priority ladder.
+//
+// Detection source: `analyticsService.list(50)` → `recentEvents` (AnalyticsRow[]).
+// Each row has `{ event_name, created_at, properties }`.
+//
+// Event-name taxonomy (analytics `event_name` strings):
+//   • `meditation_completed`   — REAL, existing string (src/services/analytics/index.ts).
+//                                Used here as the breathing proxy because no dedicated
+//                                breathing event exists yet (see ASSUMPTIONS below).
+//   • `breathing_session_completed` — PROPOSED canonical string for a finished
+//                                breathing/paced-breathing session. Add this emit at
+//                                the end of every breathing session.
+//   • `cbt_lesson_completed`   — PROPOSED canonical string for a finished CBT lesson.
+//                                No lesson-completion analytics event exists yet.
+//
+// NOTE: detection only honors events whose `created_at` is *today*.
+
+const BREATHING_COMPLETED_EVENTS = [
+  'breathing_session_completed', // proposed (canonical)
+  'meditation_completed', // real, existing proxy
+] as const;
+
+const CBT_LESSON_COMPLETED_EVENTS = [
+  'cbt_lesson_completed', // proposed (canonical)
+] as const;
+
+// Streak count at/above which we treat the streak as a "milestone" worth celebrating.
+const STREAK_MILESTONE = 1;
+
+function isSameDay(iso?: string | null): boolean {
+  if (!iso) return false;
+  return new Date(iso).toDateString() === new Date().toDateString();
+}
+
+function didEventHappenToday(events: AnalyticsRow[], names: readonly string[]): boolean {
+  return events.some((e) => names.includes(e.event_name) && isSameDay(e.created_at));
+}
+
+/**
+ * PRIORITY LADDER (most → least salient):
+ *   1. breathing session completed today   → "Nice work."
+ *   2. CBT lesson completed today           → "You've completed another CBT lesson."
+ *   3. streak milestone reached             → "Day {streak}"
+ *   4. time-of-day base greeting (fallback) → Good Morning / Afternoon / Evening
+ *
+ * Only headline + subline are returned here. The CTA label stays owned by
+ * `buildAdaptiveContent` (keyed off `narrativeMoment`) so the check-in / journey
+ * CTA logic is preserved untouched.
+ */
+function buildSmartGreeting(ctx: {
+  timeOfDay: TimeOfDay;
+  streak: number;
+  didBreathingToday: boolean;
+  didCbtToday: boolean;
+  hasCheckedInToday: boolean;
+  firstName: string | null;
+  reflectedYesterday?: boolean;
+}): { headline: string; subline: string } {
+  if (ctx.didBreathingToday) {
+    return {
+      headline: 'Nice work.',
+      subline: "Your breathing session lowered today's stress.",
+    };
+  }
+  if (ctx.didCbtToday) {
+    return {
+      headline: "You've completed another CBT lesson.",
+      subline: 'Momentum matters.',
+    };
+  }
+  if (ctx.streak >= STREAK_MILESTONE) {
+    return {
+      headline: `Day ${ctx.streak}`,
+      subline: ctx.streak >= 7
+        ? "You're building something real."
+        : "Don't break the chain.",
+    };
+  }
+  switch (ctx.timeOfDay) {
+    case 'morning':
+      return {
+        headline: 'Good Morning',
+        subline: ctx.reflectedYesterday
+          ? "You reflected yesterday. Let's continue."
+          : "Let's begin gently.",
+      };
+    case 'afternoon':
+      return {
+        headline: 'Good Afternoon',
+        subline: ctx.hasCheckedInToday
+          ? "You've already made progress today."
+          : 'How is your day going?',
+      };
+    case 'evening':
+      return {
+        headline: 'Good Evening',
+        subline: ctx.hasCheckedInToday
+          ? "You've already made progress today."
+          : 'Ready to wind down?',
+      };
+    case 'night':
+    default:
+      return {
+        headline: 'Good Night',
+        subline: "Let's help your mind slow down.",
+      };
+  }
 }
 
 // ─── Adapters ─────────────────────────────────────────────────────────────────
@@ -68,19 +185,54 @@ export type HomeScreenData = {
   narrativeMoment: NarrativeMoment;
   adaptiveContent: AdaptiveContent;
   recommendationReason: string | null;
+  intention: string;
 
   // Mood
   todayMood: Mood | null;
   moodEntries: Mood[];
 
   // Journey
-  journey: JourneyRow | null;
+  journey: JourneyProgress | null;
 
   // Data
   recommendations: RecommendationRow[];
   recentEvents: AnalyticsRow[];
   profile: ProfileRow | null;
 };
+
+// ─── Intentions ───────────────────────────────────────────────────────────────
+const INTENTIONS: Record<TimeOfDay, string[]> = {
+  morning: [
+    'Stay present.',
+    'Breathe through challenges.',
+    'Focus on one thing at a time.',
+    'Embrace small progress.',
+  ],
+  afternoon: [
+    'Maintain your energy.',
+    'Take a mindful minute.',
+    'Be kind to yourself.',
+    'Acknowledge your progress.',
+  ],
+  evening: [
+    'Let go of today.',
+    'Rest is progress.',
+    'Embrace the quiet.',
+    'Reflect on one positive thing.',
+  ],
+  night: [
+    'Prepare to wind down.',
+    'Sleep is recovery.',
+    'Clear your mind.',
+    'Feel the calm.',
+  ],
+};
+
+function getDailyIntention(timeOfDay: TimeOfDay): string {
+  const day = new Date().getDate();
+  const list = INTENTIONS[timeOfDay] || INTENTIONS.morning;
+  return list[day % list.length];
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -170,46 +322,52 @@ function buildAdaptiveContent(
   firstName: string | null,
   streak: number,
   journeyTitle: string | null,
+  hasCheckedInToday: boolean,
 ): AdaptiveContent {
   const name = firstName ?? 'there';
 
+  // Dynamic CTA based on user state
+  const dynamicCta = hasCheckedInToday
+    ? (journeyTitle ? `Continue ${journeyTitle}` : 'Continue')
+    : 'Complete Today\'s Check-in';
+
   const MAP: Record<NarrativeMoment, AdaptiveContent> = {
     morning_fresh: {
-      headline: `Good morning, ${name} 🌤`,
+      headline: `Good morning, ${name}`,
       subline: 'Ready to start today?',
-      ctaLabel: 'Begin check-in',
+      ctaLabel: hasCheckedInToday ? 'Continue' : 'Begin check-in',
     },
     afternoon_active: {
-      headline: `Hey, ${name} 👋`,
+      headline: `Hey, ${name}`,
       subline: journeyTitle
         ? `Continue: ${journeyTitle}`
         : "Let's keep the momentum going.",
-      ctaLabel: 'Continue journey',
+      ctaLabel: dynamicCta,
     },
     evening_wind_down: {
-      headline: `Good evening, ${name} 🌙`,
+      headline: `Good evening, ${name}`,
       subline: "Let's slow down and reflect.",
-      ctaLabel: 'Reflect now',
+      ctaLabel: hasCheckedInToday ? 'Reflect now' : 'Check in',
     },
     post_lesson: {
-      headline: `Nice work, ${name} 🎉`,
+      headline: `Nice work, ${name}`,
       subline: 'One more lesson unlocks tomorrow.',
       ctaLabel: 'See progress',
     },
     missed_days: {
-      headline: `Welcome back, ${name} 🤍`,
+      headline: `Welcome back, ${name}`,
       subline: "Let's restart gently. No pressure.",
       ctaLabel: 'Check in now',
     },
     streak_active: {
-      headline: `Day ${streak} 🔥`,
+      headline: `Day ${streak}`,
       subline: "You're building something real.",
-      ctaLabel: 'Keep going',
+      ctaLabel: dynamicCta,
     },
     default: {
-      headline: `Hello, ${name} 👋`,
+      headline: `Hello, ${name}`,
       subline: "Here's your day at a glance.",
-      ctaLabel: 'Continue',
+      ctaLabel: dynamicCta,
     },
   };
 
@@ -220,10 +378,9 @@ function buildAdaptiveContent(
 
 class HomeViewModel {
   async getHomeScreenData(): Promise<HomeScreenData> {
-    const [moodRows, journeys, recommendations, recentEvents, profile] =
+    const [moodRows, recommendations, recentEvents, profile] =
       await Promise.all([
         moodService.list(30),
-        journeyService.listByStatus('active'),
         recommendationService.list('pending'),
         analyticsService.list(50),
         profileService.getCurrent(),
@@ -236,17 +393,53 @@ class HomeViewModel {
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
       );
 
-    const journey = journeys[0] ?? null;
     const streak = calcStreak(moodEntries);
+    const journey = profile?.id ? await journeyRepository.computeUserProgress(profile.id) : null;
     const daysSinceLast = calcDaysSinceLastCheckIn(moodEntries);
     const firstName = getFirstName(profile);
-    const narrativeMoment = deriveMoment(moodEntries, streak, daysSinceLast);
-    const adaptiveContent = buildAdaptiveContent(
+    const hasCheckedInToday = !!getTodayMood(moodEntries);
+
+    // Smart Welcome Card: pick the most salient message for *today*.
+    const didBreathingToday = didEventHappenToday(
+      recentEvents,
+      BREATHING_COMPLETED_EVENTS,
+    );
+    const didCbtToday = didEventHappenToday(
+      recentEvents,
+      CBT_LESSON_COMPLETED_EVENTS,
+    );
+
+    let narrativeMoment = deriveMoment(moodEntries, streak, daysSinceLast);
+    if (didCbtToday) {
+      narrativeMoment = 'post_lesson';
+    } else if (streak >= 1 && narrativeMoment !== 'missed_days') {
+      narrativeMoment = 'streak_active';
+    }
+
+    // CTA label is owned by buildAdaptiveContent (moment-based) — kept intact.
+    const baseAdaptive = buildAdaptiveContent(
       narrativeMoment,
       firstName,
       streak,
       journey?.title ?? null,
+      hasCheckedInToday,
     );
+
+    const smart = buildSmartGreeting({
+      timeOfDay: getTimeOfDay(),
+      streak,
+      didBreathingToday,
+      didCbtToday,
+      hasCheckedInToday,
+      firstName,
+      reflectedYesterday: false, // TODO: wire up from journal data
+    });
+
+    const adaptiveContent: AdaptiveContent = {
+      ...baseAdaptive,
+      headline: smart.headline,
+      subline: smart.subline,
+    };
 
     // Build recommendation reason from journey context
     const recommendationReason = journey
@@ -255,6 +448,9 @@ class HomeViewModel {
       ? 'Based on your recent activity'
       : null;
 
+    const timeOfDay = getTimeOfDay();
+    const intention = getDailyIntention(timeOfDay);
+
     return {
       greeting: buildGreeting(profile),
       dayCount: calcDayCount(profile),
@@ -262,6 +458,7 @@ class HomeViewModel {
       narrativeMoment,
       adaptiveContent,
       recommendationReason,
+      intention,
       todayMood: getTodayMood(moodEntries),
       moodEntries,
       journey,

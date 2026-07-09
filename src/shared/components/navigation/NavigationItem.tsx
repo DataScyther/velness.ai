@@ -81,12 +81,6 @@ export function NavigationItem({ name, label, hint }: NavigationItemProps) {
       accessibilityHint={hint}
       style={styles.pressable}
     >
-      {isActive && !isDisabled && (
-        <View
-          pointerEvents="none"
-          style={[styles.activePill, { backgroundColor: colors.brand.subtle }]}
-        />
-      )}
       <Animated.View style={[styles.container, animatedStyle]}>
         <View style={styles.iconContainer}>
           <IconWrapper
@@ -116,15 +110,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
-  },
-  activePill: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: 6,
-    right: 6,
-    borderRadius: 16,
-    zIndex: 0,
   },
   iconContainer: {
     position: 'relative',

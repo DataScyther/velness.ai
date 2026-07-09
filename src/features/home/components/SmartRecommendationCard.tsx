@@ -1,13 +1,19 @@
 // src/features/home/components/SmartRecommendationCard.tsx
 //
 // Contextual recommendation that explains WHY — not just WHAT.
-// Replaces generic "Recommended" with a reason → recommendation narrative.
+// Phase 9: Added bullet-point reasoning, spring press, stagger animation.
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { Sparkles, ArrowRight } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { shadows } from '@/core/theme';
 
 interface SmartRecommendationCardProps {
   reason: string;        // "Because you've been studying CBT"
@@ -23,39 +29,99 @@ export function SmartRecommendationCard({
   onPress,
 }: SmartRecommendationCardProps) {
   const { colors } = useTheme();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.98, { damping: 14, stiffness: 300 });
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 280 });
+  }, [scale]);
+
+  // Generate contextual reasoning bullets based on time and context
+  const reasonBullets = useMemo(() => {
+    const bullets: string[] = [];
+    const hour = new Date().getHours();
+
+    if (hour >= 22 || hour < 5) {
+      bullets.push("It's late — winding down helps sleep quality");
+    } else if (hour >= 20) {
+      bullets.push(`It's after ${hour >= 22 ? 'midnight' : '8 PM'}`);
+    } else if (hour < 10) {
+      bullets.push('Morning mindfulness boosts focus');
+    }
+
+    if (title.toLowerCase().includes('sleep')) {
+      bullets.push('Rest prepares your mind for tomorrow');
+    } else if (title.toLowerCase().includes('breathing')) {
+      bullets.push('Deep breathing activates your calming system');
+    } else if (title.toLowerCase().includes('cbt') || title.toLowerCase().includes('thought')) {
+      bullets.push('Reframing thoughts reduces mental friction');
+    } else if (title.toLowerCase().includes('grounding')) {
+      bullets.push('Sensory awareness brings you to the present');
+    }
+
+    // Cap at 3 bullets
+    return bullets.slice(0, 3);
+  }, [title]);
 
   return (
-    <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+    <Animated.View
+      entering={FadeInDown.delay(100).duration(500)}
+      style={animatedStyle}
+    >
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[
           styles.card,
           {
             backgroundColor: colors.surface.primary,
             borderColor: colors.border.default,
           },
-          pressed && styles.pressed,
+          shadows.sm,
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Recommendation: ${title}. ${reason}`}
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={[styles.iconBadge, { backgroundColor: `${colors.brand.primary}18` }]}>
-            <Sparkles size={14} color={colors.brand.primary} />
+          <View style={[styles.iconBadge, { backgroundColor: `${colors.text.tertiary}14` }]}>
+            <Sparkles size={14} color={colors.text.secondary} />
           </View>
           <Text style={[styles.reasonText, { color: colors.text.secondary }]}>
             {reason}
           </Text>
         </View>
 
-        {/* Divider */}
-        <View style={[styles.divider, { backgroundColor: colors.border.default }]} />
+        {/* Reasoning bullets */}
+        {reasonBullets.length > 0 && (
+          <View style={styles.bulletList}>
+            {reasonBullets.map((bullet, idx) => (
+              <Animated.View
+                key={idx}
+                entering={FadeInDown.delay(200 + idx * 80).duration(400)}
+                style={styles.bulletRow}
+              >
+                <Text style={[styles.bulletDot, { color: colors.text.tertiary }]}>•</Text>
+                <Text style={[styles.bulletText, { color: colors.text.secondary }]}>
+                  {bullet}
+                </Text>
+              </Animated.View>
+            ))}
+          </View>
+        )}
 
         {/* Body */}
         <View style={styles.body}>
           <View style={styles.textBlock}>
-            <Text style={[styles.label, { color: colors.brand.primary }]}>
+            <Text style={[styles.label, { color: colors.text.tertiary }]}>
               We recommend
             </Text>
             <Text style={[styles.title, { color: colors.text.primary }]}>
@@ -68,7 +134,7 @@ export function SmartRecommendationCard({
             )}
           </View>
           <View style={[styles.cta, { backgroundColor: colors.brand.primary }]}>
-            <Text style={styles.ctaText}>Try it</Text>
+            <Text style={styles.ctaText}>Try</Text>
             <ArrowRight size={14} color="#FFFFFF" />
           </View>
         </View>
@@ -83,15 +149,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  pressed: {
-    opacity: 0.88,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 10,
+    paddingBottom: 8,
     gap: 8,
   },
   iconBadge: {
@@ -108,10 +171,26 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     letterSpacing: 0.1,
   },
-  divider: {
-    height: 1,
-    marginHorizontal: 16,
-    opacity: 0.6,
+  bulletList: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    gap: 4,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingLeft: 32, // Align with reason text
+  },
+  bulletDot: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  bulletText: {
+    fontSize: 12,
+    lineHeight: 17,
+    flex: 1,
   },
   body: {
     flexDirection: 'row',
@@ -146,9 +225,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 10,
+    minHeight: 44,
   },
   ctaText: {
     color: '#FFFFFF',

@@ -27,6 +27,7 @@ import { DEFAULT_CATEGORIES } from '@/features/journey/data/categories';
 import { DEFAULT_PROGRAMS, DEFAULT_LESSONS } from '@/features/journey/data/programs';
 import { DEFAULT_RECOMMENDATIONS } from '@/features/journey/data/recommendations';
 import { getRecommendations, computeStreak } from '@/features/journey/services/JourneyService';
+import { ensureSeeded } from '@/features/journey/services/SeedService';
 import { moodRepository } from './MoodRepository';
 import { logger } from '@/services/logging';
 
@@ -421,6 +422,11 @@ export class JourneyRepository {
     if (!uid) return DEFAULT_RECOMMENDATIONS;
 
     try {
+      // Ensure the referenced exercises exist in the DB (seeded with the
+      // matching slugToUUID ids) before we save recommendations that point
+      // at them — otherwise the recommendations_exercise_id_fkey violates.
+      await ensureSeeded();
+
       const [userProgress, moodHistory, exerciseProgress] = await Promise.all([
         this.loadUserProgress(uid),
         moodRepository.loadMoods(uid),
@@ -462,19 +468,42 @@ export class JourneyRepository {
 
   async saveRecommendation(uid: string, rec: Recommendation): Promise<void> {
     try {
-      await recommendationRepository.create({
-        exercise_id: slugToUUID(rec.exerciseId),
-        reason: rec.reason,
-        priority: 0,
-        source: 'computed',
-        journey_id: null,
-        program_id: null,
-        expires_at: null,
-      });
+      await this.insertRecommendation(slugToUUID(rec.exerciseId), rec);
     } catch (error) {
       if (error instanceof NotAuthenticatedError) return;
+      // If the referenced exercise hasn't been seeded yet, save the
+      // recommendation without the FK link instead of dropping it.
+      if (error instanceof Error && error.message.includes('foreign key constraint')) {
+        try {
+          await this.insertRecommendation(null, rec);
+          return;
+        } catch (fallbackErr) {
+          if (fallbackErr instanceof NotAuthenticatedError) return;
+          logger.error('journey', 'Failed to save recommendation (null exercise)', {
+            uid,
+            recId: rec.id,
+            error: String(fallbackErr),
+          });
+          return;
+        }
+      }
       logger.error('journey', 'Failed to save recommendation', { uid, recId: rec.id, error: String(error) });
     }
+  }
+
+  private async insertRecommendation(
+    exerciseId: string | null,
+    rec: Recommendation,
+  ): Promise<void> {
+    await recommendationRepository.create({
+      exercise_id: exerciseId,
+      reason: rec.reason,
+      priority: 0,
+      source: 'computed',
+      journey_id: null,
+      program_id: null,
+      expires_at: null,
+    });
   }
 
   async loadStreak(uid: string): Promise<Streak> {

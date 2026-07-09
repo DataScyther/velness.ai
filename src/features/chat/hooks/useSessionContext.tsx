@@ -21,14 +21,12 @@ async function setSessionMeta(data: SessionMeta): Promise<void> {
 
 interface SessionContext {
   mood: string | null;
-  streak: number;
   firstSessionDate: string | null;
   previousSessionAt: Date | null;
   previousSessionMood: string | null;
   previousSessionFocus: string | null;
   sessionCount: number;
   setMood(mood: string): void;
-  incrementStreak(): void;
   setJourneyFocus(focus: string): void;
 }
 
@@ -40,25 +38,13 @@ interface SessionMeta {
   journeyFocus?: string | null;
   sessionCount?: number;
   firstSessionDate?: string | null;
-  streak?: number;
 }
 
 const SessionContext = createContext<SessionContext | null>(null);
 
-function calculateStreak(lastActiveAt?: string | null): number {
-  if (!lastActiveAt) return 1;
-  const lastDate = new Date(lastActiveAt);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  lastDate.setHours(0, 0, 0, 0);
-  const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-  return diffDays <= 1 ? 1 : diffDays + 1;
-}
-
 export function SessionContextProvider({ children }: { children: React.ReactNode }) {
   const [sessionData, setSessionData] = useState<Partial<SessionContext>>({
     mood: null,
-    streak: 0,
     firstSessionDate: null,
     previousSessionAt: null,
     previousSessionMood: null,
@@ -72,11 +58,9 @@ export function SessionContextProvider({ children }: { children: React.ReactNode
         const data = await getSessionMeta();
         if (data) {
           const previousSessionAt = data.lastActiveAt ? new Date(data.lastActiveAt) : null;
-          const streak = calculateStreak(data.lastActiveAt);
-          
+
           setSessionData({
             mood: data.mood || null,
-            streak,
             firstSessionDate: data.firstSessionDate || null,
             previousSessionAt,
             previousSessionMood: data.mood || null,
@@ -107,26 +91,6 @@ export function SessionContextProvider({ children }: { children: React.ReactNode
     }
   }, []);
 
-  const incrementStreak = useCallback(() => {
-    setSessionData(prev => {
-      const newStreak = (prev.streak || 0) + 1;
-      const updated: Partial<SessionMeta> = {
-        ...prev,
-        streak: newStreak,
-        lastActiveAt: new Date().toISOString(),
-      };
-      
-      getSessionMeta().then(existing => {
-        setSessionMeta({
-          ...(existing || {}),
-          ...updated,
-        });
-      }).catch(err => console.error('[SessionContext] Failed to save streak:', err));
-      
-      return { ...prev, streak: newStreak };
-    });
-  }, []);
-
   const setJourneyFocus = useCallback(async (focus: string) => {
     setSessionData(prev => ({ ...prev, journeyFocus: focus }));
     try {
@@ -145,7 +109,6 @@ export function SessionContextProvider({ children }: { children: React.ReactNode
   const value: SessionContext = {
     ...sessionData,
     setMood,
-    incrementStreak,
     setJourneyFocus,
   } as SessionContext;
 

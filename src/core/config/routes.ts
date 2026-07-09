@@ -33,6 +33,7 @@ export const ROUTES = {
     SESSION: '/journey/session/[sessionId]',
     COMPLETION: '/journey/completion',
     PROGRESS: '/journey/progress',
+    MOOD_TIMELINE: '/journey/mood-timeline',
   } as const,
 } as const;
 

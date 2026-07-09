@@ -48,12 +48,15 @@ export function NavigationContainer({
     ],
   }));
 
+  // Light mode needs a firmer edge (it can wash out over bright pages);
+  // dark mode wants a brighter rim so the glass catches the light.
   const containerBorderColor =
     theme === 'dark'
       ? 'rgba(255, 255, 255, 0.14)'
-      : 'rgba(15, 23, 42, 0.08)';
+      : 'rgba(15, 23, 42, 0.12)';
 
   const shadowColor = theme === 'dark' ? '#000000' : '#334155';
+  const shadowOpacity = theme === 'dark' ? 0.24 : 0.16;
   const bottomPosition = Math.max(LAYOUT.TAB_BAR_MARGIN, insets.bottom);
 
   return (
@@ -64,43 +67,47 @@ export function NavigationContainer({
         {
           borderColor: containerBorderColor,
           shadowColor: shadowColor,
+          shadowOpacity: shadowOpacity,
           bottom: bottomPosition,
           ...(Platform.OS === 'web' && {
-            backdropFilter: 'blur(32px)',
-            WebkitBackdropFilter: 'blur(32px)',
+            backdropFilter: 'blur(60px) saturate(130%)',
+            WebkitBackdropFilter: 'blur(60px) saturate(130%)',
           }),
         },
       ]}
     >
       <BlurView
-        intensity={theme === 'dark' ? 70 : 90}
+        intensity={theme === 'dark' ? 100 : 100}
         tint={theme === 'dark' ? 'dark' : 'light'}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Clean, theme-fitted surface. This sits over the BlurView so the bar
-          looks intentional and consistent in BOTH themes and on web (where
-          BlurView has no effect). No white/silver gradient sheen. */}
+      {/* Frosted surface — opaque enough to dissolve background text into soft
+          color while the BlurView underneath supplies the frost. The blur does
+          the heavy lifting; this layer seals it so nothing sharp shows through.
+          Sits over the BlurView so it stays consistent on web (where
+          BlurView has no effect and the web backdrop-filter carries the blur). */}
       <View
         style={[
           StyleSheet.absoluteFill,
           {
             backgroundColor:
               theme === 'dark'
-                ? 'rgba(18, 18, 27, 0.88)'
-                : 'rgba(255, 255, 255, 0.88)',
+                ? 'rgba(18, 18, 27, 0.74)'
+                : 'rgba(255, 255, 255, 0.8)',
           },
         ]}
         pointerEvents="none"
       />
 
+      {/* Soft top edge light — the catch that sells frosted glass. */}
       <View
         style={[
           styles.glassHighlight,
           {
             backgroundColor:
               theme === 'dark'
-                ? 'rgba(255, 255, 255, 0.06)'
+                ? 'rgba(255, 255, 255, 0.12)'
                 : 'rgba(255, 255, 255, 0.7)',
           },
         ]}
@@ -120,10 +127,10 @@ const styles = StyleSheet.create({
     height: LAYOUT.TAB_BAR_HEIGHT,
     borderRadius: PILL_RADIUS,
     borderWidth: 0.5,
-    elevation: 12,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
+    elevation: 14,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
     zIndex: 100,
     justifyContent: 'center',
     paddingHorizontal: 4,
@@ -132,9 +139,9 @@ const styles = StyleSheet.create({
   glassHighlight: {
     position: 'absolute',
     top: 0,
-    left: 28,
-    right: 28,
-    height: 1,
+    left: 20,
+    right: 20,
+    height: 1.5,
     borderRadius: 1,
     zIndex: 2,
   },

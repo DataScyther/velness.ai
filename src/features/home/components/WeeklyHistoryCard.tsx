@@ -8,14 +8,26 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  ZoomIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import { BarChart2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
-import { type Mood, type MoodRating, MOOD_MAP } from '@/shared/types';
+import { type Mood, type MoodRating, getMoodEmotion } from '@/shared/types';
+import { EmotionAvatar } from '@/components/emotion/EmotionAvatar';
 import { MoodTimeline } from './MoodTimeline';
 
 interface WeeklyHistoryCardProps {
   moodEntries: Mood[];
   onCheckIn?: () => void;
+  onPress?: () => void;
 }
 
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -34,6 +46,7 @@ const SVG_HEIGHT = 56;
 export const WeeklyHistoryCard = React.memo(({
   moodEntries,
   onCheckIn,
+  onPress,
 }: WeeklyHistoryCardProps) => {
   const { colors } = useTheme();
 
@@ -52,6 +65,73 @@ export const WeeklyHistoryCard = React.memo(({
 
   const hasData = weekData.some((d) => d.moodLevel !== null);
 
+  const hoverY = useSharedValue(0);
+
+  React.useEffect(() => {
+    if (!hasData) {
+      hoverY.value = withRepeat(
+        withSequence(
+          withTiming(-4, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 1800, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+    } else {
+      hoverY.value = 0;
+    }
+  }, [hasData]);
+
+  const animatedHoverStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: hoverY.value }],
+  }));
+
+  // Calculate average and trend comparison
+  const { averageMood, trendText, trendColor } = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    const fourteenDaysAgo = new Date(now);
+    fourteenDaysAgo.setDate(now.getDate() - 14);
+
+    const currEntries = moodEntries.filter(
+      (e) => new Date(e.timestamp) >= sevenDaysAgo && new Date(e.timestamp) <= now
+    );
+    const prevEntries = moodEntries.filter(
+      (e) => new Date(e.timestamp) >= fourteenDaysAgo && new Date(e.timestamp) < sevenDaysAgo
+    );
+
+    const currAvg = currEntries.length > 0
+      ? currEntries.reduce((sum, e) => sum + e.rating, 0) / currEntries.length
+      : 0;
+
+    const prevAvg = prevEntries.length > 0
+      ? prevEntries.reduce((sum, e) => sum + e.rating, 0) / prevEntries.length
+      : 0;
+
+    const avgString = currAvg > 0 ? currAvg.toFixed(1) : '—';
+    
+    let trendStr = 'no change';
+    let color = colors.text.secondary;
+    if (currAvg > 0 && prevAvg > 0) {
+      const diff = currAvg - prevAvg;
+      const pct = Math.round((diff / prevAvg) * 100);
+      if (pct > 0) {
+        trendStr = `+${pct}% better`;
+        color = colors.success;
+      } else if (pct < 0) {
+        trendStr = `${pct}% lower`;
+        color = colors.danger;
+      } else {
+        trendStr = 'stable';
+      }
+    } else if (currAvg > 0) {
+      trendStr = 'first week';
+    }
+
+    return { averageMood: avgString, trendText: trendStr, trendColor: color };
+  }, [moodEntries, colors]);
+
   // Build SVG points from weekData
   const svgPoints = useMemo(() => {
     const colWidth = SVG_WIDTH / 7;
@@ -67,7 +147,8 @@ export const WeeklyHistoryCard = React.memo(({
 
   return (
     <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-      <View
+      <Pressable
+        onPress={onPress}
         style={[
           styles.card,
           { backgroundColor: colors.surface.primary, borderColor: colors.border.default },
@@ -75,7 +156,14 @@ export const WeeklyHistoryCard = React.memo(({
       >
         {/* Header row */}
         <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text.primary }]}>Mood History</Text>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.title, { color: colors.text.primary }]}>Mood History</Text>
+            {hasData && (
+              <Text style={[styles.averageText, { color: trendColor }]}>
+                Avg: {averageMood} ({trendText})
+              </Text>
+            )}
+          </View>
           <Text style={[styles.range, { color: colors.text.secondary }]}>7 days</Text>
         </View>
 
@@ -96,7 +184,6 @@ export const WeeklyHistoryCard = React.memo(({
                 const rating = item.moodLevel as MoodRating | null;
                 const isToday = i === 6;
                 const color = rating ? MOOD_COLORS[rating] : null;
-                const emoji = rating ? MOOD_MAP[rating].emoji : null;
 
                 return (
                   <Animated.View
@@ -113,8 +200,13 @@ export const WeeklyHistoryCard = React.memo(({
                         isToday && color && { borderColor: color },
                       ]}
                     >
-                      {emoji ? (
-                        <Text style={styles.emoji}>{emoji}</Text>
+                      {rating ? (
+                        <EmotionAvatar
+                          emotion={getMoodEmotion(rating)}
+                          size={22}
+                          animated={false}
+                          showGlow={false}
+                        />
                       ) : (
                         <View style={[styles.emptyDot, { backgroundColor: colors.border.default }]} />
                       )}
@@ -122,7 +214,7 @@ export const WeeklyHistoryCard = React.memo(({
                     <Text
                       style={[
                         styles.dayLabel,
-                        { color: isToday ? colors.brand.primary : colors.text.secondary },
+                        { color: isToday ? colors.text.primary : colors.text.secondary },
                         isToday && styles.dayLabelToday,
                       ]}
                     >
@@ -134,20 +226,33 @@ export const WeeklyHistoryCard = React.memo(({
             </View>
           </>
         ) : (
-          /* Compact empty state */
-          <View style={styles.emptyRow}>
+          /* Friendly empty state with illustration */
+          <View style={styles.emptyContainer}>
+            <Animated.View
+              style={[
+                styles.emptyIconWrap,
+                { backgroundColor: `${colors.text.tertiary}12` },
+                animatedHoverStyle,
+              ]}
+            >
+              <BarChart2 size={24} color={colors.text.secondary} />
+            </Animated.View>
             <View style={styles.emptyText}>
               <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
-                No entries yet
+                Your first check-in unlocks
               </Text>
               <Text style={[styles.emptySubtitle, { color: colors.text.secondary }]}>
-                Complete today's check-in to start your mood history
+                weekly insights.
               </Text>
             </View>
             {onCheckIn && (
               <Pressable
                 onPress={onCheckIn}
-                style={[styles.emptyBtn, { backgroundColor: colors.brand.primary }]}
+                style={({ pressed }) => [
+                  styles.emptyBtn,
+                  { backgroundColor: colors.brand.primary },
+                  pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
+                ]}
                 accessibilityRole="button"
               >
                 <Text style={styles.emptyBtnText}>Check in</Text>
@@ -155,7 +260,7 @@ export const WeeklyHistoryCard = React.memo(({
             )}
           </View>
         )}
-      </View>
+      </Pressable>
     </Animated.View>
   );
 });
@@ -176,10 +281,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
+  titleContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 2,
+  },
   title: {
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.1,
+  },
+  averageText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   range: {
     fontSize: 12,
@@ -225,16 +339,23 @@ const styles = StyleSheet.create({
   dayLabelToday: {
     fontWeight: '700',
   },
-  // Compact inline empty state
-  emptyRow: {
-    flexDirection: 'row',
+  // Friendly empty state
+  emptyContainer: {
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 4,
+    paddingVertical: 16,
+    gap: 10,
+    minHeight: SVG_HEIGHT + 48, // Reserve layout space for future charts
+  },
+  emptyIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
-    flex: 1,
-    gap: 3,
+    alignItems: 'center',
+    gap: 2,
   },
   emptyTitle: {
     fontSize: 14,

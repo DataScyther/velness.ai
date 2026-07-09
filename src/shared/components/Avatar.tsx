@@ -84,7 +84,7 @@ export function Avatar({ photoURL, name, size, className = '' }: AvatarProps) {
     return (
       <Animated.View
         entering={FadeIn.duration(300)}
-        className={`${avatarVariants({ size })} bg-velness-purple-600/30 ${className}`}
+        className={`${avatarVariants({ size })} bg-[#6B7280]/40 ${className}`}
       >
         <Text className={`${textVariants({ size })}`}>{initials}</Text>
       </Animated.View>

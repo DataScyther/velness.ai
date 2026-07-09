@@ -14,6 +14,9 @@ import { COMPLETION_STATUS, EXERCISE_TYPE } from '@/features/journey/constants';
 import { JourneyNavigationGuard } from '../services/JourneyNavigationGuard';
 import { DEFAULT_LESSONS } from '@/features/journey/data/programs';
 import type { ExerciseWithProgress } from '@/features/journey/models';
+import { analyticsService } from '@/services/analytics';
+
+import { useQueryClient } from '@tanstack/react-query';
 
 function getExerciseIcon(type: string, color: string, size = 20) {
   switch (type) {
@@ -32,6 +35,7 @@ export function LessonScreen() {
   const { programId, lessonId } = useLocalSearchParams<{ programId: string; lessonId: string }>();
   const { exercises, completeLesson } = useJourney();
   const setCurrentLesson = useJourneyStore((s) => s.setCurrentLesson);
+  const queryClient = useQueryClient();
 
   const lesson = useMemo(() => DEFAULT_LESSONS.find(l => l.id === lessonId), [lessonId]);
 
@@ -62,11 +66,23 @@ export function LessonScreen() {
     completingRef.current = true;
     try {
       await completeLesson(programId, lessonId);
+
+      // Track CBT lesson completion
+      const isCBT = !programId.includes('breathing') && !programId.includes('meditation') && !programId.includes('sleep');
+      if (isCBT) {
+        analyticsService.trackEvent('cbt_lesson_completed' as any, {
+          program_id: programId,
+          lesson_id: lessonId,
+        });
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['homeState'] });
+
       router.push(`/journey/completion?programId=${programId}&lessonId=${lessonId}` as any);
     } catch {
       completingRef.current = false;
     }
-  }, [uid, programId, lessonId, completeLesson]);
+  }, [uid, programId, lessonId, completeLesson, queryClient]);
 
   useEffect(() => {
     if (allCompleted && uid && !completingRef.current) {

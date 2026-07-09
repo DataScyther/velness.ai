@@ -7,18 +7,20 @@
 import type { NarrativeMoment, AdaptiveContent } from './HomeViewModel';
 import type { Mood } from '@/shared/types';
 
-import type { JourneyRow } from '../../../../backend/services/JourneyService';
+import type { JourneyProgress } from '@/features/journey/types/JourneyProgress';
 import type { RecommendationRow } from '../../../../backend/services/RecommendationService';
 import type { ProgressRow } from '../../../../backend/services/ProgressService';
 import type { NotificationRow } from '../../../../backend/services/NotificationService';
 import type { JournalRow } from '../../../../backend/services/JournalService';
 import type { MissionRow } from '../../../../backend/services/MissionService';
+import type { AnalyticsRow } from '../../../../backend/services/AnalyticsService';
 
 export interface GreetingSection {
   text: string;
   firstName: string | null;
   moment: NarrativeMoment;
   adaptive: AdaptiveContent;
+  intention: string;
 }
 
 export interface TodaysMissionSection {
@@ -29,11 +31,14 @@ export interface TodaysMissionSection {
   status: string;
   programId: string | null;
   lessonId: string | null;
+  reason?: string;
+  estimatedTime?: string;
 }
 
 export interface ReflectionSection {
   latest: JournalRow | null;
   reflectedToday: boolean;
+  prompt?: string;
 }
 
 export interface MoodSection {
@@ -66,12 +71,13 @@ export interface NotificationsSection {
 export interface HomeState {
   greeting: GreetingSection;
   todaysMission: TodaysMissionSection | null;
-  journey: JourneyRow | null;
+  journey: JourneyProgress | null;
   reflection: ReflectionSection;
   mood: MoodSection;
   recommendation: RecommendationSection;
   progress: ProgressSummary;
   notifications: NotificationsSection;
+  recentEvents: AnalyticsRow[];
 }
 
 export type { MissionRow };

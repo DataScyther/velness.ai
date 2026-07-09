@@ -3,6 +3,7 @@ import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Trophy, TrendingUp, BarChart3, Flame, Medal, Star, CheckCircle } from 'lucide-react-native';
+import { StarIcon } from '@/shared/components/SymbolIcons';
 import { useTheme } from '@/hooks/useTheme';
 import { useJourney } from '@/shared/hooks/useJourney';
 import { ProgressBar } from '@/shared/components/ProgressBar';
@@ -155,7 +156,10 @@ export function ProgressScreen() {
                       <Text style={[styles.achievementTitle, { color: colors.text.primary }]}>{ms.title}</Text>
                       {isRecent && (
                         <View style={{ backgroundColor: colors.warning, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                          <Text style={{ fontSize: 9, fontWeight: '700', color: colors.background.primary }}>NEW 🌟</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+                            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.background.primary }}>NEW</Text>
+                            <StarIcon size={9} color={colors.background.primary} />
+                          </View>
                         </View>
                       )}
                     </View>

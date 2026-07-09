@@ -243,6 +243,10 @@ graph TD
 - Project Synopsis: [docs/Project_Synopsis.md](docs/Project_Synopsis.md)
 - Requirements & Methodology: [docs/Requirements_and_Methodology.md](docs/Requirements_and_Methodology.md)
 - Future Scope & References: [docs/Future_Scope_and_References.md](docs/Future_Scope_and_References.md)
+- Velness Emotion System (design + usage): [docs/EMOTION_SYSTEM.md](docs/EMOTION_SYSTEM.md)
+- Velness Emotion System (API reference): [docs/EMOTION_SYSTEM_API.md](docs/EMOTION_SYSTEM_API.md)
+
+> **Sprint — Velness Emotion System:** Replace all Unicode emojis with a single reusable, animated, brand-consistent `EmotionAvatar` component (Light/Dark, 60 FPS via `react-native-reanimated`).
 
 ---
 
