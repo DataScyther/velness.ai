@@ -103,12 +103,22 @@ class AuthService {
         // preferences may not exist yet
       }
 
-      return mapAuthUserToProfile(authUser, {
+      const profile = mapAuthUserToProfile(authUser, {
         ...profileRow,
         ...preferences,
       });
+
+      if ((authUser as any)?.is_anonymous) {
+        profile.onboardingCompleted = true;
+      }
+
+      return profile;
     } catch {
-      return mapAuthUserToProfile(authUser, null);
+      const profile = mapAuthUserToProfile(authUser, null);
+      if ((authUser as any)?.is_anonymous) {
+        profile.onboardingCompleted = true;
+      }
+      return profile;
     }
   }
 
@@ -123,10 +133,16 @@ class AuthService {
     this.backendUnsubscribe = backendAuthService.subscribe((session, user) => {
       this.currentUser = user;
       if (user) {
-        void this.hydrateProfile(user).then((profile) => {
-          this.userProfile = profile;
-          this.notifyListeners(this.userProfile);
-        });
+        void this.hydrateProfile(user)
+          .then((profile) => {
+            this.userProfile = profile;
+            this.notifyListeners(this.userProfile);
+          })
+          .catch((err) => {
+            // Never let a failed profile hydration become an unhandled rejection
+            // (which can silently terminate the app, e.g. on guest sign-in).
+            console.warn('[auth] hydrateProfile failed:', err);
+          });
       } else {
         this.userProfile = null;
         this.notifyListeners(null);
@@ -140,10 +156,14 @@ class AuthService {
     const user = backendAuthService.getCurrentUser();
     this.currentUser = user;
     if (user) {
-      void this.hydrateProfile(user).then((profile) => {
-        this.userProfile = profile;
-        this.notifyListeners(this.userProfile);
-      });
+      void this.hydrateProfile(user)
+        .then((profile) => {
+          this.userProfile = profile;
+          this.notifyListeners(this.userProfile);
+        })
+        .catch((err) => {
+          console.warn('[auth] hydrateProfile (syncState) failed:', err);
+        });
     }
   }
 
@@ -256,12 +276,28 @@ class AuthService {
       if (!user) throw new Error('Anonymous sign-in failed: no user returned.');
 
       this.currentUser = user;
-      this.userProfile = await this.hydrateProfile(user);
+      const profile = await this.hydrateProfile(user);
+      profile.onboardingCompleted = true;
 
+      // Persist in DB and storage
+      try {
+        await profileRepository.update(user.id, {
+          onboarding_completed: true,
+        });
+      } catch (err) {
+        console.warn('[auth] Failed to mark guest onboarding completed in DB:', err);
+      }
+
+      try {
+        await storageService.set(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
+      } catch (err) {
+        console.warn('[auth] Failed to save onboarding completed in storage:', err);
+      }
+
+      this.userProfile = profile;
       this.notifyListeners(this.userProfile);
       analyticsService.trackEvent('auth_guest' as never, { method: 'anonymous' });
 
-      if (!this.userProfile) throw new Error('Failed to load profile');
       return this.userProfile;
     } catch (error) {
       throw new Error(mapSupabaseError(error));
@@ -420,6 +456,7 @@ class AuthService {
 
   async checkEmailVerified(): Promise<boolean> {
     if (!this.currentUser) return false;
+    if ((this.currentUser as any)?.is_anonymous) return true;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       return user?.email_confirmed_at != null;
@@ -429,6 +466,7 @@ class AuthService {
   }
 
   isEmailVerified(): boolean {
+    if ((this.currentUser as any)?.is_anonymous) return true;
     return this.currentUser?.email_confirmed_at != null;
   }
 
@@ -474,7 +512,9 @@ class AuthService {
 
   onAuthStateChanged(listener: (user: UserProfile | null) => void): () => void {
     this.listeners.push(listener);
-    if (this.userProfile) listener(this.userProfile);
+    // Guard the immediate invoke too — it runs outside notifyListeners and an
+    // unhandled rejection here is the original "guest auto-close" crash.
+    if (this.userProfile) this.invokeListenerSafely(listener, this.userProfile);
     return () => {
       const index = this.listeners.indexOf(listener);
       if (index > -1) this.listeners.splice(index, 1);
@@ -486,8 +526,28 @@ class AuthService {
     // The anonymous session is already linked to the user's data in the database.
   }
 
+  private invokeListenerSafely(
+    listener: (user: UserProfile | null) => void,
+    user: UserProfile | null,
+  ): void {
+    try {
+      const fn = listener as unknown as (u: UserProfile | null) => unknown;
+      const result = fn(user);
+      // Listeners may be async (e.g. onAuthStateChanged handlers that await
+      // storage/profile lookups). A rejected promise here is otherwise an
+      // unhandled rejection that silently terminates the app (guest auto-close).
+      if (result && typeof (result as Promise<unknown>).catch === 'function') {
+        (result as Promise<unknown>).catch((err) =>
+          console.warn('[auth] listener rejected:', err),
+        );
+      }
+    } catch (err) {
+      console.warn('[auth] listener threw:', err);
+    }
+  }
+
   private notifyListeners(user: UserProfile | null): void {
-    this.listeners.forEach((listener) => listener(user));
+    this.listeners.forEach((listener) => this.invokeListenerSafely(listener, user));
   }
 }
 

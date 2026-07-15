@@ -4,6 +4,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  withSequence,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
@@ -82,7 +83,10 @@ export function IconWrapper({
   useEffect(() => {
     if (name === 'chat' && isActive) {
       pulse.value = withRepeat(
-        withTiming(1.06, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+        withSequence(
+          withTiming(1.06, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+        ),
         -1,
         true
       );

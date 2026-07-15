@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  withSequence,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
@@ -46,7 +47,10 @@ export const WeeklyProgressTracker = React.memo(({
   const pulseOpacity = useSharedValue(0.3);
   useEffect(() => {
     pulseOpacity.value = withRepeat(
-      withTiming(0.8, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+      withSequence(
+        withTiming(0.8, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.3, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+      ),
       -1,
       true
     );

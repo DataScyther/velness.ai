@@ -4,6 +4,7 @@ import Animated, {
   useSharedValue,
   useAnimatedProps,
   withRepeat,
+  withSequence,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
@@ -36,19 +37,31 @@ export const MoodPoint = React.memo(({ cx, cy, moodLevel, isToday }: MoodPointPr
   useEffect(() => {
     if (isToday) {
       pulse1.value = withRepeat(
-        withTiming(1, {
-          duration: 2000,
-          easing: Easing.out(Easing.ease),
-        }),
+        withSequence(
+          withTiming(1, {
+            duration: 2000,
+            easing: Easing.out(Easing.ease),
+          }),
+          withTiming(0, {
+            duration: 2000,
+            easing: Easing.out(Easing.ease),
+          }),
+        ),
         -1,
         false
       );
 
       pulse2.value = withRepeat(
-        withTiming(1, {
-          duration: 2000,
-          easing: Easing.out(Easing.ease),
-        }),
+        withSequence(
+          withTiming(1, {
+            duration: 2000,
+            easing: Easing.out(Easing.ease),
+          }),
+          withTiming(0.5, {
+            duration: 2000,
+            easing: Easing.out(Easing.ease),
+          }),
+        ),
         -1,
         false
       );

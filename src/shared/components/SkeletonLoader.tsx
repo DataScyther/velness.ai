@@ -10,6 +10,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  withSequence,
   withTiming,
   Easing,
   interpolate,
@@ -32,7 +33,10 @@ export function SkeletonLoader({
 
   useEffect(() => {
     shimmer.value = withRepeat(
-      withTiming(1, { duration: 1500, easing: Easing.ease }),
+      withSequence(
+        withTiming(1, { duration: 1500, easing: Easing.ease }),
+        withTiming(0, { duration: 1500, easing: Easing.ease }),
+      ),
       -1,
       true
     );

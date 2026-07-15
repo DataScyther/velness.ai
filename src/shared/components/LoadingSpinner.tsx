@@ -9,6 +9,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  withSequence,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
@@ -32,7 +33,10 @@ export function LoadingSpinner({
 
   useEffect(() => {
     rotation.value = withRepeat(
-      withTiming(360, { duration: 1000, easing: Easing.linear }),
+      withSequence(
+        withTiming(360, { duration: 1000, easing: Easing.linear }),
+        withTiming(0, { duration: 1000, easing: Easing.linear }),
+      ),
       -1,
       false
     );
