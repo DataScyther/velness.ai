@@ -13,6 +13,12 @@ export function useHomeState() {
   return useQuery({
     queryKey: HOME_STATE_QUERY_KEY,
     queryFn: () => homeService.fetchHomeState(),
-    staleTime: 30_000, // 30 s — reduce redundant re-fetches while app is open
+    // Show the previous (cached) result instantly on warm opens while the
+    // fresh data refetches in the background — avoids a skeleton flash.
+    placeholderData: (prev) => prev,
+    // Keep cached data usable across reopen; refetch is cheap once mounted.
+    staleTime: 0,
+    gcTime: 5 * 60_000,
+    refetchOnMount: true,
   });
 }

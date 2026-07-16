@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, ScrollView, TextInput } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Check, TrendingUp, Trophy, ArrowRight, BarChart3, Star, Sparkles, BookOpen, ChevronRight, Award } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useJourney } from '@/shared/hooks/useJourney';
+import { useAuth } from '@/shared/hooks/useAuth';
+import { journeyRepository } from '@/repositories/JourneyRepository';
 import { spacing, borderRadius } from '@/core/theme';
 import { ROUTES, buildRoute } from '@/core/config/routes';
 import { DEFAULT_LESSONS } from '@/features/journey/data/programs';
@@ -14,12 +16,15 @@ export function CompletionScreen() {
   const { colors } = useTheme();
   const { programId, lessonId } = useLocalSearchParams<{ programId?: string; lessonId?: string }>();
   const { programs, userProgress, streak, weeklyProgress, exercisesCompleted } = useJourney();
+  const { user } = useAuth();
+  const uid = user?.uid || null;
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   
   const [reflection, setReflection] = useState('');
   const [rating, setRating] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // Play completion success haptic on load
@@ -125,8 +130,26 @@ export function CompletionScreen() {
     };
   }, [currentProgram, currentLesson, programs, programId, userProgress]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
+    if (uid && programId && lessonId && (reflection.trim() || rating !== null)) {
+      setIsSaving(true);
+      try {
+        await journeyRepository.saveLessonReflection(
+          uid,
+          programId,
+          lessonId,
+          rating,
+          reflection.trim()
+        );
+      } catch (error) {
+        console.error('[CompletionScreen] Failed to save lesson reflection:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+
     router.replace(nextRecommendation.route as any);
   };
 
@@ -170,23 +193,21 @@ export function CompletionScreen() {
           </View>
 
           {/* Program Progress Completion Indicator */}
-          {currentProgram && (
-            <View style={[styles.programProgressCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]} accessible={true} accessibilityLabel={`${currentProgram.title} completion progress: ${userProgress?.programProgress[currentProgram.id]?.completionPercent ?? 0} percent`}>
-              <Text style={[styles.programTag, { color: colors.brand.primary }]}>{currentProgram.title.toUpperCase()}</Text>
-              <View style={styles.progressPercentRow}>
-                <Text style={[styles.programProgressText, { color: colors.text.secondary }]}>Program Completion</Text>
-                <Text style={[styles.programProgressVal, { color: colors.text.primary }]}>
-                  {userProgress?.programProgress[currentProgram.id]?.completionPercent ?? 0}%
-                </Text>
+          {currentProgram && (() => {
+            const total = DEFAULT_LESSONS.filter(l => l.programId === currentProgram.id).length;
+            const completed = userProgress?.programProgress[currentProgram.id]?.completedLessonIds?.length ?? 0;
+            return (
+              <View style={[styles.programProgressCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]} accessible={true} accessibilityLabel={`${currentProgram.title} completion: ${completed} of ${total} lessons`}>
+                <Text style={[styles.programTag, { color: colors.brand.primary }]}>{currentProgram.title.toUpperCase()}</Text>
+                <View style={styles.progressPercentRow}>
+                  <Text style={[styles.programProgressText, { color: colors.text.secondary }]}>Program Completion</Text>
+                  <Text style={[styles.programProgressVal, { color: colors.text.primary }]}>
+                    {`${completed} of ${total} lessons`}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.progressBarWrapper}>
-                <View style={[styles.progressBarFilled, { 
-                  backgroundColor: colors.brand.primary, 
-                  width: `${userProgress?.programProgress[currentProgram.id]?.completionPercent ?? 0}%` 
-                }]} />
-              </View>
-            </View>
-          )}
+            );
+          })()}
 
           {/* 2. Achievement Unlocked (If Applicable) */}
           {achievementUnlocked && (
@@ -253,14 +274,27 @@ export function CompletionScreen() {
             <Text style={[styles.recDesc, { color: colors.text.secondary }]}>{nextRecommendation.description}</Text>
             
             <Pressable 
-              style={[styles.primaryButton, { backgroundColor: colors.brand.primary, marginTop: spacing.md }]}
+              style={[
+                styles.primaryButton, 
+                { 
+                  backgroundColor: isSaving ? `${colors.brand.primary}80` : colors.brand.primary, 
+                  marginTop: spacing.md 
+                }
+              ]}
               onPress={handleContinue}
+              disabled={isSaving}
               accessibilityRole="button"
               accessibilityLabel={nextRecommendation.label}
               accessibilityHint={nextRecommendation.description}
             >
-              <Text style={[styles.primaryButtonText, { color: colors.brand.contrastText }]}>{nextRecommendation.label}</Text>
-              <ArrowRight size={18} color={colors.brand.contrastText} />
+              {isSaving ? (
+                <ActivityIndicator color={colors.brand.contrastText} size="small" />
+              ) : (
+                <>
+                  <Text style={[styles.primaryButtonText, { color: colors.brand.contrastText }]}>{nextRecommendation.label}</Text>
+                  <ArrowRight size={18} color={colors.brand.contrastText} />
+                </>
+              )}
             </Pressable>
           </View>
 

@@ -10,8 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["SF Pro Text", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        display: ["SF Pro Display", "SF Pro Text", "-apple-system", "sans-serif"],
+        sans: ["Geomini", "SF Pro Text", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        display: ["Geomini", "SF Pro Display", "SF Pro Text", "-apple-system", "sans-serif"],
         mono: ["JetBrains Mono", "SF Mono", "Menlo", "monospace"],
       },
       fontSize: {

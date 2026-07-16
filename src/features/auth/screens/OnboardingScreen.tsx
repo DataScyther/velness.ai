@@ -29,7 +29,15 @@ export function OnboardingScreen() {
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
         <Image
           source={require('@/shared/assets/velness-logo.jpg')}
-          style={{ width: 120, height: 120, resizeMode: 'contain', borderRadius: 24, marginBottom: spacing.md }}
+          style={{
+            width: 120,
+            height: 120,
+            resizeMode: 'cover',
+            borderRadius: 60,
+            borderWidth: 1.5,
+            borderColor: 'rgba(255, 255, 255, 0.15)',
+            marginBottom: spacing.md
+          }}
         />
         <Text style={{ ...typography.headingLarge, color: colors.text.primary, textAlign: 'center' }}>
           Welcome to Velness

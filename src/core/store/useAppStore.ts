@@ -31,6 +31,8 @@ export interface UIState {
   toasts: Toast[];
   /** Modal state */
   activeModal: string | null;
+  /** Whether AI responses should be spoken aloud (opt-in, default OFF) */
+  voiceEnabled: boolean;
 }
 
 export interface Toast {
@@ -41,7 +43,7 @@ export interface Toast {
 }
 
 export interface SessionState {
-  /** Authenticated Firebase user */
+  /** Authenticated Supabase user */
   user: UserProfile | null;
   /** Whether user is authenticated */
   isAuthenticated: boolean;
@@ -68,6 +70,7 @@ export interface AppStore {
   addToast: (toast: Omit<Toast, 'id'>) => void;
   removeToast: (id: string) => void;
   setActiveModal: (modal: string | null) => void;
+  setVoiceEnabled: (v: boolean) => void;
 
   // ─── Session State ──────────────────────────────────────────────────
   session: SessionState;
@@ -105,6 +108,7 @@ const initialUIState: UIState = {
   isLoading: false,
   toasts: [],
   activeModal: null,
+  voiceEnabled: false,
 };
 
 const initialSessionState: SessionState = {
@@ -156,6 +160,9 @@ export const useAppStore = create<AppStore>()(
 
       setActiveModal: (activeModal) =>
         set((state) => ({ ui: { ...state.ui, activeModal } })),
+
+      setVoiceEnabled: (voiceEnabled) =>
+        set((state) => ({ ui: { ...state.ui, voiceEnabled } })),
 
       // ─── Session State ─────────────────────────────────────────────
       session: { ...initialSessionState },
@@ -426,6 +433,7 @@ export const useAppStore = create<AppStore>()(
         },
         ui: {
           theme: state.ui.theme,
+          voiceEnabled: state.ui.voiceEnabled,
         },
       }),
       merge: (persistedState: any, currentState: AppStore) => {

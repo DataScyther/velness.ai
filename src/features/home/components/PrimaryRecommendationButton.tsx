@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'SF Pro Display',
+    fontFamily: 'Geomini, SF Pro Display',
     letterSpacing: 0.3,
   },
 });

@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { ScrollView, View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, Brain, Wind, Sparkles, BookOpen, Heart, Info, Star, ChevronLeft } from 'lucide-react-native';
+import { ArrowLeft, Brain, Wind, Sparkles, BookOpen, Heart, Info, Star, ChevronLeft, ArrowUpRight, ArrowDownRight, TrendingUp, BarChart3, CheckCircle } from 'lucide-react-native';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useMoodEntries } from '@/shared/hooks/useMood';
@@ -10,14 +11,11 @@ import { useQuery } from '@tanstack/react-query';
 import { journalService } from '../../../../backend/services/JournalService';
 import { analyticsService } from '../../../../backend/services/AnalyticsService';
 import { WeeklyHistoryHeader } from '../components/WeeklyHistoryHeader';
-import { MoodTimeline } from '../components/MoodTimeline';
-import { type Mood, type MoodRating, MOOD_MAP, getMoodEmotion } from '@/shared/types';
-import { EmotionAvatar } from '@/components/emotion/EmotionAvatar';
-import { spacing, borderRadius, shadows } from '@/core/theme';
-
-const { width: SCREEN_W } = Dimensions.get('window');
-const SVG_WIDTH = SCREEN_W - 48;
-const SVG_HEIGHT = 80;
+import { MoodTimelineVisual } from '../components/MoodTimelineVisual';
+import { WeeklyStory } from '../components/WeeklyStory';
+import { MoodCalendar } from '../components/MoodCalendar';
+import { type Mood, type MoodRating, MOOD_MAP } from '@/shared/types';
+import { spacing, shadows } from '@/core/theme';
 
 const MOOD_COLORS: Record<number, string> = {
   1: '#FF453A', // Awful (Red)
@@ -26,6 +24,84 @@ const MOOD_COLORS: Record<number, string> = {
   4: '#5AC8FA', // Good (Blue)
   5: '#30D158', // Great (Green)
 };
+
+const SHORT_DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Meditation completion/started events. `meditation_session_completed` is the
+// string actually emitted by ExerciseScreen; `meditation_completed` and
+// `meditation_session_started` are also honored for completeness.
+const MEDITATION_EVENTS = [
+  'meditation_completed',
+  'meditation_session_completed',
+  'meditation_session_started',
+];
+// Sleep events exist in the analytics taxonomy but carry NO duration field
+// (only exercise/program/lesson/session ids), so we can only report presence.
+const SLEEP_EVENTS = ['sleep_session_started', 'sleep_session_completed'];
+// Breathing events emitted by ExerciseScreen for BREATHING-type exercises.
+// Both started/completed are counted so a session that began in-week is captured.
+const BREATHING_EVENTS = ['breathing_session_started', 'breathing_session_completed'];
+
+/**
+ * Returns the [start, end] bounds of a given week. `selectedWeek === 0` is the
+ * current calendar week (Sunday-based); each increment steps one week further
+ * into the past. `end` is inclusive (end of the final day).
+ */
+function getWeekBounds(selectedWeek: number): { start: Date; end: Date } {
+  const today = new Date();
+  const currentStart = new Date(today);
+  currentStart.setDate(today.getDate() - today.getDay());
+  currentStart.setHours(0, 0, 0, 0);
+
+  const start = new Date(currentStart);
+  start.setDate(currentStart.getDate() - selectedWeek * 7);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
+function formatRangeDate(d: Date): string {
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/**
+ * Animated distribution bar. The fill width eases from 0 → `percentage` on
+ * mount (subtle 450ms ease-out) using a reanimated shared value. Keep it
+ * number→string so it works on both native and web.
+ */
+function AnimatedBar({ color, percentage }: { color: string; percentage: number }) {
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withTiming(percentage, {
+      duration: 450,
+      easing: Easing.out(Easing.ease),
+    });
+  }, [percentage, progress]);
+  const animatedStyle = useAnimatedStyle(() => ({
+    width: `${progress.value}%`,
+  }));
+  return (
+    <Animated.View style={[styles.progressBarFill, { backgroundColor: color }, animatedStyle]} />
+  );
+}
+
+/**
+ * One cell of the compact Weekly Summary supporting strip. Deliberately small
+ * and low-contrast so the timeline stays the focal point (Sprint 8 reflow).
+ */
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.compactStat}>
+      <Text style={[styles.compactStatValue, { color: colors.text.primary }]}>{value}</Text>
+      <Text style={[styles.compactStatLabel, { color: colors.text.tertiary }]}>{label}</Text>
+    </View>
+  );
+}
 
 export function MoodTimelineScreen() {
   const { colors, theme } = useTheme();
@@ -50,67 +126,79 @@ export function MoodTimelineScreen() {
 
   const isLoading = isLoadingMoods || isLoadingJournals || isLoadingEvents;
 
-  // ── Calculations: Weekly Summary ──────────────────────────────────────────────
-  const weekDaysData = useMemo(() => {
-    const today = new Date();
-    const days = [];
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (6 - i));
-      const dayEntries = moodEntries.filter(
-        (e) => new Date(e.timestamp).toDateString() === d.toDateString()
-      );
-      const latest = dayEntries.length > 0 ? dayEntries[dayEntries.length - 1] : null;
-      days.push({
-        date: d,
-        dayName: dayNames[d.getDay()],
-        moodLevel: latest ? latest.rating : null,
-      });
-    }
-    return days;
-  }, [moodEntries]);
+  // ── Week selector state ───────────────────────────────────────────────────────
+  const [selectedWeek, setSelectedWeek] = useState(0);
 
-  const svgPoints = useMemo(() => {
-    const colWidth = SVG_WIDTH / 7;
-    return weekDaysData.map((d, i) => {
-      const x = colWidth * i + colWidth / 2;
-      const y = d.moodLevel != null
-        ? SVG_HEIGHT - 12 - ((d.moodLevel - 1) / 4) * (SVG_HEIGHT - 24)
-        : SVG_HEIGHT / 2;
-      return { x, y, moodLevel: d.moodLevel };
+  const handleWeekChange = useCallback((offset: number) => {
+    setSelectedWeek((w) => (w + offset < 0 ? 0 : w + offset));
+  }, []);
+
+  // ── Calculations: Weekly Summary (selected-week aware) ────────────────────────
+  const {
+    weeklySummary,
+    dominantEmoji,
+    dominantLabel,
+    hasDominant,
+    heroTrendText,
+    heroHasTrend,
+  } = useMemo(() => {
+    const { start, end } = getWeekBounds(selectedWeek);
+
+    const prevStart = new Date(start);
+    prevStart.setDate(start.getDate() - 7);
+    prevStart.setHours(0, 0, 0, 0);
+    const prevEnd = new Date(start);
+    prevEnd.setDate(start.getDate() - 1);
+    prevEnd.setHours(23, 59, 59, 999);
+
+    const currEntries = moodEntries.filter((e) => {
+      const t = new Date(e.timestamp);
+      return t >= start && t <= end;
     });
-  }, [weekDaysData]);
+    const prevEntries = moodEntries.filter((e) => {
+      const t = new Date(e.timestamp);
+      return t >= prevStart && t <= prevEnd;
+    });
 
-  const weeklySummary = useMemo(() => {
-    const now = new Date();
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    const fourteenDaysAgo = new Date(now);
-    fourteenDaysAgo.setDate(now.getDate() - 14);
+    // Dominant (most frequent) mood for the selected week.
+    const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const e of currEntries) counts[e.rating] = (counts[e.rating] || 0) + 1;
 
-    const currEntries = moodEntries.filter(
-      (e) => new Date(e.timestamp) >= sevenDaysAgo && new Date(e.timestamp) <= now
-    );
-    const prevEntries = moodEntries.filter(
-      (e) => new Date(e.timestamp) >= fourteenDaysAgo && new Date(e.timestamp) < sevenDaysAgo
-    );
+    let dominantRating: MoodRating | null = null;
+    let maxCount = 0;
+    for (const r of [5, 4, 3, 2, 1] as MoodRating[]) {
+      if (counts[r] > maxCount) {
+        maxCount = counts[r];
+        dominantRating = r;
+      }
+    }
 
-    const currAvg = currEntries.length > 0
-      ? currEntries.reduce((sum, e) => sum + e.rating, 0) / currEntries.length
-      : 0;
+    const dominant =
+      dominantRating != null
+        ? {
+            emoji: MOOD_MAP[dominantRating].emoji,
+            label: MOOD_MAP[dominantRating].label,
+          }
+        : null;
 
-    const prevAvg = prevEntries.length > 0
-      ? prevEntries.reduce((sum, e) => sum + e.rating, 0) / prevEntries.length
-      : 0;
+    const currAvg =
+      currEntries.length > 0
+        ? currEntries.reduce((sum, e) => sum + e.rating, 0) / currEntries.length
+        : 0;
+
+    const prevAvg =
+      prevEntries.length > 0
+        ? prevEntries.reduce((sum, e) => sum + e.rating, 0) / prevEntries.length
+        : 0;
 
     const avgString = currAvg > 0 ? currAvg.toFixed(1) : '—';
-    
+
     let trendStr = 'no change';
     let percentStr = '';
     let isBetter = false;
     let isWorse = false;
+    let heroTrend = '';
+    let heroTrendVisible = false;
 
     if (currAvg > 0 && prevAvg > 0) {
       const diff = currAvg - prevAvg;
@@ -119,10 +207,14 @@ export function MoodTimelineScreen() {
         trendStr = `better than last week`;
         percentStr = `↑ ${pct}%`;
         isBetter = true;
+        heroTrend = `+${pct}% compared to last week`;
+        heroTrendVisible = true;
       } else if (pct < 0) {
         trendStr = `lower than last week`;
         percentStr = `↓ ${Math.abs(pct)}%`;
         isWorse = true;
+        heroTrend = `${pct}% compared to last week`;
+        heroTrendVisible = true;
       } else {
         trendStr = 'consistent with last week';
       }
@@ -130,41 +222,94 @@ export function MoodTimelineScreen() {
       trendStr = 'starting your journey';
     }
 
-    return { averageMood: avgString, trendText: trendStr, percentText: percentStr, isBetter, isWorse };
-  }, [moodEntries]);
+    return {
+      weeklySummary: {
+        averageMood: avgString,
+        trendText: trendStr,
+        percentText: percentStr,
+        isBetter,
+        isWorse,
+      },
+      dominantEmoji: dominant?.emoji ?? '',
+      dominantLabel: dominant?.label ?? '',
+      hasDominant: dominant != null,
+      heroTrendText: heroTrend,
+      heroHasTrend: heroTrendVisible,
+    };
+  }, [moodEntries, selectedWeek]);
 
-  // ── Calculations: Monthly Calendar Grid ──────────────────────────────────────
-  const monthlyCalendarData = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-indexed
+  const dateRangeText = useMemo(() => {
+    const { start, end } = getWeekBounds(selectedWeek);
+    return `${formatRangeDate(start)} – ${formatRangeDate(end)}`;
+  }, [selectedWeek]);
 
-    const firstDayIndex = new Date(year, month, 1).getDay(); // Sunday = 0
-    const totalDays = new Date(year, month + 1, 0).getDate();
+  // ── Calculations: Weekly Stat Summary (selected-week aware) ──────────────────
+  const weeklyStats = useMemo(() => {
+    const { start, end } = getWeekBounds(selectedWeek);
 
-    const calendarCells = [];
-    
-    // Fill empty cells for days before the 1st of the month
-    // Shift Sunday to the end of the week if desired, or keep standard (Sun-Sat)
-    for (let i = 0; i < firstDayIndex; i++) {
-      calendarCells.push({ dayNumber: null, moodLevel: null });
+    const weekEntries = moodEntries.filter((e) => {
+      const t = new Date(e.timestamp);
+      return t >= start && t <= end;
+    });
+
+    // Mood Stability: 0–100 consistency score for the selected week.
+    // std dev of that week's ratings; stability = clamp(100 - (stdDev/2)*100, 0, 100).
+    let moodStability = '—';
+    let hasStability = false;
+    if (weekEntries.length >= 2) {
+      const ratings = weekEntries.map((e) => e.rating);
+      const mean = ratings.reduce((s, r) => s + r, 0) / ratings.length;
+      const variance =
+        ratings.reduce((s, r) => s + (r - mean) * (r - mean), 0) / ratings.length;
+      const stdDev = Math.sqrt(variance);
+      const score = Math.round(Math.min(100, Math.max(0, 100 - (stdDev / 2) * 100)));
+      moodStability = `${score}%`;
+      hasStability = true;
     }
 
-    // Fill days of the month
-    for (let day = 1; day <= totalDays; day++) {
-      const cellDate = new Date(year, month, day);
-      const dayEntries = moodEntries.filter(
-        (e) => new Date(e.timestamp).toDateString() === cellDate.toDateString()
+    // Current Streak: consecutive-day check-ins counting back from today (global).
+    const checkedDays = new Set(moodEntries.map((e) => new Date(e.timestamp).toDateString()));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let currentStreak = 0;
+    const cursor = new Date(today);
+    while (checkedDays.has(cursor.toDateString())) {
+      currentStreak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    // Journal Entries within the selected week.
+    const journalCount = journals.filter((j) => {
+      const t = new Date(j.created_at);
+      return t >= start && t <= end;
+    }).length;
+
+    // Meditations (completed or session started) within the selected week.
+    const meditationCount = analyticsEvents.filter((e) => {
+      const t = new Date(e.created_at);
+      return (
+        (e.event_name === 'meditation_completed' ||
+          e.event_name === 'meditation_session_started') &&
+        t >= start &&
+        t <= end
       );
-      const latest = dayEntries.length > 0 ? dayEntries[dayEntries.length - 1] : null;
-      calendarCells.push({
-        dayNumber: day,
-        moodLevel: latest ? latest.rating : null,
-      });
-    }
+    }).length;
 
-    return calendarCells;
-  }, [moodEntries]);
+    // Breathing sessions (started or completed) within the selected week.
+    const breathingCount = analyticsEvents.filter((e) => {
+      const t = new Date(e.created_at);
+      return BREATHING_EVENTS.includes(e.event_name) && t >= start && t <= end;
+    }).length;
+
+    return {
+      moodStability,
+      hasStability,
+      currentStreak,
+      journalCount,
+      meditationCount,
+      breathingCount,
+    };
+  }, [moodEntries, journals, analyticsEvents, selectedWeek]);
 
   // ── Calculations: Emotion Distribution ───────────────────────────────────────
   const emotionDistribution = useMemo(() => {
@@ -219,8 +364,8 @@ export function MoodTimelineScreen() {
       if (medAvg > nonMedAvg && meditationMoods.length >= 1) {
         insights.push({
           id: 'meditation',
-          text: 'You usually feel better after meditation.',
-          description: `On meditation days, your average mood is ${medAvg.toFixed(1)} compared to ${nonMedAvg.toFixed(1)} on other days.`,
+          text: 'Your mood lifts after meditation sessions.',
+          why: `Slower breathing down-regulates your nervous system, lowering stress before it builds. On meditation days your average mood is ${medAvg.toFixed(1)} vs ${nonMedAvg.toFixed(1)} otherwise.`,
           icon: Sparkles,
           color: '#8B5CF6',
         });
@@ -237,8 +382,8 @@ export function MoodTimelineScreen() {
     if (lowEveningEntries.length >= 2) {
       insights.push({
         id: 'evening_stress',
-        text: 'You often report stress after 7 PM.',
-        description: `You logged stress or tension ${lowEveningEntries.length} times in the evening. Consider scheduling wind-down exercises earlier.`,
+        text: 'You often feel stress after 7 PM.',
+        why: 'Demands accumulate through the day with no wind-down, so tension peaks in the evening.',
         icon: Brain,
         color: '#FF9F0A',
       });
@@ -260,8 +405,8 @@ export function MoodTimelineScreen() {
     if (sleepLowCount >= 2) {
       insights.push({
         id: 'sleep_correlation',
-        text: 'Sleep below 6 hours correlates with low mood.',
-        description: 'Your journal logs indicate that poor rest or fatigue is frequently linked with Awful or Not Good mood ratings.',
+        text: 'Short sleep tracks with lower mood.',
+        why: 'Poor rest depletes emotional regulation, making low ratings more likely the next day.',
         icon: BookOpen,
         color: '#6366F1',
       });
@@ -272,8 +417,8 @@ export function MoodTimelineScreen() {
     if (journaledDays.size >= 2) {
       insights.push({
         id: 'journal_consistency',
-        text: 'Journaling improves your mood consistency.',
-        description: 'Writing about your thoughts regularly helps stabilize your mood swings and promotes emotional regulation.',
+        text: 'Journaling steadies your mood.',
+        why: 'Naming feelings externalizes them, which takes the edge off their intensity.',
         icon: Heart,
         color: '#10B981',
       });
@@ -283,8 +428,8 @@ export function MoodTimelineScreen() {
     if (insights.length === 0) {
       insights.push({
         id: 'general_growth',
-        text: 'Keep tracking to uncover deeper patterns.',
-        description: 'Consistency is key. Continue logging your mood and meditations to unlock comprehensive correlations.',
+        text: 'Keep tracking to surface deeper patterns.',
+        why: 'Consistent logging reveals the quiet links between your habits and mood, so small changes add up over time.',
         icon: Info,
         color: colors.brand.primary,
       });
@@ -292,6 +437,45 @@ export function MoodTimelineScreen() {
 
     return insights;
   }, [moodEntries, analyticsEvents, journals, colors]);
+
+  // ── Calculations: Weekly Mood Timeline (Sprint 3 flagship) ────────────────
+  const weekTimelineDays = useMemo(() => {
+    const { start } = getWeekBounds(selectedWeek);
+
+    const isSameDay = (iso: string, day: Date) =>
+      new Date(iso).toDateString() === day.toDateString();
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(start);
+      day.setDate(start.getDate() + i);
+      day.setHours(0, 0, 0, 0);
+
+      const dayEntries = moodEntries.filter(
+        (e) => new Date(e.timestamp).toDateString() === day.toDateString()
+      );
+      const latest = dayEntries.length > 0 ? dayEntries[dayEntries.length - 1] : null;
+
+      const meditationDone = analyticsEvents.some(
+        (e) => MEDITATION_EVENTS.includes(e.event_name) && isSameDay(e.created_at, day)
+      );
+
+      const sleepEvent = analyticsEvents.some(
+        (e) => SLEEP_EVENTS.includes(e.event_name) && isSameDay(e.created_at, day)
+      );
+
+      days.push({
+        dayName: SHORT_DAY[day.getDay()],
+        date: day,
+        rating: latest ? latest.rating : null,
+        note: latest && latest.note ? latest.note : null,
+        meditationDone,
+        sleepText: sleepEvent ? 'Done' : null,
+      });
+    }
+
+    return days;
+  }, [moodEntries, analyticsEvents, selectedWeek]);
 
   const hasData = moodEntries.length > 0;
 
@@ -309,7 +493,18 @@ export function MoodTimelineScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Living Dashboard Header widget */}
-        <WeeklyHistoryHeader />
+        <WeeklyHistoryHeader
+          selectedWeek={selectedWeek}
+          onWeekChange={handleWeekChange}
+          dateRangeText={dateRangeText}
+          dominantEmoji={dominantEmoji}
+          dominantLabel={dominantLabel}
+          hasDominant={hasDominant}
+          trendText={heroTrendText}
+          isBetter={weeklySummary.isBetter}
+          isWorse={weeklySummary.isWorse}
+          hasTrend={heroHasTrend}
+        />
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -324,172 +519,205 @@ export function MoodTimelineScreen() {
           </View>
         ) : (
           <>
-            {/* ── Weekly Trend & Summary ─────────────────────────────────── */}
-            <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }, shadows.glass]}>
-              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Weekly Trend</Text>
-              
-              <View style={styles.trendRow}>
-                <View>
-                  <Text style={[styles.averageLabel, { color: colors.text.secondary }]}>Average Mood</Text>
-                  <Text style={[styles.averageVal, { color: colors.text.primary }]}>{weeklySummary.averageMood}</Text>
-                </View>
-                {weeklySummary.percentText ? (
-                  <View style={[
-                    styles.trendBadge,
-                    {
-                      backgroundColor: weeklySummary.isBetter
-                        ? `${colors.success}15`
-                        : `${colors.danger}15`,
-                      borderColor: weeklySummary.isBetter
-                        ? `${colors.success}30`
-                        : `${colors.danger}30`
-                    }
-                  ]}>
+            {/* ── Weekly Story (signature narrative — lead-in to the arc) ── */}
+            <WeeklyStory
+              days={weekTimelineDays}
+              weekLabel={selectedWeek === 0 ? 'This Week' : dateRangeText}
+            />
+
+            {/* ── Weekly Mood Timeline (Sprint 3, signature hero) ───────── */}
+            <MoodTimelineVisual
+              days={weekTimelineDays}
+              weekLabel={selectedWeek === 0 ? 'This Week' : dateRangeText}
+            />
+
+            {/* ── Weekly Summary (Sprint 2 — compact supporting strip) ──── */}
+            <View style={[styles.compactSummary, { backgroundColor: colors.surface.secondary, borderColor: colors.border.default }]}>
+              <View style={styles.compactSummaryMain}>
+                <View style={styles.compactAvgBlock}>
+                  <Text style={[styles.compactAvg, { color: colors.text.primary }]}>
+                    {weeklySummary.averageMood}
+                    <Text style={[styles.compactAvgUnit, { color: colors.text.tertiary }]}>/5</Text>
+                  </Text>
+                  <View style={styles.trendLine}>
+                    {weeklySummary.isBetter ? (
+                      <ArrowUpRight size={14} color={colors.success} />
+                    ) : weeklySummary.isWorse ? (
+                      <ArrowDownRight size={14} color={colors.danger} />
+                    ) : (
+                      <TrendingUp size={14} color={colors.text.tertiary} />
+                    )}
                     <Text style={[
-                      styles.trendBadgeText,
-                      { color: weeklySummary.isBetter ? colors.success : colors.danger }
+                      styles.compactTrend,
+                      {
+                        color: weeklySummary.isBetter
+                          ? colors.success
+                          : weeklySummary.isWorse
+                          ? colors.danger
+                          : colors.text.tertiary,
+                      },
                     ]}>
-                      {weeklySummary.percentText}
-                    </Text>
-                    <Text style={[styles.trendBadgeLabel, { color: colors.text.secondary }]}>
                       {weeklySummary.trendText}
                     </Text>
                   </View>
-                ) : (
-                  <Text style={[styles.trendBadgeLabel, { color: colors.text.secondary, alignSelf: 'center' }]}>
-                    {weeklySummary.trendText}
-                  </Text>
-                )}
-              </View>
-
-              <View style={styles.chartContainer}>
-                <MoodTimeline points={svgPoints} svgWidth={SVG_WIDTH} svgHeight={SVG_HEIGHT} />
-              </View>
-
-              {/* Day Dots list */}
-              <View style={styles.weekList}>
-                {weekDaysData.map((d, index) => {
-                  const rating = d.moodLevel as MoodRating | null;
-                  const isToday = index === 6;
-                  return (
-                    <View key={index} style={[styles.weekDayRow, isToday && { borderBottomWidth: 0 }]}>
-                      <Text style={[styles.weekDayLabel, { color: isToday ? colors.brand.primary : colors.text.primary }]}>
-                        {d.dayName} {isToday && '(Today)'}
-                      </Text>
-                      <View style={styles.weekDayValue}>
-                        {rating ? (
-                          <>
-                            <Text style={[styles.weekDayRating, { color: MOOD_COLORS[rating] }]}>
-                              {MOOD_MAP[rating].label}
-                            </Text>
-                            <EmotionAvatar emotion={getMoodEmotion(rating)} size={22} animated={false} showGlow={false} />
-                          </>
-                        ) : (
-                          <Text style={[styles.weekDayRating, { color: colors.text.tertiary }]}>No check-in</Text>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* ── Monthly Mood Calendar ──────────────────────────────────── */}
-            <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }, shadows.glass]}>
-              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Mood Calendar</Text>
-              <Text style={[styles.calendarSubtitle, { color: colors.text.secondary }]}>
-                {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
-              </Text>
-              
-              <View style={styles.calendarGrid}>
-                {/* Week day letters */}
-                <View style={styles.calendarWeekHeader}>
-                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                    <Text key={day} style={[styles.calendarWeekText, { color: colors.text.tertiary }]}>
-                      {day}
-                    </Text>
-                  ))}
                 </View>
-
-                {/* Day cells */}
-                <View style={styles.calendarBody}>
-                  {monthlyCalendarData.map((cell, idx) => {
-                    const rating = cell.moodLevel;
-                    const cellColor = rating ? MOOD_COLORS[rating] : 'transparent';
-                    return (
-                      <View key={idx} style={styles.calendarCell}>
-                        {cell.dayNumber !== null ? (
-                          <View style={[
-                            styles.calendarDot,
-                            rating
-                              ? { backgroundColor: cellColor }
-                              : { backgroundColor: colors.surface.secondary, borderWidth: 1, borderColor: colors.border.default }
-                          ]}>
-                            <Text style={[
-                              styles.calendarDayNum,
-                              { color: rating ? '#FFFFFF' : colors.text.secondary }
-                            ]}>
-                              {cell.dayNumber}
-                            </Text>
-                          </View>
-                        ) : (
-                          <View style={styles.calendarCellPlaceholder} />
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            </View>
-
-            {/* ── Emotion Distribution ───────────────────────────────────── */}
-            <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }, shadows.glass]}>
-              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Emotion Distribution</Text>
-              
-              <View style={styles.distributionList}>
-                {emotionDistribution.map((dist, idx) => (
-                  <View key={idx} style={styles.distRow}>
-                    <Text style={styles.distEmoji}>{dist.emoji}</Text>
-                    <Text style={[styles.distLabel, { color: colors.text.primary }]}>{dist.label}</Text>
-                    
-                    <View style={styles.progressContainer}>
-                      <View style={[styles.progressBarBg, { backgroundColor: colors.border.default }]}>
-                        <View style={[
-                          styles.progressBarFill,
-                          { backgroundColor: dist.color, width: `${dist.percentage}%` }
-                        ]} />
-                      </View>
-                    </View>
-                    
-                    <Text style={[styles.distPct, { color: colors.text.secondary }]}>{dist.percentage}%</Text>
+                {hasDominant ? (
+                  <View style={[styles.compactChip, { borderColor: colors.border.default }]}>
+                    <Text style={styles.compactChipText}>{`${dominantEmoji} ${dominantLabel}`}</Text>
                   </View>
-                ))}
+                ) : null}
+              </View>
+
+              <View style={styles.compactStats}>
+                <SummaryStat label="Stability" value={weeklyStats.moodStability} />
+                <SummaryStat label="Streak" value={`${weeklyStats.currentStreak}d`} />
+                <SummaryStat label="Journal" value={`${weeklyStats.journalCount}`} />
+                <SummaryStat label="Meditate" value={`${weeklyStats.meditationCount}`} />
               </View>
             </View>
 
-            {/* ── AI Mood Insights (MODULE 4) ─────────────────────────────── */}
-            <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }, shadows.glass]}>
+            {/* ── Monthly Mood Calendar (Sprint 4) ─────────────────────── */}
+            <MoodCalendar moodEntries={moodEntries} />
+
+            {/* ── Emotion Distribution (Redesign: Most Common Emotion) ─────── */}
+            <View style={[styles.card, styles.distCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }, shadows.glass]}>
+              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Most Common Emotion</Text>
+
+              {emotionDistribution.length > 0 ? (
+                (() => {
+                  const dominant = emotionDistribution[0];
+                  const rest = emotionDistribution.slice(1);
+                  return (
+                    <>
+                      {/* Dominant hero */}
+                      <View style={styles.distHero}>
+                        <Text style={styles.distHeroEmoji}>{dominant.emoji}</Text>
+                        <View style={styles.distHeroBody}>
+                          <Text style={[styles.distHeroLabel, { color: colors.text.primary }]}>
+                            {dominant.label}
+                          </Text>
+                          <Text style={[styles.distHeroPct, { color: dominant.color }]}>
+                            {dominant.percentage}%
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Remaining emotions */}
+                      <View style={styles.distributionList}>
+                        {rest.map((dist, idx) => (
+                          <View key={idx} style={styles.distRow}>
+                            <Text style={styles.distEmoji}>{dist.emoji}</Text>
+                            <Text style={[styles.distLabel, { color: colors.text.primary }]}>{dist.label}</Text>
+
+                            <View style={styles.progressContainer}>
+                              <View style={[styles.progressBarBg, { backgroundColor: colors.border.default }]}>
+                                <AnimatedBar color={dist.color} percentage={dist.percentage} />
+                              </View>
+                            </View>
+
+                            <Text style={[styles.distPct, { color: colors.text.secondary }]}>{dist.percentage}%</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {/* Footer stat row */}
+                      <View style={[styles.distFooter, { borderTopColor: colors.border.default }]}>
+                        <View style={styles.distFooterCell}>
+                          <Text style={[styles.distFooterLabel, { color: colors.text.tertiary }]}>Total</Text>
+                          <Text style={[styles.distFooterValue, { color: colors.text.primary }]}>
+                            {moodEntries.length}
+                          </Text>
+                        </View>
+                        <View style={styles.distFooterCell}>
+                          <Text style={[styles.distFooterLabel, { color: colors.text.tertiary }]}>Dominant</Text>
+                          <Text style={[styles.distFooterValue, { color: colors.text.primary }]}>
+                            {dominant.emoji}
+                          </Text>
+                        </View>
+                        <View style={styles.distFooterCell}>
+                          <Text style={[styles.distFooterLabel, { color: colors.text.tertiary }]}>Trend</Text>
+                          <View style={styles.distFooterTrend}>
+                            {weeklySummary.isBetter ? (
+                              <ArrowUpRight size={16} color={colors.success} />
+                            ) : weeklySummary.isWorse ? (
+                              <ArrowDownRight size={16} color={colors.danger} />
+                            ) : (
+                              <TrendingUp size={16} color={colors.text.secondary} />
+                            )}
+                            {weeklySummary.percentText ? (
+                              <Text style={[
+                                styles.distFooterValue,
+                                {
+                                  color: weeklySummary.isBetter
+                                    ? colors.success
+                                    : weeklySummary.isWorse
+                                    ? colors.danger
+                                    : colors.text.secondary,
+                                },
+                              ]}>
+                                {weeklySummary.percentText}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+                    </>
+                  );
+                })()
+              ) : (
+                <View style={styles.distHero}>
+                  <Text style={styles.distHeroEmoji}>—</Text>
+                  <View style={styles.distHeroBody}>
+                    <Text style={[styles.distHeroLabel, { color: colors.text.primary }]}>No data</Text>
+                    <Text style={[styles.distHeroPct, { color: colors.text.secondary }]}>—</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* ── AI Insights (MODULE 4, Sprint 6) ───────────────────────── */}
+            <Animated.View entering={FadeInDown.duration(400)} style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }, shadows.glass]}>
               <View style={styles.insightsHeader}>
-                <Brain size={18} color={colors.brand.primary} />
+                <BarChart3 size={18} color={colors.brand.primary} />
                 <Text style={[styles.sectionTitle, { color: colors.text.primary, marginLeft: spacing.xs }]}>
-                  AI Mood Insights
+                  AI Insights
                 </Text>
               </View>
 
               {moodEntries.length < 3 ? (
-                <View style={styles.insightsLocked}>
-                  <Info size={24} color={colors.brand.secondary} style={{ marginBottom: spacing.xs }} />
-                  <Text style={[styles.lockedTitle, { color: colors.text.primary }]}>Insights Locked</Text>
-                  <Text style={[styles.lockedDesc, { color: colors.text.secondary }]}>
-                    Log mood entries and reflections for at least 3 days to reveal personalized wellness correlations.
-                  </Text>
-                </View>
+                (() => {
+                  const needed = Math.max(0, 3 - moodEntries.length);
+                  return (
+                    <View style={styles.insightsLocked}>
+                      <Info size={24} color={colors.brand.secondary} style={{ marginBottom: spacing.xs }} />
+                      <Text style={[styles.lockedTitle, { color: colors.text.primary }]}>Unlock Personalized Insights</Text>
+                      <Text style={[styles.lockedDesc, { color: colors.text.secondary }]}>
+                        {needed === 0
+                          ? 'Almost there — one more check-in unlocks insights'
+                          : `${needed} more check-ins needed`}
+                      </Text>
+
+                      <View style={styles.unlockList}>
+                        {['Mood patterns', 'Stress triggers', 'Sleep correlations', 'Personalized recommendations'].map((item) => (
+                          <View key={item} style={styles.unlockItem}>
+                            <CheckCircle size={16} color={colors.success} />
+                            <Text style={[styles.unlockText, { color: colors.text.secondary }]}>{item}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })()
               ) : (
                 <View style={styles.insightsList}>
-                  {moodInsights.map((insight) => {
+                  {moodInsights.map((insight, i) => {
                     const InsightIcon = insight.icon;
                     return (
-                      <View key={insight.id} style={[styles.insightItem, { borderColor: colors.border.default }]}>
+                      <Animated.View
+                        key={insight.id}
+                        entering={FadeInDown.delay(i * 60).duration(350)}
+                        style={[styles.insightItem, { borderColor: colors.border.default }]}
+                      >
                         <View style={[styles.insightIconWrap, { backgroundColor: `${insight.color}15` }]}>
                           <InsightIcon size={18} color={insight.color} />
                         </View>
@@ -498,14 +726,52 @@ export function MoodTimelineScreen() {
                             {insight.text}
                           </Text>
                           <Text style={[styles.insightDesc, { color: colors.text.secondary }]}>
-                            {insight.description}
+                            {insight.why}
                           </Text>
                         </View>
-                      </View>
+                      </Animated.View>
                     );
                   })}
                 </View>
               )}
+            </Animated.View>
+
+            {/* ── Weekly Reflection (Sprint 7, closing section) ─────────────── */}
+            <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }, shadows.glass]}>
+              <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Weekly Reflection</Text>
+
+              <Text style={[styles.reflectionHeadline, { color: colors.text.primary }]}>
+                {weeklySummary.isBetter
+                  ? 'This week you felt calmer than last week.'
+                  : weeklySummary.isWorse
+                    ? 'This week you felt more tense than last week.'
+                    : 'This week felt about the same as last week.'}
+              </Text>
+
+              <View style={styles.reflectionStats}>
+                <View style={styles.reflectionStat}>
+                  <Text style={[styles.reflectionStatValue, { color: colors.text.primary }]}>
+                    {weeklyStats.journalCount}
+                  </Text>
+                  <Text style={[styles.reflectionStatLabel, { color: colors.text.secondary }]}>Reflections</Text>
+                </View>
+                <View style={styles.reflectionStat}>
+                  <Text style={[styles.reflectionStatValue, { color: colors.text.primary }]}>
+                    {weeklyStats.meditationCount}
+                  </Text>
+                  <Text style={[styles.reflectionStatLabel, { color: colors.text.secondary }]}>Meditation sessions</Text>
+                </View>
+                <View style={styles.reflectionStat}>
+                  <Text style={[styles.reflectionStatValue, { color: colors.text.primary }]}>
+                    {weeklyStats.breathingCount}
+                  </Text>
+                  <Text style={[styles.reflectionStatLabel, { color: colors.text.secondary }]}>Breathing sessions</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.reflectionClosing, { color: colors.text.tertiary, borderTopColor: colors.border.default }]}>
+                Keep your current evening routine.
+              </Text>
             </View>
           </>
         )}
@@ -567,114 +833,101 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  trendRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  averageLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  averageVal: {
-    fontSize: 34,
-    fontWeight: '800',
-  },
-  trendBadge: {
+  compactSummary: {
+    borderRadius: 16,
     borderWidth: 1,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 8,
-    alignItems: 'flex-end',
-  },
-  trendBadgeText: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  trendBadgeLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  chartContainer: {
-    height: SVG_HEIGHT,
-    marginBottom: spacing.xl,
-    alignSelf: 'stretch',
-  },
-  weekList: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    paddingTop: spacing.md,
-  },
-  weekDayRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    paddingHorizontal: spacing.md,
   },
-  weekDayLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+  compactSummaryMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
   },
-  weekDayValue: {
+  compactAvgBlock: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  weekDayRating: {
+  compactAvg: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  compactAvgUnit: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '700',
   },
-  calendarSubtitle: {
-    fontSize: 13,
+  compactTrend: {
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: spacing.md,
+    flexShrink: 1,
   },
-  calendarGrid: {
-    alignSelf: 'stretch',
+  compactChip: {
+    borderWidth: 1,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 999,
   },
-  calendarWeekHeader: {
+  compactChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  compactStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.xs,
+    gap: spacing.xs,
+    paddingTop: spacing.sm,
   },
-  calendarWeekText: {
-    width: (SCREEN_W - 64) / 7,
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '700',
+  compactStat: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
-  calendarBody: {
+  compactStatValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 1,
+  },
+  compactStatLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  trendLine: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  calendarCell: {
-    width: (SCREEN_W - 64) / 7,
-    height: 38,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 4,
+    gap: spacing.xs,
+    maxWidth: '55%',
   },
-  calendarCellPlaceholder: {
-    width: 28,
-    height: 28,
+  distCard: {
+    minHeight: 170,
   },
-  calendarDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
+  distHero: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: spacing.md,
   },
-  calendarDayNum: {
-    fontSize: 11,
+  distHeroEmoji: {
+    fontSize: 40,
+    marginRight: spacing.sm,
+  },
+  distHeroBody: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  distHeroLabel: {
+    fontSize: 18,
     fontWeight: '700',
+    marginBottom: 2,
+  },
+  distHeroPct: {
+    fontSize: 26,
+    fontWeight: '800',
   },
   distributionList: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   distRow: {
     flexDirection: 'row',
@@ -685,9 +938,34 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   distLabel: {
-    width: 76,
+    width: 72,
     fontSize: 13,
     fontWeight: '600',
+  },
+  distFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+  },
+  distFooterCell: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  distFooterLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  distFooterValue: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  distFooterTrend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   progressContainer: {
     flex: 1,
@@ -758,5 +1036,52 @@ const styles = StyleSheet.create({
   insightDesc: {
     fontSize: 11,
     lineHeight: 16,
+  },
+  unlockList: {
+    marginTop: spacing.md,
+    width: '100%',
+    gap: spacing.xs,
+  },
+  unlockItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  unlockText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  reflectionHeadline: {
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 21,
+    marginBottom: spacing.lg,
+  },
+  reflectionStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  reflectionStat: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  reflectionStatValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  reflectionStatLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  reflectionClosing: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 17,
+    textAlign: 'center',
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
   },
 });

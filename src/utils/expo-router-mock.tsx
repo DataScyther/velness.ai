@@ -52,9 +52,22 @@ export const useNavigation = () => {
   };
 };
 
+export function useLocalSearchParams<T extends Record<string, string | string[] | undefined> = Record<string, string | undefined>>(): T {
+  const hash = typeof window !== 'undefined' ? window.location.hash : '';
+  const queryIndex = hash.indexOf('?');
+  if (queryIndex === -1) return {} as T;
+  const params = new URLSearchParams(hash.slice(queryIndex + 1));
+  const result: Record<string, string> = {};
+  params.forEach((value, key) => {
+    result[key] = value;
+  });
+  return result as T;
+}
+
 export default {
   useRouter,
   router,
   Redirect,
   useNavigation,
+  useLocalSearchParams,
 };

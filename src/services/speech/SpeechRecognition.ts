@@ -48,7 +48,7 @@ export function useSpeechRecognitionEvent<K extends keyof SpeechEventMap>(
     []
   );
 
-  if (useNativeEventHook) {
+  if (useNativeEventHook && speechRecognitionAvailable) {
     // Always call the hook unconditionally at top level — this is allowed.
     // The original hook returns a cleanup function, which we ignore since
     // we manage listener lifecycle via handlerRef indirection.

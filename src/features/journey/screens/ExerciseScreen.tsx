@@ -3,7 +3,7 @@ import { ScrollView, View, Text, Pressable, TextInput, StyleSheet, Animated as R
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft, Play, Pause, RotateCcw, Check, Sparkles, BookOpen, Clock, Heart, Award } from 'lucide-react-native';
+import { ArrowLeft, Play, Pause, RotateCcw, Check, Sparkles, BookOpen, Clock, Heart, Award, Volume2, Music, CheckCircle2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useJourney } from '@/shared/hooks/useJourney';
@@ -15,25 +15,34 @@ import type { ExerciseWithProgress } from '@/features/journey/models';
 import { GuidedExerciseEngine } from '../components/GuidedExerciseEngine';
 import { GUIDED_STEPS_CONFIG } from '../data/guidedSteps';
 import { JourneyNavigationGuard } from '../services/JourneyNavigationGuard';
-import { DEFAULT_LESSONS } from '@/features/journey/data/programs';
+import { DEFAULT_LESSONS, DEFAULT_PROGRAMS } from '@/features/journey/data/programs';
+import { DEFAULT_EXERCISES } from '@/features/journey/data/exercises';
 import { analyticsService } from '@/services/analytics';
 
-type LifecycleStage = 'introduction' | 'preparation' | 'exercise' | 'pause' | 'completion' | 'reflection' | 'saving';
+type LifecycleStage = 'overview' | 'why_this_helps' | 'preparation' | 'exercise' | 'pause' | 'reflection' | 'completion' | 'next_recommendation' | 'saving';
 
 // ─── Child Component: Meditation Timer ─────────────────────────────────
 function MeditationTimer({ 
   estimatedTime, 
   isRunning, 
-  onComplete 
+  onComplete,
+  voice,
+  ambient
 }: { 
   estimatedTime: number; 
   isRunning: boolean; 
   onComplete: () => void; 
+  voice: 'Female' | 'Male' | 'Silent';
+  ambient: 'None' | 'Rain' | 'Ocean' | 'Forest';
 }) {
   const { colors } = useTheme();
   const totalSeconds = estimatedTime * 60;
   const [remaining, setRemaining] = useState(totalSeconds);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    setRemaining(estimatedTime * 60);
+  }, [estimatedTime]);
 
   useEffect(() => {
     if (isRunning) {
@@ -62,12 +71,31 @@ function MeditationTimer({
   const seconds = remaining % 60;
 
   return (
-    <View style={styles.timerCircle}>
-      <View style={[styles.timerCircleBg, { borderColor: colors.brand.primary }]}>
-        <Text style={[styles.timerText, { color: colors.text.primary }]}>
-          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-        </Text>
-        <Text style={[styles.timerLabel, { color: colors.text.secondary }]}>remaining</Text>
+    <View style={styles.meditationTimerContainer}>
+      <View style={styles.timerCircle}>
+        <View style={[styles.timerCircleBg, { borderColor: colors.brand.primary }]}>
+          <Text style={[styles.timerText, { color: colors.text.primary }]}>
+            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          </Text>
+          <Text style={[styles.timerLabel, { color: colors.text.secondary }]}>remaining</Text>
+        </View>
+      </View>
+      
+      {/* Audio Status Panel */}
+      <View style={[styles.audioStatusPanel, { backgroundColor: colors.background.secondary, borderColor: colors.border.default }]}>
+        <View style={styles.audioStatusItem}>
+          <Volume2 size={16} color={colors.text.secondary} />
+          <Text style={[styles.audioStatusText, { color: colors.text.primary }]}>
+            {voice === 'Silent' ? 'Silent / Bell' : `${voice} Guide`}
+          </Text>
+        </View>
+        <View style={[styles.audioStatusDivider, { backgroundColor: colors.border.default }]} />
+        <View style={styles.audioStatusItem}>
+          <Music size={16} color={colors.text.secondary} />
+          <Text style={[styles.audioStatusText, { color: colors.text.primary }]}>
+            {ambient === 'None' ? 'No Ambient' : `${ambient} Ambient`}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -103,8 +131,17 @@ function BreathingGuide({
     if (programId.includes('focus-breathing')) {
       return { inhale: 2000, hold1: 0, exhale: 2000, hold2: 0, name: 'Alertness Breath' };
     }
-    if (programId.includes('sleep-preparation')) {
-      return { inhale: 6000, hold1: 0, exhale: 6000, hold2: 0, name: 'Unwinding Breath' };
+    if (programId.includes('sleep-breathing')) {
+      return { inhale: 6000, hold1: 0, exhale: 6000, hold2: 0, name: 'Sleep Breath' };
+    }
+    if (programId.includes('deep-relaxation')) {
+      return { inhale: 5000, hold1: 0, exhale: 5000, hold2: 0, name: 'Deep Relaxation' };
+    }
+    if (programId.includes('1-minute-reset')) {
+      return { inhale: 5000, hold1: 0, exhale: 5000, hold2: 0, name: '1 Minute Reset' };
+    }
+    if (programId.includes('3-minute-calm')) {
+      return { inhale: 5000, hold1: 0, exhale: 5000, hold2: 0, name: '3 Minute Calm' };
     }
     // Default calm reset/stress relief: 5s in, 5s out
     return { inhale: 5000, hold1: 0, exhale: 5000, hold2: 0, name: 'Resonant Breath' };
@@ -332,7 +369,7 @@ export function ExerciseScreen() {
   const uid = user?.uid || null;
   const { exerciseId, sessionId } = useLocalSearchParams<{ exerciseId?: string; sessionId?: string }>();
   const targetId = exerciseId || sessionId;
-  const { exercises } = useJourney();
+  const { exercises, daysPracticed, minutesCompleted, startExercise } = useJourney();
   const queryClient = useQueryClient();
 
   const exercise = useMemo(() => {
@@ -345,10 +382,72 @@ export function ExerciseScreen() {
   }, [exercise]);
 
   // Lifecycle stage state
-  const [stage, setStage] = useState<LifecycleStage>('introduction');
+  const [stage, setStage] = useState<LifecycleStage>('overview');
   const [prepSeconds, setPrepSeconds] = useState(5);
   const [reflectionText, setReflectionText] = useState('');
   const [savedReflection, setSavedReflection] = useState('');
+  const [prevDays, setPrevDays] = useState(0);
+  const [prevMins, setPrevMins] = useState(0);
+
+  const program = useMemo(() => {
+    if (!lesson) return null;
+    return DEFAULT_PROGRAMS.find((p) => p.id === lesson.programId) || null;
+  }, [lesson]);
+
+  const nextRecommendation = useMemo(() => {
+    if (!exercise || !lesson) return null;
+    
+    const currentProgramId = lesson.programId;
+    const programLessons = DEFAULT_LESSONS.filter(l => l.programId === currentProgramId)
+      .sort((a, b) => a.order - b.order);
+    const nextL = programLessons.find(l => l.order === lesson.order + 1);
+    if (nextL) {
+      const nextEx = DEFAULT_EXERCISES.find(ex => ex.lessonId === nextL.id);
+      if (nextEx) {
+        return {
+          id: nextEx.id,
+          title: nextEx.title,
+          type: nextEx.type,
+          description: nextEx.description,
+          reason: 'Next lesson in your active program',
+        };
+      }
+    }
+
+    const siblingProgram = DEFAULT_PROGRAMS.find(p => p.categoryId === exercise.type && p.id !== currentProgramId);
+    if (siblingProgram) {
+      const siblingLesson = DEFAULT_LESSONS.find(l => l.programId === siblingProgram.id);
+      const siblingEx = DEFAULT_EXERCISES.find(ex => ex.lessonId === siblingLesson?.id);
+      if (siblingEx) {
+        return {
+          id: siblingEx.id,
+          title: siblingEx.title,
+          type: siblingEx.type,
+          description: siblingEx.description,
+          reason: 'Continue your exploration',
+        };
+      }
+    }
+
+    return {
+      id: 'box-breathing-l1-ex1',
+      title: 'Box Breathing',
+      type: 'breathing',
+      description: 'Stabilize your focus and nervous system.',
+      reason: 'Recommended for daily centering',
+    };
+  }, [exercise, lesson]);
+
+  // Meditation Customization States
+  const [selectedDuration, setSelectedDuration] = useState<number>(10);
+  const [selectedVoice, setSelectedVoice] = useState<'Female' | 'Male' | 'Silent'>('Female');
+  const [selectedAmbient, setSelectedAmbient] = useState<'None' | 'Rain' | 'Ocean' | 'Forest'>('None');
+
+  useEffect(() => {
+    if (exercise) {
+      setSelectedDuration(exercise.estimatedTime || 10);
+    }
+  }, [exercise]);
 
   // ─── Stage Transitions (Sprint 4.10) ──────────────────────────────────
   const fadeAnim = useRef(new RNAnimated.Value(1)).current;
@@ -411,6 +510,8 @@ export function ExerciseScreen() {
 
   const handleSave = useCallback(async () => {
     if (!uid || !targetId) return;
+    setPrevDays(daysPracticed);
+    setPrevMins(minutesCompleted);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     transitionToStage('saving');
     try {
@@ -443,21 +544,19 @@ export function ExerciseScreen() {
       await queryClient.invalidateQueries({ queryKey: ['journey', 'legacy', uid] });
       await queryClient.invalidateQueries({ queryKey: ['homeState'] });
       
-      const title = exercise?.title || 'Exercise';
-      const duration = exercise?.estimatedTime || 0;
-      router.replace(`/journey/summary?exerciseId=${targetId}&title=${encodeURIComponent(title)}&duration=${duration}&type=${exercise?.type || 'meditation'}` as any);
+      transitionToStage('completion');
     } catch (err) {
       console.error('[ExerciseScreen] Save failed:', err);
       transitionToStage('reflection'); // fallback
     }
-  }, [uid, targetId, exercise, lesson?.programId, queryClient, transitionToStage]);
+  }, [uid, targetId, exercise, lesson?.programId, queryClient, transitionToStage, daysPracticed, minutesCompleted]);
 
   const handleExerciseComplete = (data?: string) => {
     if (data) {
       setSavedReflection(data);
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    transitionToStage('completion');
+    transitionToStage('reflection');
   };
 
   if (!exercise) {
@@ -495,7 +594,15 @@ export function ExerciseScreen() {
             await queryClient.invalidateQueries({ queryKey: ['journey', 'user-progress', uid] });
             await queryClient.invalidateQueries({ queryKey: ['journey', 'legacy', uid] });
             await queryClient.invalidateQueries({ queryKey: ['homeState'] });
-            router.replace('/(tabs)/journey');
+            router.replace({
+              pathname: '/journey/summary',
+              params: {
+                exerciseId: exercise.id,
+                title: exercise.title,
+                duration: exercise.estimatedTime,
+                type: 'cbt',
+              },
+            } as any);
           }}
         />
       </SafeAreaView>
@@ -533,8 +640,8 @@ export function ExerciseScreen() {
       )}
 
       <RNAnimated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }}>
-        {/* Stage: Introduction */}
-        {stage === 'introduction' && (
+        {/* Stage: Overview */}
+        {stage === 'overview' && (
           <ScrollView contentContainerStyle={styles.introContainer} showsVerticalScrollIndicator={false}>
             <View style={[styles.badge, { backgroundColor: `${colors.brand.primary}12` }]} accessible={true} accessibilityLabel={`Exercise type: ${exercise.type}`}>
               <Sparkles size={14} color={colors.brand.primary} />
@@ -546,25 +653,117 @@ export function ExerciseScreen() {
             <Text style={[styles.desc, { color: colors.text.secondary }]}>{exercise.description}</Text>
 
             {/* Goal & Duration */}
-            <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]} accessible={true}>
-              <View style={styles.cardHeader}>
-                <Heart size={18} color={colors.brand.primary} />
-                <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Focus & Goal</Text>
+            {exercise.type === EXERCISE_TYPE.MEDITATION ? (
+              <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]} accessible={true}>
+                <View style={styles.cardHeader}>
+                  <Heart size={18} color={colors.brand.primary} />
+                  <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Focus & Goal</Text>
+                </View>
+                <Text style={[styles.cardContentText, { color: colors.text.secondary, marginBottom: spacing.md }]}>
+                  {exercise.goal || 'Train mindfulness, emotional focus, and cognitive resilience.'}
+                </Text>
+
+                <View style={styles.cardDivider} />
+
+                {/* Duration Selector */}
+                <View style={{ marginTop: spacing.md }}>
+                  <View style={styles.cardHeader}>
+                    <Clock size={18} color={colors.brand.primary} />
+                    <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Session Duration</Text>
+                  </View>
+                  <View style={styles.selectorRow}>
+                    {[5, 10, 15, 20].map((dur) => (
+                      <Pressable
+                        key={dur}
+                        onPress={() => setSelectedDuration(dur)}
+                        style={[
+                          styles.selectorPill,
+                          selectedDuration === dur
+                            ? { backgroundColor: colors.brand.primary, borderColor: colors.brand.primary }
+                            : { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
+                        ]}
+                      >
+                        <Text style={[styles.selectorPillText, selectedDuration === dur ? { color: colors.brand.contrastText } : { color: colors.text.primary }]}>
+                          {dur} min
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Voice Selector */}
+                <View style={{ marginTop: spacing.md }}>
+                  <View style={styles.cardHeader}>
+                    <Volume2 size={18} color={colors.brand.primary} />
+                    <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Guide Voice</Text>
+                  </View>
+                  <View style={styles.selectorRow}>
+                    {(['Female', 'Male', 'Silent'] as const).map((voice) => (
+                      <Pressable
+                        key={voice}
+                        onPress={() => setSelectedVoice(voice)}
+                        style={[
+                          styles.selectorPill,
+                          selectedVoice === voice
+                            ? { backgroundColor: colors.brand.primary, borderColor: colors.brand.primary }
+                            : { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
+                        ]}
+                      >
+                        <Text style={[styles.selectorPillText, selectedVoice === voice ? { color: colors.brand.contrastText } : { color: colors.text.primary }]}>
+                          {voice === 'Silent' ? 'Silent / Bell' : `${voice} Guide`}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Ambient Sound Selector */}
+                <View style={{ marginTop: spacing.md }}>
+                  <View style={styles.cardHeader}>
+                    <Music size={18} color={colors.brand.primary} />
+                    <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Ambient Sound</Text>
+                  </View>
+                  <View style={styles.selectorRow}>
+                    {(['None', 'Rain', 'Ocean', 'Forest'] as const).map((ambient) => (
+                      <Pressable
+                        key={ambient}
+                        onPress={() => setSelectedAmbient(ambient)}
+                        style={[
+                          styles.selectorPill,
+                          selectedAmbient === ambient
+                            ? { backgroundColor: colors.brand.primary, borderColor: colors.brand.primary }
+                            : { backgroundColor: colors.background.secondary, borderColor: colors.border.default }
+                        ]}
+                      >
+                        <Text style={[styles.selectorPillText, selectedAmbient === ambient ? { color: colors.brand.contrastText } : { color: colors.text.primary }]}>
+                          {ambient}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
               </View>
-              <Text style={[styles.cardContentText, { color: colors.text.secondary }]}>
-                {exercise.goal || 'Train mindfulness, emotional focus, and cognitive resilience.'}
-              </Text>
-              
-              <View style={styles.cardDivider} />
-              
-              <View style={styles.cardHeader}>
-                <Clock size={18} color={colors.brand.primary} />
-                <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Duration</Text>
+            ) : (
+              <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]} accessible={true}>
+                <View style={styles.cardHeader}>
+                  <Heart size={18} color={colors.brand.primary} />
+                  <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Focus & Goal</Text>
+                </View>
+                <Text style={[styles.cardContentText, { color: colors.text.secondary }]}>
+                  {exercise.goal || 'Train mindfulness, emotional focus, and cognitive resilience.'}
+                </Text>
+                
+                <View style={styles.cardDivider} />
+                
+                <View style={styles.cardHeader}>
+                  <Clock size={18} color={colors.brand.primary} />
+                  <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Duration</Text>
+                </View>
+                <Text style={[styles.cardContentText, { color: colors.text.secondary }]}>
+                  ~{exercise.estimatedTime} minutes
+                </Text>
               </View>
-              <Text style={[styles.cardContentText, { color: colors.text.secondary }]}>
-                ~{exercise.estimatedTime} minutes
-              </Text>
-            </View>
+            )}
 
             {/* Instructions List */}
             {exercise.instructions && exercise.instructions.length > 0 && (
@@ -592,12 +791,50 @@ export function ExerciseScreen() {
 
             <Pressable 
               style={[styles.primaryButton, { backgroundColor: colors.brand.primary }]}
+              onPress={() => transitionToStage('why_this_helps')}
+              accessibilityRole="button"
+              accessibilityLabel="Continue"
+              accessibilityHint="Navigates to the benefits explanation screen"
+            >
+              <Text style={[styles.primaryButtonText, { color: colors.brand.contrastText }]}>Continue</Text>
+            </Pressable>
+          </ScrollView>
+        )}
+
+        {/* Stage: Why This Helps */}
+        {stage === 'why_this_helps' && (
+          <ScrollView contentContainerStyle={styles.introContainer} showsVerticalScrollIndicator={false}>
+            <View style={[styles.badge, { backgroundColor: `${colors.brand.primary}12` }]} accessible={true}>
+              <Sparkles size={14} color={colors.brand.primary} />
+              <Text style={[styles.badgeText, { color: colors.brand.primary }]}>
+                BENEFITS
+              </Text>
+            </View>
+            <Text style={[styles.title, { color: colors.text.primary }]}>Why this helps</Text>
+            <Text style={[styles.desc, { color: colors.text.secondary }]}>
+              Investing a few minutes in yourself builds long-term cognitive resilience and emotional balance.
+            </Text>
+
+            <View style={[styles.card, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]} accessible={true}>
+              <View style={styles.cardHeader}>
+                <Award size={18} color={colors.brand.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Key Benefits</Text>
+              </View>
+              {(program?.benefits || ['Nervous system regulation', 'Stress reduction', 'Cognitive resilience']).map((benefit, bIdx) => (
+                <View key={bIdx} style={styles.instructionStep}>
+                  <View style={[styles.bulletPoint, { backgroundColor: colors.brand.primary }]} />
+                  <Text style={[styles.stepText, { color: colors.text.secondary, marginLeft: spacing.xs }]}>{benefit}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Pressable 
+              style={[styles.primaryButton, { backgroundColor: colors.brand.primary, marginTop: spacing.xl }]}
               onPress={() => transitionToStage('preparation')}
               accessibilityRole="button"
-              accessibilityLabel="Get Ready"
-              accessibilityHint="Navigates to the preparation screen and starts a countdown"
+              accessibilityLabel="Continue to Preparation"
             >
-              <Text style={[styles.primaryButtonText, { color: colors.brand.contrastText }]}>Get Ready</Text>
+              <Text style={[styles.primaryButtonText, { color: colors.brand.contrastText }]}>Continue</Text>
             </Pressable>
           </ScrollView>
         )}
@@ -629,7 +866,7 @@ export function ExerciseScreen() {
           <View style={styles.exerciseBody}>
             {/* Active Exercise Screens */}
             {exercise.type === EXERCISE_TYPE.MEDITATION && (
-              <MeditationTimer estimatedTime={exercise.estimatedTime} isRunning={true} onComplete={() => handleExerciseComplete()} />
+              <MeditationTimer estimatedTime={selectedDuration} isRunning={true} onComplete={() => handleExerciseComplete()} voice={selectedVoice} ambient={selectedAmbient} />
             )}
 
             {exercise.type === EXERCISE_TYPE.BREATHING && (
@@ -707,17 +944,69 @@ export function ExerciseScreen() {
             <Text style={[styles.desc, { color: colors.text.secondary }]}>
               You spent dedicated time investing in your mental health.
             </Text>
+
+            <View style={styles.completedStatsGrid}>
+              <View style={[styles.completedStatCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
+                <Text style={[styles.completedStatValue, { color: colors.brand.primary }]}>+{Math.max(0, daysPracticed - prevDays)}</Text>
+                <Text style={[styles.completedStatLabel, { color: colors.text.secondary }]}>
+                  {Math.max(0, daysPracticed - prevDays) === 1 ? 'Day Practiced' : 'Days Practiced'}
+                </Text>
+              </View>
+              <View style={[styles.completedStatCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
+                <Text style={[styles.completedStatValue, { color: colors.brand.primary }]}>+{Math.max(0, minutesCompleted - prevMins)}</Text>
+                <Text style={[styles.completedStatLabel, { color: colors.text.secondary }]}>Minutes Completed</Text>
+              </View>
+            </View>
             
             <Pressable 
               style={[styles.primaryButton, { backgroundColor: colors.brand.primary, marginTop: spacing.xl }]}
-              onPress={() => transitionToStage('reflection')}
+              onPress={() => transitionToStage('next_recommendation')}
               accessibilityRole="button"
-              accessibilityLabel="Reflect and Save"
-              accessibilityHint="Proceeds to write a short reflection and save progress"
+              accessibilityLabel="Continue to next recommendation"
+              accessibilityHint="Proceeds to the recommended next session"
             >
-              <Text style={[styles.primaryButtonText, { color: colors.brand.contrastText }]}>Reflect & Save</Text>
+              <Text style={[styles.primaryButtonText, { color: colors.brand.contrastText }]}>Continue</Text>
             </Pressable>
           </View>
+        )}
+
+        {/* Stage: Next Recommendation */}
+        {stage === 'next_recommendation' && nextRecommendation && (
+          <ScrollView contentContainerStyle={styles.reflectionContainer} keyboardShouldPersistTaps="handled">
+            <View style={[styles.recBadge, { backgroundColor: `${colors.brand.primary}12` }]}>
+              <Text style={[styles.recBadgeText, { color: colors.brand.primary }]}>UP NEXT</Text>
+            </View>
+            <Text style={[styles.title, { color: colors.text.primary }]}>Keep the momentum</Text>
+            <Text style={[styles.desc, { color: colors.text.secondary }]}>
+              You've completed this session. Here's a recommended next practice.
+            </Text>
+
+            <View style={[styles.recommendationBox, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
+              <Text style={[styles.recTitleText, { color: colors.text.primary }]}>{nextRecommendation.title}</Text>
+              <Text style={[styles.recDescText, { color: colors.text.secondary }]}>{nextRecommendation.description}</Text>
+              <Text style={[styles.recDescText, { color: colors.text.secondary }]}>{nextRecommendation.reason}</Text>
+            </View>
+
+            <Pressable
+              style={[styles.primaryButton, { backgroundColor: colors.brand.primary, marginTop: spacing.lg }]}
+              onPress={() => startExercise(nextRecommendation.id)}
+              accessibilityRole="button"
+              accessibilityLabel="Start next session"
+              accessibilityHint="Launches the recommended next session directly"
+            >
+              <Text style={[styles.primaryButtonText, { color: colors.brand.contrastText }]}>Start Next Session</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.secondaryButton, { borderColor: colors.border.default, marginTop: spacing.md }]}
+              onPress={() => router.replace('/(tabs)/journey' as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Finish and return to Journey"
+              accessibilityHint="Returns to the Journey tab"
+            >
+              <Text style={[styles.secondaryButtonText, { color: colors.text.primary }]}>Finish</Text>
+            </Pressable>
+          </ScrollView>
         )}
 
         {/* Stage: Reflection prompt */}
@@ -729,7 +1018,7 @@ export function ExerciseScreen() {
             </View>
             <Text style={[styles.title, { color: colors.text.primary }]}>How do you feel now?</Text>
             <Text style={[styles.desc, { color: colors.text.secondary }]}>
-              A brief reflection helps solidify your learning and track changes over time.
+              {lesson?.reflectionPrompt || 'A brief reflection helps solidify your learning and track changes over time.'}
             </Text>
 
             <TextInput
@@ -928,7 +1217,27 @@ const styles = StyleSheet.create({
 
   // Saving Screen styles
   savingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
-  savingText: { fontSize: 16, fontWeight: '600' }
+  savingText: { fontSize: 16, fontWeight: '600' },
+
+  // Meditation Redesign Selectors & Panels
+  selectorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  selectorPill: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: borderRadius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  selectorPillText: { fontSize: 13, fontWeight: '600' },
+  meditationTimerContainer: { alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
+  audioStatusPanel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: borderRadius.lg, borderWidth: 1, gap: spacing.md, marginTop: spacing.md },
+  audioStatusItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  audioStatusText: { fontSize: 13, fontWeight: '600' },
+  audioStatusDivider: { width: 1, height: 16 },
+  bulletPoint: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
+  completedStatsGrid: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, width: '100%' },
+  completedStatCard: { flex: 1, padding: spacing.md, borderRadius: borderRadius.lg, borderWidth: 1, alignItems: 'center', gap: spacing.xs },
+  completedStatValue: { fontSize: 18, fontWeight: '700' },
+  completedStatLabel: { fontSize: 12 },
+  recommendationBox: { width: '100%', padding: spacing.lg, borderRadius: borderRadius.xl, borderWidth: 1, gap: spacing.xs, marginVertical: spacing.md },
+  recBadge: { alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: borderRadius.sm, marginBottom: spacing.xs },
+  recBadgeText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8 },
+  recTitleText: { fontSize: 16, fontWeight: '600' },
+  recDescText: { fontSize: 13, lineHeight: 18 },
 });
 
 export default ExerciseScreen;

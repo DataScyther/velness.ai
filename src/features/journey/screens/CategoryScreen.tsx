@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Brain, Wind, Sparkles, Leaf, BookOpen, Clock, ChevronRight, Play, Award, CheckCircle } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useJourney } from '@/shared/hooks/useJourney';
-import { ProgressBar } from '@/shared/components/ProgressBar';
+import { DEFAULT_LESSONS } from '@/features/journey/data/programs';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
 import { ROUTES, buildRoute } from '@/core/config/routes';
 import { spacing, borderRadius } from '@/core/theme';
@@ -25,7 +25,7 @@ function getCategoryIcon(type: string, color: string, size = 24) {
 export function CategoryScreen() {
   const { colors } = useTheme();
   const { categoryId } = useLocalSearchParams<{ categoryId: string }>();
-  const { programs, categories, userProgress, isLoading } = useJourney();
+  const { programs, categories, userProgress, isLoading, startExercise } = useJourney();
 
   const category = useMemo(() => categories.find(c => c.id === categoryId), [categories, categoryId]);
 
@@ -42,6 +42,14 @@ export function CategoryScreen() {
       return progProg && progProg.completionPercent > 0 && progProg.completionPercent < 100;
     });
   }, [categoryPrograms, userProgress]);
+
+  const continueProgramLessons = useMemo(() => {
+    if (!continueProgram) return { total: 0, current: 1 };
+    const total = DEFAULT_LESSONS.filter(l => l.programId === continueProgram.id).length;
+    const done = userProgress?.programProgress[continueProgram.id]?.completedLessonIds?.length ?? 0;
+    const current = total > 0 ? Math.min(done + 1, total) : 1;
+    return { total, current };
+  }, [continueProgram, userProgress]);
 
   // 2. Featured Program (First program in catalog that is not the active continue program)
   const featuredProgram = useMemo(() => {
@@ -127,6 +135,158 @@ export function CategoryScreen() {
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: colors.text.secondary }]}>No programs in this category yet.</Text>
           </View>
+        ) : categoryId === 'breathing' ? (
+          <View style={styles.breathingCatalog}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary, marginBottom: spacing.lg }]}>
+              Select a Breathing Session
+            </Text>
+            {categoryPrograms
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .map((program) => {
+                const exerciseId = `${program.id}-l1-ex1`;
+                const isCompleted = userProgress?.programProgress?.[program.id]?.status === 'completed';
+                return (
+                  <Pressable
+                    key={program.id}
+                    style={[
+                      styles.sessionCard,
+                      {
+                        backgroundColor: colors.surface.primary,
+                        borderColor: colors.border.default,
+                      }
+                    ]}
+                    onPress={() => startExercise(exerciseId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Start ${program.title} session`}
+                  >
+                    <View style={styles.sessionCardHeader}>
+                      <View style={styles.sessionTitleContainer}>
+                        <View style={[styles.sessionIconWrapper, { backgroundColor: `${category?.accentColor || colors.brand.primary}12` }]}>
+                          <Wind size={20} color={category?.accentColor || colors.brand.primary} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.sessionTitle, { color: colors.text.primary }]}>
+                            {program.title}
+                          </Text>
+                          <Text style={[styles.sessionDuration, { color: colors.text.secondary }]}>
+                            {program.estimatedTime} session
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <View style={[styles.startButton, { backgroundColor: `${category?.accentColor || colors.brand.primary}15` }]}>
+                        <Play size={14} color={category?.accentColor || colors.brand.primary} fill={category?.accentColor || colors.brand.primary} />
+                        <Text style={[styles.startButtonText, { color: category?.accentColor || colors.brand.primary }]}>
+                          Start
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={[styles.sessionDescription, { color: colors.text.secondary }]}>
+                      {program.description}
+                    </Text>
+
+                    <View style={styles.sessionFooter}>
+                      <View style={styles.benefitsRow}>
+                        {program.benefits?.slice(0, 2).map((benefit, idx) => (
+                          <View key={idx} style={[styles.benefitBadge, { backgroundColor: colors.background.secondary }]}>
+                            <Text style={[styles.benefitBadgeText, { color: colors.text.secondary }]}>
+                              {benefit}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                      {isCompleted && (
+                        <View style={styles.completedBadge}>
+                          <CheckCircle size={14} color={colors.success} />
+                          <Text style={[styles.completedText, { color: colors.success }]}>
+                            Completed
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+          </View>
+        ) : (categoryId === 'meditation' || categoryId === 'wellness') ? (
+          <View style={styles.breathingCatalog}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary, marginBottom: spacing.lg }]}>
+              {categoryId === 'meditation' ? 'Select a Meditation Session' : 'Wellness Studio Experiments'}
+            </Text>
+            {categoryPrograms
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .map((program) => {
+                const exerciseId = `${program.id}-l1-ex1`;
+                const isCompleted = userProgress?.programProgress?.[program.id]?.status === 'completed';
+                return (
+                  <Pressable
+                    key={program.id}
+                    style={[
+                      styles.sessionCard,
+                      {
+                        backgroundColor: colors.surface.primary,
+                        borderColor: colors.border.default,
+                      }
+                    ]}
+                    onPress={() => startExercise(exerciseId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Start ${program.title} session`}
+                  >
+                    <View style={styles.sessionCardHeader}>
+                      <View style={styles.sessionTitleContainer}>
+                        <View style={[styles.sessionIconWrapper, { backgroundColor: `${category?.accentColor || colors.brand.primary}12` }]}>
+                          {categoryId === 'meditation' ? (
+                            <Leaf size={20} color={category?.accentColor || colors.brand.primary} />
+                          ) : (
+                            <Sparkles size={20} color={category?.accentColor || colors.brand.primary} />
+                          )}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.sessionTitle, { color: colors.text.primary }]}>
+                            {program.title}
+                          </Text>
+                          <Text style={[styles.sessionDuration, { color: colors.text.secondary }]}>
+                            {program.estimatedTime} session • {program.difficulty}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <View style={[styles.startButton, { backgroundColor: `${category?.accentColor || colors.brand.primary}15` }]}>
+                        <Play size={14} color={category?.accentColor || colors.brand.primary} fill={category?.accentColor || colors.brand.primary} />
+                        <Text style={[styles.startButtonText, { color: category?.accentColor || colors.brand.primary }]}>
+                          Start
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={[styles.sessionDescription, { color: colors.text.secondary }]}>
+                      {program.description}
+                    </Text>
+
+                    <View style={styles.sessionFooter}>
+                      <View style={styles.benefitsRow}>
+                        {program.benefits?.slice(0, 2).map((benefit, idx) => (
+                          <View key={idx} style={[styles.benefitBadge, { backgroundColor: colors.background.secondary }]}>
+                            <Text style={[styles.benefitBadgeText, { color: colors.text.secondary }]}>
+                              {benefit}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                      {isCompleted && (
+                        <View style={styles.completedBadge}>
+                          <CheckCircle size={14} color={colors.success} />
+                          <Text style={[styles.completedText, { color: colors.success }]}>
+                            Completed
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+          </View>
         ) : (
           <View style={styles.catalogSections}>
             
@@ -158,18 +318,9 @@ export function CategoryScreen() {
                   </Text>
 
                   <View style={styles.continueProgress}>
-                    <View style={styles.progressTextRow}>
-                      <Text style={[styles.progressTextLabel, { color: colors.text.secondary }]}>Overall Progress</Text>
-                      <Text style={[styles.progressPercentLabel, { color: colors.text.primary }]}>
-                        {userProgress?.programProgress[continueProgram.id]?.completionPercent ?? 0}%
-                      </Text>
-                    </View>
-                    <ProgressBar 
-                      percent={userProgress?.programProgress[continueProgram.id]?.completionPercent ?? 0} 
-                      height={6} 
-                      color={category?.accentColor || colors.brand.primary} 
-                      trackColor={colors.border.default} 
-                    />
+                    <Text style={[styles.progressPercentLabel, { color: colors.text.primary }]}>
+                      {`Lesson ${continueProgramLessons.current} of ${continueProgramLessons.total}`}
+                    </Text>
                   </View>
                 </Pressable>
               </View>
@@ -494,6 +645,23 @@ const styles = StyleSheet.create({
   listItemDesc: { fontSize: 12 },
   listItemMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   listItemMetaText: { fontSize: 11 },
+  // Breathing Redesign Styles
+  breathingCatalog: { gap: spacing.md },
+  sessionCard: { borderRadius: borderRadius.lg, borderWidth: 1, padding: spacing.lg, gap: spacing.md },
+  sessionCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sessionTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
+  sessionIconWrapper: { width: 40, height: 40, borderRadius: borderRadius.md, alignItems: 'center', justifyContent: 'center' },
+  sessionTitle: { fontSize: 16, fontWeight: '700' },
+  sessionDuration: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  startButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs, paddingHorizontal: spacing.md, borderRadius: borderRadius.md },
+  startButtonText: { fontSize: 13, fontWeight: '700' },
+  sessionDescription: { fontSize: 13, lineHeight: 18 },
+  sessionFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 },
+  benefitsRow: { flexDirection: 'row', gap: spacing.xs },
+  benefitBadge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
+  benefitBadgeText: { fontSize: 11, fontWeight: '500' },
+  completedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  completedText: { fontSize: 11, fontWeight: '700' },
 });
 
 export default CategoryScreen;

@@ -47,6 +47,8 @@ interface MessageListProps {
   onContinueLater?: (messageId: string) => void;
   onShareInsight?: (messageId: string) => void;
   onAskFollowUp?: (messageId: string) => void;
+  /** Current system keyboard height in px (0 when hidden). Drives keyboard-aware shifting. */
+  keyboardHeight?: number;
 }
 
 function deriveViewState(state: ConversationState, showSkeleton: boolean): ChatViewState {
@@ -72,6 +74,7 @@ export function MessageList({
   onContinueLater,
   onShareInsight,
   onAskFollowUp,
+  keyboardHeight = 0,
 }: MessageListProps) {
   const { colors } = useTheme();
   const flatListRef = useRef<FlatList<Message>>(null);
@@ -80,6 +83,15 @@ export function MessageList({
   const [showNewMessagesButton, setShowNewMessagesButton] = useState(false);
 
   const isNearBottomRef = useRef(true);
+  const statusRef = useRef(state.status);
+  statusRef.current = state.status;
+  const prevKeyboardHeightRef = useRef(0);
+
+  // IDs of messages present at first mount. These are restored/historical
+  // messages that must NOT be auto-spoken when voice responses are enabled.
+  const spokenIdsRef = useRef<Set<string>>(
+    new Set(state.messages.map((m) => m.id))
+  );
 
   const scrollMetrics = useRef({
     contentHeight: 0,
@@ -139,6 +151,27 @@ export function MessageList({
     }
   }, [scrollToEnd]);
 
+  // --- Keyboard-aware shifting ---
+  // When the system keyboard opens (user is typing), the streaming indicator
+  // (ListFooterComponent) must shift up into view above the keyboard. The
+  // composer is lifted by the keyboard-height inset applied in ChatScreen, but
+  // the FlatList is not automatically re-scrolled, so the footer can remain
+  // hidden below the fold. Driven by `keyboardHeight` (cross-platform hook),
+  // reveal the latest content above the keyboard whenever the user is near the
+  // bottom or AI is streaming.
+  useEffect(() => {
+    if (keyboardHeight <= 0 && prevKeyboardHeightRef.current <= 0) return;
+    prevKeyboardHeightRef.current = keyboardHeight;
+
+    // Defer so layout (inset / window resize) settles first.
+    const raf = requestAnimationFrame(() => {
+      if (isNearBottomRef.current || statusRef.current === 'streaming') {
+        scrollToEnd(true);
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [keyboardHeight, scrollToEnd]);
+
   const handleNewMessagesPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowNewMessagesButton(false);
@@ -186,6 +219,7 @@ export function MessageList({
           onContinueLater={onContinueLater}
           onShareInsight={onShareInsight}
           onAskFollowUp={onAskFollowUp}
+          spokenIdsRef={spokenIdsRef}
         />
       );
     },

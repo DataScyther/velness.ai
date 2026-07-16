@@ -137,6 +137,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Geomini (Google Font) ───────────────────────────
+ * Used for web. Native (RN) cannot load the Google Fonts CDN, so it falls
+ * back to the system stack in --font-body / --font-display below. */
+@font-face {
+  font-family: 'Geomini';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/geomini/v2/Yq6L-L2BVyv2_q37mTVoSDbHLBc5Sb6OqPCy.ttf) format('truetype');
+}
+
+/* Reusable Geomini utility — variable style pattern (per spec). */
+.geomini-regular {
+  font-family: "Geomini", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Apply optical sizing globally so weights/axis render correctly. */
+* {
+  font-optical-sizing: auto;
+}
+
 /* ─── Theme transitions ─────────────────────────── */
 
 html {
@@ -160,8 +184,8 @@ html.preload *::after {
 
 @layer base {
   :root {
-    --font-display: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --font-body: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-display: "Geomini", "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-body: "Geomini", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: "JetBrains Mono", "SF Mono", Menlo, Monaco, Consolas, monospace;
 
     --text-hero: 56px;
@@ -394,7 +418,7 @@ html.preload *::after {
 
     :root,
     :host {
-        --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        --font-sans: "Geomini", "Manrope", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
         --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         --color-red-50: oklch(.971 .013 17.38);
         --color-red-100: oklch(.936 .032 17.717);

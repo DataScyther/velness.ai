@@ -4,11 +4,13 @@
  * Variants: outlined | filled
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, type TextInputProps } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  useSharedValue,
   withTiming,
+  interpolateColor,
 } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -42,14 +44,19 @@ export function TextField({
     ? 'border-brand-primary'
     : 'border-border-default';
 
+  // withTiming must animate numbers, not color strings — drive a numeric progress
+  // and interpolateColor so the label color animates to a valid color.
+  const labelColorProgress = useSharedValue(0);
+  useEffect(() => {
+    const target = error ? 2 : isFocused ? 1 : 0;
+    labelColorProgress.value = withTiming(target, { duration: 200 });
+  }, [error, isFocused]);
+
   const labelAnimatedStyle = useAnimatedStyle(() => ({
-    color: withTiming(
-      error
-        ? colors.danger
-        : isFocused
-        ? colors.brand.primary
-        : colors.text.secondary,
-      { duration: 200 }
+    color: interpolateColor(
+      labelColorProgress.value,
+      [0, 1, 2],
+      [colors.text.secondary, colors.brand.primary, colors.danger]
     ),
   }));
 

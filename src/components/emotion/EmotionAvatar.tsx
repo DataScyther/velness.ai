@@ -17,6 +17,7 @@ import Animated, {
   withSequence,
   withTiming,
   withSpring,
+  useAnimatedProps,
   Easing,
 } from 'react-native-reanimated';
 
@@ -153,7 +154,7 @@ function EmotionAvatarComponent({
     };
   });
 
-  const ringStyle = useAnimatedStyle(() => ({
+  const ringProps = useAnimatedProps(() => ({
     opacity: ringOpacity.value,
   }));
 
@@ -171,7 +172,7 @@ function EmotionAvatarComponent({
             <Stop offset="100%" stopColor={glowColor} stopOpacity={0} />
           </RadialGradient>
         </Defs>
-
+ 
         {showGlow && (
           <AnimatedCircle cx="50" cy="50" r="48" fill={`url(#${glowId})`} opacity={glowOpacity} />
         )}
@@ -180,16 +181,15 @@ function EmotionAvatarComponent({
 
         <Circle cx="50" cy="50" r="36" fill={`url(#${gradId})`} />
 
-        <Animated.View style={ringStyle}>
-          <Circle
-            cx="50"
-            cy="50"
-            r="43"
-            fill="none"
-            stroke={selected ? ringColor : 'transparent'}
-            strokeWidth={selected ? 3 : 0}
-          />
-        </Animated.View>
+        <AnimatedCircle
+          cx="50"
+          cy="50"
+          r="43"
+          fill="none"
+          stroke={selected ? ringColor : 'transparent'}
+          strokeWidth={selected ? 3 : 0}
+          animatedProps={ringProps}
+        />
 
         <Ellipse cx="40" cy="36" rx="14" ry="9" fill="#FFFFFF" opacity={0.18} />
 

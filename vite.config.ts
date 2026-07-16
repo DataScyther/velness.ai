@@ -106,6 +106,10 @@ export default defineConfig(({ mode }) => ({
       'react-native': path.resolve(__dirname, './src/utils/react-native-web-wrapper.ts'),
       'expo-router': path.resolve(__dirname, './src/utils/expo-router-mock.tsx'),
       'expo-clipboard': path.resolve(__dirname, './src/utils/expo-clipboard-mock.ts'),
+      'expo-linear-gradient': path.resolve(__dirname, './src/utils/expo-linear-gradient-mock.tsx'),
+      'expo-web-browser': path.resolve(__dirname, './src/utils/expo-web-browser-mock.ts'),
+      'expo-linking': path.resolve(__dirname, './src/utils/expo-linking-mock.ts'),
+      'lottie-react-native': path.resolve(__dirname, './src/utils/lottie-react-native-mock.tsx'),
     },
   },
   build: {
@@ -142,6 +146,8 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     global: 'globalThis',
+    __DEV__: JSON.stringify(mode !== 'production'),
+    'process.env.NODE_ENV': JSON.stringify(mode),
     ...publicEnvDefine(mode),
   },
 }));

@@ -49,13 +49,19 @@ export const EmptyState = React.memo(({ onCheckIn }: EmptyStateProps) => {
 
       {onCheckIn && (
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Check In Now"
           style={({ pressed }) => [
             styles.button,
-            { backgroundColor: colors.brand.primary, opacity: pressed ? 0.9 : 1 },
+            {
+              backgroundColor: colors.brand.primary,
+              borderColor: colors.brand.border,
+              opacity: pressed ? 0.9 : 1,
+            },
           ]}
           onPress={onCheckIn}
         >
-          <Text style={[styles.buttonText, { color: colors.brand.contrastText }]}>
+          <Text style={[styles.buttonText, { color: colors.brand.contrastText || '#FFFFFF' }]}>
             Check In Now
           </Text>
         </Pressable>
@@ -96,15 +102,19 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   button: {
+    alignSelf: 'center',
     marginTop: spacing.lg + 2,
     paddingHorizontal: spacing['2xl'],
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: 13,
+    minHeight: 44,
     borderRadius: borderRadius.full,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    opacity: 1,
+    shadowColor: '#634EB8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonText: {
     fontSize: 14,

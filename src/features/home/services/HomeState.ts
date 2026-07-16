@@ -48,8 +48,17 @@ export interface MoodSection {
   dayCount: number;
 }
 
+export interface RecommendationItem {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  source: string;
+  reason: string;
+}
+
 export interface RecommendationSection {
-  primary: RecommendationRow | null;
+  primary: RecommendationItem | null;
   all: RecommendationRow[];
   reason: string | null;
 }

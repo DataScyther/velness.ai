@@ -6,13 +6,12 @@
  *   1. HomeHeader          (top bar — brand + notifications badge)
  *   2. HeroCard            (large gradient — greeting + adaptive content)
  *   3. QuickActionsBar     (5 one-tap circular buttons)
- *   4. Two-column row      (ContinueJourneyCard + TodaysMissionCard)
- *   5. Reflection          (today's journal entry or write prompt)
- *   6. WeeklyHistoryCard   (compact mood timeline)
- *   7. SmartRecommendation (contextual "because…" card)
- *   8. Progress            (aggregate completion stats)
- *   9. Mood check-in flow  (selector + reflection + submit)
- *  10. SyncStatusBanner    (offline / pending queue indicator)
+ *   4. Reflection          (today's journal entry or write prompt)
+ *   5. WeeklyHistoryCard   (compact mood timeline)
+ *   6. SmartRecommendation (contextual "because…" card)
+ *   7. Progress            (aggregate completion stats)
+ *   8. Mood check-in flow  (selector + reflection + submit)
+ *   9. SyncStatusBanner    (offline / pending queue indicator)
  */
 import React, { useState, useCallback, useRef } from 'react';
 import {
@@ -42,15 +41,14 @@ import Animated, {
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 
 import { router } from 'expo-router';
-import { buildRoute, ROUTES } from '@/core/config/routes';
+import { ROUTES } from '@/core/config/routes';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useSaveMood } from '@/shared/hooks/useMood';
 import { moodRepository } from '@/repositories/MoodRepository';
 import type { Mood, MoodRating } from '@/shared/types';
-import { MOOD_MAP, getMoodEmotion } from '@/shared/types';
-import { EmotionAvatar, SparkleMark } from '@/components/emotion/EmotionAvatar';
+import { SparkleMark } from '@/components/emotion/EmotionAvatar';
 import { SectionHeader } from '@/shared/components/SectionHeader';
-import { spacing } from '@/core/theme';
+import { spacing, typography, borderRadius } from '@/core/theme';
 import { useSyncRefresh } from '@/shared/hooks/useSyncRefresh';
 import { useSyncStore } from '@/core/store/useSyncStore';
 import { ReflectionInput } from '../components/ReflectionInput';
@@ -58,21 +56,15 @@ import { useTheme } from '@/hooks/useTheme';
 
 import {
   HomeHeader,
-  MoodSelector,
-  JourneyLoadingState,
-  JourneyErrorState,
-  DailyGoalsCard,
-  AchievementsWidget,
 } from '../components';
 
+import { CheckInPanel } from '../components/CheckInPanel';
 import { HeroCard } from '../components/HeroCard';
 import { QuickActionsBar } from '../components/QuickActionsBar';
 import {
   resolveQuickActionRoute,
   type QuickActionFeature,
 } from '../services/quickActionResolver';
-import { ContinueJourneyCard } from '../components/ContinueJourneyCard';
-import { TodaysMissionCard } from '../components/TodaysMissionCard';
 import { WeeklyHistoryCard } from '../components/WeeklyHistoryCard';
 import { SmartRecommendationCard } from '../components/SmartRecommendationCard';
 
@@ -80,7 +72,6 @@ import {
   useHomeState,
   HOME_STATE_QUERY_KEY,
 } from '@/features/home/hooks/useHomeState';
-import { missionService } from '../../../../backend/services/MissionService';
 import { journalService } from '../../../../backend/services/JournalService';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -92,7 +83,7 @@ export function HomeScreen() {
   const uid = user?.uid || null;
   const queryClient = useQueryClient();
 
-  const { data: home, isLoading, error } = useHomeState();
+  const { data: home } = useHomeState();
 
   const { data: journals = [] } = useQuery({
     queryKey: ['journals_list', uid],
@@ -101,8 +92,6 @@ export function HomeScreen() {
   });
 
   const greeting = home?.greeting;
-  const mission = home?.todaysMission ?? null;
-  const journey = home?.journey ?? null;
   const reflection = home?.reflection;
   const mood = home?.mood;
   const recommendation = home?.recommendation;
@@ -193,40 +182,6 @@ export function HomeScreen() {
     }
   }, [selectedMood, reflectionNote, uid, saveMoodMutation, queryClient]);
 
-  const handleHeroCta = useCallback(() => {
-    if (!mood?.today) {
-      handleCheckIn();
-    } else if (journey) {
-      router.push(ROUTES.JOURNEY.HOME);
-    } else {
-      router.push(ROUTES.TABS.JOURNEY);
-    }
-  }, [mood?.today, journey, handleCheckIn]);
-
-  const resumeJourney = useCallback(() => {
-    router.push(ROUTES.JOURNEY.HOME);
-  }, []);
-
-  const handleMissionPress = useCallback(() => {
-    if (mission?.lessonId) {
-      router.push(
-        buildRoute(ROUTES.JOURNEY.LESSON, {
-          programId: mission.programId ?? journey?.programId ?? '',
-          lessonId: mission.lessonId,
-        }),
-      );
-      return;
-    }
-    if (mission) {
-      void missionService
-        .completeMission(mission.id)
-        .then(() => void queryClient.invalidateQueries({ queryKey: HOME_STATE_QUERY_KEY }))
-        .catch((err) => console.error('[HomeScreen] mission complete error:', err));
-    } else {
-      resumeJourney();
-    }
-  }, [mission, journey, queryClient, resumeJourney]);
-
   const handleSaveReflection = useCallback(async () => {
     if (!reflectionNote.trim()) return;
     setIsSavingReflection(true);
@@ -244,20 +199,19 @@ export function HomeScreen() {
     }
   }, [reflectionNote, queryClient]);
 
-  const refresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: HOME_STATE_QUERY_KEY });
-  }, [queryClient]);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await processQueue(queryClient);
       if (uid) {
-        void moodRepository.syncFromCloud(uid).then((merged) => {
-          if (merged.length > 0) {
-            queryClient.setQueryData(['moods', uid], merged);
-          }
-        });
+        void moodRepository
+          .syncFromCloud(uid)
+          .then((merged) => {
+            if (merged.length > 0) {
+              queryClient.setQueryData(['moods', uid], merged);
+            }
+          })
+          .catch((err) => console.warn('[HomeScreen] mood sync failed:', err));
       }
       await queryClient.invalidateQueries({ queryKey: HOME_STATE_QUERY_KEY });
     } catch (err) {
@@ -277,9 +231,11 @@ export function HomeScreen() {
   // the feature index route).
 
   const openFeature = useCallback((feature: QuickActionFeature) => {
-    void resolveQuickActionRoute(feature).then((route) => {
-      router.push(route as never);
-    });
+    void resolveQuickActionRoute(feature)
+      .then((route) => {
+        router.push(route as never);
+      })
+      .catch((err) => console.warn('[HomeScreen] quick action route failed:', err));
   }, [router]);
 
   const handleBreathe = useCallback(() => openFeature('breathing'), [openFeature]);
@@ -400,13 +356,12 @@ export function HomeScreen() {
         <HeroCard
           headline={greeting?.adaptive?.headline ?? greeting?.text ?? 'Welcome back'}
           subline={greeting?.adaptive?.subline ?? "Here's your day at a glance."}
-          ctaLabel={greeting?.adaptive?.ctaLabel ?? 'Continue'}
           streak={mood?.streak ?? 0}
           dayCount={mood?.dayCount ?? 0}
           moment={greeting?.moment ?? 'default'}
           hasCheckedInToday={!!mood?.today}
           intention={greeting?.intention ?? ''}
-          onCtaPress={handleHeroCta}
+          onCheckIn={handleCheckIn}
         />
 
         {/* ── 3. Quick Actions ─────────────────────────────────────────────── */}
@@ -420,63 +375,34 @@ export function HomeScreen() {
           />
         </View>
 
-        {/* ── 3.5 Today's Progress / Daily Goals ───────────────────────────── */}
-        <View style={styles.sectionProgress}>
-          <DailyGoalsCard
-            uid={uid}
-            hasCheckedInToday={!!mood?.today}
-            hasJournaledToday={!!reflection?.reflectedToday}
-            recentEvents={home?.recentEvents ?? []}
-            onCheckInPress={handleCheckIn}
-            onJournalPress={() => {
-              if (reflectionSectionRef.current) {
-                scrollRef.current?.scrollTo({ y: reflectionY.current, animated: true });
-              }
-            }}
-            onBreathePress={handleBreathe}
-            onMeditatePress={handleMeditate}
-          />
-        </View>
-
-        {/* ── 4. Journey + Today's Mission Row ─────────────────────────────── */}
-        {isLoading ? (
-          <View style={styles.sectionFocus}>
-            <JourneyLoadingState />
-          </View>
-        ) : error ? (
-          <View style={styles.sectionFocus}>
-            <JourneyErrorState onRetry={refresh} />
-          </View>
-        ) : journey ? (
-          <View style={[styles.sectionFocus, styles.twoCol]}>
-            <ContinueJourneyCard
-              title={journey.title}
-              status={journey.status}
-              lastActivity={journey.lastActivity?.toISOString() ?? null}
-              currentStep={journey.currentLesson || 1}
-              totalSteps={journey.totalLessons || 5}
-              percent={journey.completionPercent || 0}
-              onContinue={resumeJourney}
-            />
-            <TodaysMissionCard
-              missionTitle={mission?.title ?? journey.title}
-              missionDescription={mission?.description ?? undefined}
-              estimatedTime={mission?.estimatedTime}
-              reason={mission?.reason}
-              onPress={handleMissionPress}
-            />
-          </View>
-        ) : mission ? (
-          <View style={styles.sectionFocus}>
-            <TodaysMissionCard
-              missionTitle={mission.title}
-              missionDescription={mission.description ?? undefined}
-              estimatedTime={mission.estimatedTime}
-              reason={mission.reason}
-              onPress={handleMissionPress}
-            />
-          </View>
-        ) : null}
+        {/* ── 4. Mood Check-in (compact card; opens the soft selector) ─────── */}
+        <CheckInPanel
+          visible={showSelector}
+          selectedMood={selectedMood}
+          onSelectMood={handleSelectMood}
+          reflectionNote={reflectionNote}
+          onReflectionChange={setReflectionNote}
+          reflectionInputRef={reflectionInputRef}
+          isSaving={saveMoodMutation.isPending}
+          onSubmit={handleSubmitMood}
+          onDismiss={() => setShowSelector(false)}
+        />
+        {/* Success confirmation renders as a separate, stable node (never
+           replaces the panel) so a save-tap can't unmount/mount a host view
+           mid-responder and null the Fabric handle. */}
+        {isSuccess && (
+          <Animated.View
+            entering={FadeInDown.duration(300)}
+            style={[
+              styles.successCard,
+              { backgroundColor: `${colors.success}1A`, borderColor: `${colors.success}33` },
+            ]}
+          >
+            <Text style={[styles.successText, { color: colors.success }]}>
+              ✓ Checked in! Great work today.
+            </Text>
+          </Animated.View>
+        )}
 
         {/* ── 5. Reflection (Journal) ─────────────────────────────────────── */}
         <Animated.View
@@ -528,9 +454,11 @@ export function HomeScreen() {
                       backgroundColor: isSavingReflection
                         ? `${colors.brand.primary}88`
                         : colors.brand.primary,
+                      borderColor: colors.brand.border,
                     },
-                    pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
-                    !reflectionNote.trim() && { opacity: 0.5 },
+                    pressed && !isSavingReflection && reflectionNote.trim().length > 0 && styles.submitButtonPressed,
+                    isSavingReflection && styles.submitButtonDisabled,
+                    !reflectionNote.trim() && styles.submitButtonDisabled,
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel="Save reflection"
@@ -548,7 +476,7 @@ export function HomeScreen() {
           )}
         </Animated.View>
 
-        {/* ── 6. Compact Mood Timeline ─────────────────────────────────────── */}
+        {/* ── 5. Compact Mood Timeline ─────────────────────────────────────── */}
         <View style={styles.sectionMoodHistory}>
           <WeeklyHistoryCard
             moodEntries={mood?.entries ?? []}
@@ -557,17 +485,7 @@ export function HomeScreen() {
           />
         </View>
 
-        {/* ── 6.5 Achievements ─────────────────────────────────────────────── */}
-        <View style={styles.sectionAchievements}>
-          <AchievementsWidget
-            moodEntries={mood?.entries ?? []}
-            streak={mood?.streak ?? 0}
-            journals={journals}
-            recentEvents={home?.recentEvents ?? []}
-          />
-        </View>
-
-        {/* ── 7. Smart Recommendation ──────────────────────────────────────── */}
+        {/* ── 6. Smart Recommendation ──────────────────────────────────────── */}
         {recommendation?.primary && recommendation?.reason && (
           <View style={styles.sectionRecommendation}>
             <SmartRecommendationCard
@@ -583,7 +501,7 @@ export function HomeScreen() {
           </View>
         )}
 
-        {/* ── 8. Progress ───────────────────────────────────────────────────── */}
+        {/* ── 7. Progress ───────────────────────────────────────────────────── */}
         {progress && (progress.completedLessons > 0 || progress.completedExercises > 0) && (
           <View style={styles.sectionProgress}>
             <SectionHeader title="Your Progress" />
@@ -609,71 +527,6 @@ export function HomeScreen() {
             </View>
           </View>
         )}
-
-        {/* ── 9. Mood Check-in Flow ─────────────────────────────────────────── */}
-        {showSelector && !mood?.today && (
-          <Animated.View
-            entering={FadeInDown.duration(400)}
-            style={styles.section}
-          >
-            <SectionHeader title="How are you feeling today?" />
-            <MoodSelector
-              selectedMood={selectedMood}
-              onSelectMood={handleSelectMood}
-            />
-            {selectedMood !== null && (
-              <View
-                style={[
-                  styles.submitContainer,
-                  { backgroundColor: colors.surface.secondary, borderColor: colors.border.default },
-                ]}
-              >
-                <View style={styles.submitRowInline}>
-                  <EmotionAvatar
-                    emotion={getMoodEmotion(selectedMood)}
-                    size={20}
-                    animated={false}
-                    showGlow={false}
-                  />
-                  <Text style={[styles.submitText, { color: colors.text.secondary }]}>
-                    You selected: {MOOD_MAP[selectedMood].label} — ready to check in?
-                  </Text>
-                </View>
-              <ReflectionInput
-                value={reflectionNote}
-                onChangeText={setReflectionNote}
-                inputRef={reflectionInputRef}
-              />
-                <View style={styles.submitRow}>
-                  <Text
-                    style={[
-                      styles.submitButton,
-                      { backgroundColor: colors.brand.primary, color: colors.brand.contrastText },
-                    ]}
-                    onPress={handleSubmitMood}
-                  >
-                    {saveMoodMutation.isPending ? 'Saving…' : 'Save check-in'}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </Animated.View>
-        )}
-
-        {/* ── Success toast ────────────────────────────────────────────────── */}
-        {isSuccess && (
-          <Animated.View
-            entering={FadeInDown.duration(300)}
-            style={[
-              styles.successCard,
-              { backgroundColor: `${colors.success}1A`, borderColor: `${colors.success}33` },
-            ]}
-          >
-            <Text style={[styles.successText, { color: colors.success }]}>
-              ✓ Checked in! Great work today.
-            </Text>
-          </Animated.View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -698,35 +551,29 @@ const styles = StyleSheet.create({
     width: BG_ORB,
     height: BG_ORB,
   },
-  // ── Visual rhythm spacing (Phase 1) ──────────────────────────────────
-  // Each section gets intentional spacing instead of uniform 16px.
+  // ── Visual rhythm spacing ─────────────────────────────────────────────
+  // Hero → Actions → Check-in → Reflection form a deliberate cluster with
+  // tight, consistent rhythm; later sections open up with more breath.
   sectionQuickActions: {
     marginTop: 24,
   },
   sectionProgress: {
     marginTop: 32,
   },
-  sectionFocus: {
-    marginTop: 28,
+  // Check-in card sits snugly under the action buttons.
+  sectionCheckIn: {
+    marginTop: 20,
   },
+  // Reflection tightens to the check-in (they read as one "pause & reflect"
+  // block), then the timeline opens with more space.
   sectionReflection: {
-    marginTop: 36,
+    marginTop: 20,
   },
   sectionMoodHistory: {
-    marginTop: 28,
-  },
-  sectionAchievements: {
     marginTop: 32,
   },
   sectionRecommendation: {
     marginTop: 36,
-  },
-  section: {
-    marginTop: 24,
-  },
-  twoCol: {
-    flexDirection: 'row',
-    gap: 12,
   },
 
   // Sync banner
@@ -778,11 +625,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  submitRowInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   reflectionBody: {
     fontSize: 14,
     lineHeight: 20,
@@ -812,33 +654,44 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Check-in
-  submitContainer: {
-    marginTop: 12,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-  },
-  submitText: {
-    fontSize: 14,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
+  // Check-in / reflection save button — centered, responsive (caps on wide
+  // screens), with refined spacing and press feedback.
   submitRow: {
+    width: '100%',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: spacing.sm,
   },
   submitButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-    minHeight: 44,
+    width: '100%',
+    maxWidth: 360,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: 14,
+    borderRadius: 16,
+    minHeight: 48,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
+    borderWidth: 1,
+    opacity: 1,
+    shadowColor: '#634EB8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  submitButtonDisabled: {
+    opacity: 0.5,
   },
   submitButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    fontFamily: typography.fontFamily.sans,
   },
 
   // Success

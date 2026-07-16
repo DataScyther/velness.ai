@@ -28,13 +28,13 @@ export function getTimeEmoji(timeOfDay: TimeOfDay): string {
 /** Maps a NarrativeMoment to a background gradient pair for HeroCard */
 export function getHeroGradient(moment: NarrativeMoment): [string, string, string] {
   const map: Record<NarrativeMoment, [string, string, string]> = {
-    morning_fresh:     ['#1a1035', '#2d1f5e', '#3d2a6e'],
-    afternoon_active:  ['#0d1a2e', '#1a2f50', '#1e3a5f'],
-    evening_wind_down: ['#0f0f1e', '#1a1035', '#2a1545'],
-    post_lesson:       ['#0d2010', '#0f2d1a', '#1a3d25'],
-    missed_days:       ['#1a0f0f', '#2d1515', '#3d1f1f'],
-    streak_active:     ['#1a0d00', '#2d1f00', '#3d2a00'],
-    default:           ['#0B0B12', '#13111f', '#1a1535'],
+    morning_fresh:     ['#18103c', '#2c1654', '#3f1f72'],
+    afternoon_active:  ['#091d3c', '#112c58', '#1a417b'],
+    evening_wind_down: ['#0f0a1c', '#1c1032', '#32144f'],
+    post_lesson:       ['#081d11', '#10351e', '#1a4c2d'],
+    missed_days:       ['#1e0a0a', '#341010', '#4a1919'],
+    streak_active:     ['#241202', '#412204', '#5e3207'],
+    default:           ['#0c0b16', '#17142b', '#241f44'],
   };
   return map[moment];
 }

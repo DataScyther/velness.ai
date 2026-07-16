@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { homeService } from '../HomeService';
 import type { HomeScreenData } from '../HomeViewModel';
 
@@ -85,6 +85,8 @@ import { notificationService } from '../../../../../backend/services/Notificatio
 
 describe('HomeService.fetchHomeState', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-11T14:00:00')); // 2:00 PM local time
     vi.clearAllMocks();
     (homeViewModel.getHomeScreenData as any).mockResolvedValue(baseFixture);
     (missionService.ensureTodaysMission as any).mockResolvedValue({
@@ -129,6 +131,10 @@ describe('HomeService.fetchHomeState', () => {
     ]);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('returns all 8 Home Intelligence Layer sections', async () => {
     const state = await homeService.fetchHomeState();
 
@@ -140,7 +146,7 @@ describe('HomeService.fetchHomeState', () => {
     expect(state.reflection.reflectedToday).toBe(false);
     expect(state.mood.streak).toBe(3);
     expect(state.mood.dayCount).toBe(12);
-    expect(state.recommendation.primary?.id).toBe('rec-1');
+    expect(state.recommendation.primary?.id).toBe('rec_journey_progress');
     expect(state.progress.completedLessons).toBe(1);
     expect(state.progress.completedExercises).toBe(1);
     expect(state.notifications.unreadCount).toBe(1);

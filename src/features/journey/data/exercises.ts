@@ -768,11 +768,39 @@ const CUSTOM_EXERCISES: Record<string, CustomExerciseInput> = {
     ]
   },
 
-  // Box Breathing
-  'box-breathing-l1': {
+  // 1 Minute Reset
+  '1-minute-reset-l1-ex1': {
     type: EXERCISE_TYPE.BREATHING,
-    title: 'Foundational Box Breath',
-    goal: 'Settle respiratory rhythms using 4-second intervals',
+    title: '1 Minute Reset',
+    goal: 'A quick 1-minute breathing space to reset and ground yourself',
+    instructions: [
+      'Sit comfortably and let your shoulders drop.',
+      'Inhale slowly through your nose for 5 seconds.',
+      'Exhale gently through your nose or mouth for 5 seconds.',
+      'Maintain this slow, rhythmic pace for the duration of the timer.'
+    ],
+    completionCriteria: 'Breathe continuously through the 1-minute reset.',
+    time: 1
+  },
+  // 3 Minute Calm
+  '3-minute-calm-l1-ex1': {
+    type: EXERCISE_TYPE.BREATHING,
+    title: '3 Minute Calm',
+    goal: 'Paced breathing to calm the mind and body',
+    instructions: [
+      'Sit tall and close your eyes.',
+      'Inhale slowly and deeply for 5 seconds.',
+      'Exhale smoothly and completely for 5 seconds.',
+      'Focus on the physical sensation of the air entering and leaving your body.'
+    ],
+    completionCriteria: 'Maintain paced calm cycles for 3 minutes.',
+    time: 3
+  },
+  // Box Breathing
+  'box-breathing-l1-ex1': {
+    type: EXERCISE_TYPE.BREATHING,
+    title: 'Box Breathing',
+    goal: 'The classic 4-second equal-count breathing technique used for focus and stress relief',
     instructions: [
       'Sit comfortably and let your shoulders drop.',
       'Inhale slowly through your nose for 4 seconds.',
@@ -780,798 +808,259 @@ const CUSTOM_EXERCISES: Record<string, CustomExerciseInput> = {
       'Exhale gently through your mouth for 4 seconds.',
       'Hold empty for 4 seconds. Repeat the cycle.'
     ],
-    completionCriteria: 'Breathe continuously through 4 full box cycles.',
+    completionCriteria: 'Breathe continuously through 4-4-4-4 box cycles.',
     time: 5
   },
-  'box-breathing-l2': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Hold Expansion',
-    goal: 'Extend holds to regulate autonomic carbon dioxide tolerance',
-    instructions: [
-      'Sit tall and close your eyes.',
-      'Follow the expand-hold-shrink-hold circle animation.',
-      'Maintain complete physical relaxation during the breath holds.',
-      'Allow any physical urge to sigh to pass into slow, controlled exhales.'
-    ],
-    completionCriteria: 'Maintain the paced holding cycles for 5 minutes.',
-    time: 5
-  },
-  'box-breathing-l3': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Everyday Integration',
-    goal: 'Practice box breathing in high-stress mock situations',
-    instructions: [
-      'Close your eyes and visualize a challenging upcoming situation.',
-      'Begin a slow box breathing cycle (4-4-4-4).',
-      'Continue breathing steadily while maintaining the mental image.',
-      'Notice how somatic activation declines as you breathe.'
-    ],
-    completionCriteria: 'Breathe steadily for 5 minutes.',
-    time: 5
-  },
-
   // 4-7-8 Breathing
-  '4-7-8-breathing-l1': {
+  '4-7-8-breathing-l1-ex1': {
     type: EXERCISE_TYPE.BREATHING,
-    title: '4-7-8 Foundations',
-    goal: 'Activate parasympathetic systems with a paced sigh',
+    title: '4-7-8 Breathing',
+    goal: 'A deeply relaxing breathing pattern that acts as a natural tranquilizer for the nervous system',
     instructions: [
       'Exhale completely through your mouth with a "whoosh" sound.',
       'Inhale quietly through your nose for 4 seconds.',
       'Hold your breath for a count of 7 seconds.',
       'Exhale completely through your mouth with a "whoosh" for 8 seconds.',
-      'Repeat this cycle for 4 breaths total.'
+      'Repeat this cycle.'
     ],
-    completionCriteria: 'Complete 4 full breathing cycles.',
+    completionCriteria: 'Maintain the 4-7-8 rhythm for the duration of the timer.',
     time: 5
   },
-  '4-7-8-breathing-l2': {
+  // Deep Relaxation
+  'deep-relaxation-l1-ex1': {
     type: EXERCISE_TYPE.BREATHING,
-    title: 'Nervous System Tuning',
-    goal: 'Down-regulate heart rate and muscle tension',
+    title: 'Deep Relaxation',
+    goal: 'Sustained slow breathing to release deep-seated physical and mental tension',
     instructions: [
-      'Sit comfortably, keeping your tongue behind your front teeth.',
-      'Inhale for 4 seconds, hold for 7 seconds, and exhale for 8 seconds.',
-      'Focus your attention on the feeling of releasing tension during the long exhales.',
-      'Allow your body to become heavy and fully relaxed.'
+      'Find a comfortable lying or seated posture.',
+      'Inhale slowly for 5 seconds, filling your abdomen first, then chest.',
+      'Exhale gently for 5 seconds, releasing all muscular tension.',
+      'Let your mind settle into the slow, steady rhythm of your body.'
     ],
-    completionCriteria: 'Maintain the 4-7-8 rhythm for 4 cycles.',
-    time: 5
+    completionCriteria: 'Sustain slow resonant breathing for 10 minutes.',
+    time: 10
   },
-  '4-7-8-breathing-l3': {
+  // Focus Breathing
+  'focus-breathing-l1-ex1': {
     type: EXERCISE_TYPE.BREATHING,
-    title: 'Sleep Transition Reset',
-    goal: 'Use breathing cues to transition into restorative sleep',
+    title: 'Focus Breathing',
+    goal: 'Energising breathing cycles to boost alertness and mental clarity',
+    instructions: [
+      'Sit tall with your eyes open and focus your gaze on a single point.',
+      'Inhale rapidly for 2 seconds.',
+      'Exhale rapidly for 2 seconds.',
+      'Keep the breaths light, crisp, and rhythmic.'
+    ],
+    completionCriteria: 'Breathe with energizing focus for 3 minutes.',
+    time: 3
+  },
+  // Sleep Breathing
+  'sleep-breathing-l1-ex1': {
+    type: EXERCISE_TYPE.BREATHING,
+    title: 'Sleep Breathing',
+    goal: 'Slow diaphragmatic breathing with extended exhales to prepare for deep rest',
     instructions: [
       'Lie down in bed and dim the lights.',
-      'Perform 4 to 8 cycles of the 4-7-8 breath.',
-      'Let your exhalations carry away any residual thoughts from the day.',
-      'Allow your breath to return to its natural, soft rhythm as you drift off.'
+      'Inhale slowly and quietly for 6 seconds.',
+      'Exhale very slowly and gently for 6 seconds, letting go of any thoughts.',
+      'Pause briefly and effortlessly before the next inhale.'
     ],
-    completionCriteria: 'Breathe slowly for 5 minutes.',
-    time: 5
-  },
-
-  // Calm Reset
-  'calm-reset-l1': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Resonant Flow Reset',
-    goal: 'Slow down respiration to 6 breaths per minute to balance stress',
-    instructions: [
-      'Inhale slowly for 5 seconds as the indicator expands.',
-      'Exhale smoothly for 5 seconds as the indicator shrinks.',
-      'Maintain a continuous flow with no pauses between breaths.',
-      'Focus on the physical expansion and contraction of your chest.'
-    ],
-    completionCriteria: 'Resonate breathe for 3 minutes.',
-    time: 3
-  },
-  'calm-reset-l2': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Rapid De-escalation',
-    goal: 'Use extended exhales to quickly cool down high-stress moments',
-    instructions: [
-      'Inhale quickly for 3 seconds.',
-      'Exhale slowly and completely for 6 seconds.',
-      'Observe the immediate slowing of your heart rate.',
-      'Repeat this 1:2 ratio for 3 minutes.'
-    ],
-    completionCriteria: 'Complete the paced exhalations for 3 minutes.',
-    time: 3
-  },
-  'calm-reset-l3': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Steady Grounding Anchor',
-    goal: 'Establish a stable daily somatic anchor',
-    instructions: [
-      'Sit comfortably upright and close your eyes.',
-      'Begin a slow, deep breathing rhythm (5 seconds in, 5 seconds out).',
-      'Feel the support of the chair underneath you with each breath.',
-      'Rest in the physical sensation of steady grounding.'
-    ],
-    completionCriteria: 'Breathe slowly for 5 minutes.',
-    time: 5
-  },
-
-  // Stress Relief Breathing
-  'stress-relief-breathing-l1': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Deep Diaphragmatic Breath',
-    goal: 'Engage the diaphragm to reverse shallow stress breathing',
-    instructions: [
-      'Place one hand on your chest and one on your belly.',
-      'Inhale deeply, feeling only your belly expand.',
-      'Exhale slowly, letting your belly sink naturally.',
-      'Keep your chest and shoulders still and relaxed.'
-    ],
-    completionCriteria: 'Breathe diaphragmatically for 5 minutes.',
-    time: 5
-  },
-  'stress-relief-breathing-l2': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Tension Release Sigh',
-    goal: 'Release somatic stress from the body on exhalation',
-    instructions: [
-      'Inhale deeply through your nose.',
-      'Open your mouth and sigh the breath out fully with a relaxed jaw.',
-      'With each sigh, imagine tension melting off your shoulders and neck.',
-      'Let your muscles become soft and heavy.'
-    ],
-    completionCriteria: 'Practice tension release breaths for 5 minutes.',
-    time: 5
-  },
-  'stress-relief-breathing-l3': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Quiet Mind Respiration',
-    goal: 'Establish slow, coherent breathing to silence overthinking',
-    instructions: [
-      'Inhale for 5 seconds, and exhale for 6 seconds.',
-      'Observe the empty spaces at the end of each exhalation.',
-      'Let your mind rest in those quiet pauses.',
-      'Continue breathing with a soft, effortless rhythm.'
-    ],
-    completionCriteria: 'Maintain the slow breathing for 5 minutes.',
-    time: 5
-  },
-
-  // Focus Breathing
-  'focus-breathing-l1': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Alertness Activation',
-    goal: 'Energize the brain and clear fatigue with rhythmic activation breathing',
-    instructions: [
-      'Sit upright with a strong, active posture.',
-      'Inhale sharply through your nose for 2 seconds.',
-      'Exhale rapidly through your nose for 2 seconds.',
-      'Perform this energetic cycle rhythmically for 10 breaths, then rest.'
-    ],
-    completionCriteria: 'Complete 3 activation cycles.',
-    time: 3
-  },
-  'focus-breathing-l2': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Mind Energizer (Bhastrika)',
-    goal: 'Boost alertness and clear brain fog',
-    instructions: [
-      'Inhale deeply and raise your arms up.',
-      'Exhale forcefully through your nose while bringing your fists down to your shoulders.',
-      'Maintain an energetic, rhythmic pace.',
-      'Settle into a normal, calm breath when completed.'
-    ],
-    completionCriteria: 'Breathe rhythmically for 3 minutes.',
-    time: 3
-  },
-  'focus-breathing-l3': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Coherent Focus Reset',
-    goal: 'Balance alertness and calm for sustained mental stamina',
-    instructions: [
-      'Inhale for 4 seconds, pause for 2 seconds.',
-      'Exhale for 4 seconds, pause for 2 seconds.',
-      'Keep your eyes open and focus your gaze on a single point in front of you.',
-      'Maintain this balanced, alert breath.'
-    ],
-    completionCriteria: 'Breathe with focus for 3 minutes.',
-    time: 3
-  },
-
-  // Sleep Preparation
-  'sleep-preparation-l1': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Somatic Unwinding',
-    goal: 'Release physiological activation from the day',
-    instructions: [
-      'Sit or lie down in a dim space.',
-      'Slowly inhale for 5 seconds.',
-      'Exhale gently for 7 seconds, letting your body sink into support.',
-      'Allow your jaw, forehead, and shoulders to fully relax.'
-    ],
-    completionCriteria: 'Breathe slowly for 5 minutes.',
-    time: 5
-  },
-  'sleep-preparation-l2': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Sleep Activation Breath',
-    goal: 'Trigger sleep centers in the brain with extended exhales',
-    instructions: [
-      'Inhale silently through your nose for 4 seconds.',
-      'Exhale very slowly and quietly through your mouth for 8 seconds.',
-      'Repeat this cycle, making the breath as soft and effortless as possible.',
-      'Let your thoughts float away with each slow release.'
-    ],
-    completionCriteria: 'Maintain the sleep-triggering breath for 5 minutes.',
-    time: 5
-  },
-  'sleep-preparation-l3': {
-    type: EXERCISE_TYPE.BREATHING,
-    title: 'Bedtime Transition Flow',
-    goal: 'Lock in a nightly wind-down breathing ritual',
-    instructions: [
-      'Close your eyes and lie down comfortably in bed.',
-      'Inhale slowly for 6 seconds, and exhale gently for 6 seconds.',
-      'Pause briefly at the end of each breath.',
-      'Allow your breathing to become natural and soft as you fall asleep.'
-    ],
-    completionCriteria: 'Breathe gently for 5 minutes.',
-    time: 5
-  },
-
-  // Morning Calm
-  'morning-calm-l1': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Mindful Waking Anchor',
-    goal: 'Ground your attention in somatic sensations to start the day',
-    instructions: [
-      'Find a comfortable seated posture.',
-      'Bring your focus to the rising and falling of your chest.',
-      'Acknowledge the transition from sleep to waking state.',
-      'Rest in the physical sensation of breath in the morning.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-  'morning-calm-l2': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Intention Setting',
-    goal: 'Set a positive, value-aligned focus for the day',
-    instructions: [
-      'Sit comfortably and settle your breathing.',
-      'Ask yourself: "How do I want to show up for myself and others today?"',
-      'Select one value word (e.g. patience, courage, presence).',
-      'Hold this intention in your awareness as you focus on your breath.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-  'morning-calm-l3': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Radiant Day Starter',
-    goal: 'Cultivate energy and readiness to meet the day',
-    instructions: [
-      'Take three deep, energizing breaths.',
-      'Visualize yourself handling today\'s tasks with ease and confidence.',
-      'Offer yourself a positive affirmation: "I am capable and present."',
-      'Open your eyes, ready to step into your day.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-
-  // Anxiety Relief Meditation
-  'anxiety-relief-meditation-l1': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Body Anchor',
-    goal: 'Locate a stable physical sensation to anchor your focus',
-    instructions: [
-      'Find a comfortable posture, placing your feet flat on the floor.',
-      'Bring your attention to the contact of your body with the chair.',
-      'Feel the weight and stability of this physical connection.',
-      'Return to this physical anchor whenever anxious thoughts surge.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-  'anxiety-relief-meditation-l2': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Sky and Clouds Defusion',
-    goal: 'Observe thoughts as passing objects, not absolute truth',
-    instructions: [
-      'Close your eyes and observe the anxious thoughts passing through your mind.',
-      'Visualize your mind as the wide, open blue sky.',
-      'Imagine your anxious thoughts as passing clouds floating by.',
-      'Observe them without holding onto them or pushing them away.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-  'anxiety-relief-meditation-l3': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Softening Resistance',
-    goal: 'Release physical resistance and allow feelings to pass',
-    instructions: [
-      'Acknowledge any tightness or racing heart rate without judgment.',
-      'Breathe into these physical sensations, imagining them softening.',
-      'Repeat: "This feeling is uncomfortable, but I am safe. It will pass."',
-      'Let the sensation exist without fighting it.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-
-  // Better Sleep
-  'better-sleep-l1': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Deep Sleep Body Scan',
-    goal: 'Progressively relax body parts to trigger somatic sleep readiness',
-    instructions: [
-      'Lie down comfortably in bed, ready to sleep.',
-      'Bring your attention to your toes, relaxing them completely.',
-      'Slowly move your awareness up through your feet, calves, knees, and thighs.',
-      'Release any lingering tension in your torso, shoulders, neck, and face.'
-    ],
-    completionCriteria: 'Complete the full body scan.',
-    time: 15
-  },
-  'better-sleep-l2': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Floating Thoughts Imagery',
-    goal: 'Release active thoughts to allow the mind to quiet',
-    instructions: [
-      'Close your eyes and breathe softly.',
-      'When an active thought arises, imagine placing it on a leaf.',
-      'Watch the leaf float down a gentle stream and disappear.',
-      'Do this with every thought, returning to the stream\'s flow.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-  'better-sleep-l3': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Surrendered Rest',
-    goal: 'Transition into deep resting states',
-    instructions: [
-      'Let go of any effort to control your breath.',
-      'Feel the weight of your body fully supported by the mattress.',
-      'Allow your mind to drift naturally without trying to achieve anything.',
-      'Let sleep arrive on its own terms.'
-    ],
-    completionCriteria: 'Meditate for 15 minutes.',
+    completionCriteria: 'Breathe slowly for 15 minutes to transition to sleep.',
     time: 15
   },
 
-  // Focus Training
-  'focus-training-l1': {
+  // ─── Meditation Redesign ───────────────────────────────────────────
+  'sleep-meditation-l1-ex1': {
     type: EXERCISE_TYPE.MEDITATION,
-    title: 'Focus Anchor',
-    goal: 'Train focus by keeping attention on the breath',
+    title: 'Sleep Meditation',
+    goal: 'Wind down your body and mind with calming body scans and visualizations.',
     instructions: [
-      'Find a comfortable, alert seated posture.',
-      'Focus attention on the physical sensation of breath at your nostrils.',
-      'Observe the coolness as you inhale, and the warmth as you exhale.',
-      'Keep your attention fixed on this small point.'
+      'Get into a comfortable lying position in a quiet, dark room.',
+      'Allow your eyes to close and take three deep, slow breaths.',
+      'Begin scanning your body from head to toe, releasing muscle groups as you scan.',
+      'If thoughts arise, gently label them "thinking" and return to the scan.'
     ],
-    completionCriteria: 'Meditate for 10 minutes.',
+    completionCriteria: 'Complete the timer to transition to reflection.',
+    time: 15
+  },
+  'stress-meditation-l1-ex1': {
+    type: EXERCISE_TYPE.MEDITATION,
+    title: 'Stress Meditation',
+    goal: 'Somatic calming and releasing daily mental chatter.',
+    instructions: [
+      'Sit in a posture that is upright yet relaxed.',
+      'Allow your focus to rest on the physical expansion and contraction of your chest.',
+      'On each exhale, consciously soften your shoulders, neck, and jaw.',
+      'Give yourself permission to pause all problem-solving for the duration.'
+    ],
+    completionCriteria: 'Complete the timer to transition to reflection.',
     time: 10
   },
-  'focus-training-l2': {
+  'focus-meditation-l1-ex1': {
     type: EXERCISE_TYPE.MEDITATION,
-    title: 'Distraction Labeler',
-    goal: 'Label distractions neutrally and return to focus',
+    title: 'Focus Meditation',
+    goal: 'Train your brain to anchor attention, recognize distraction, and return to focus.',
     instructions: [
-      'Focus on your breath anchor.',
-      'When your mind wanders, note it neutrally: say "thinking" or "feeling".',
-      'Gently, without self-blame, redirect your focus back to the breath.',
-      'Repeat this cycle of noticing, labeling, and returning.'
+      'Find a quiet spot. Fix your gaze softly on a point or close your eyes.',
+      'Anchor your awareness at the tip of your nose, feeling the cool air of inhale.',
+      'When your mind wanders, note the distraction neutrally and return to the anchor.',
+      'Acknowledge each return as a successful focus repetition.'
     ],
-    completionCriteria: 'Meditate for 10 minutes.',
+    completionCriteria: 'Complete the timer to transition to reflection.',
     time: 10
   },
-  'focus-training-l3': {
+  'anxiety-meditation-l1-ex1': {
     type: EXERCISE_TYPE.MEDITATION,
-    title: 'Mental Stamina Builder',
-    goal: 'Build attentional endurance over a sustained period',
+    title: 'Anxiety Meditation',
+    goal: 'Mindfulness practices specifically designed to create space around anxious feelings.',
     instructions: [
-      'Maintain your breath focus for an extended duration.',
-      'Notice any restlessness or boredom that arises.',
-      'Observe these states as temporary mind waves, and return to focus.',
-      'Strengthen your attention span through persistence.'
+      'Settle into a comfortable, supportive seat.',
+      'Observe anxious thoughts as passing clouds in the wide sky of your mind.',
+      'Name physical sensations of anxiety (tightness, warmth) without trying to change them.',
+      'Inhale spaciousness around the sensations; exhale soft release.'
     ],
-    completionCriteria: 'Meditate for 10 minutes.',
+    completionCriteria: 'Complete the timer to transition to reflection.',
+    time: 15
+  },
+  'confidence-meditation-l1-ex1': {
+    type: EXERCISE_TYPE.MEDITATION,
+    title: 'Confidence Meditation',
+    goal: 'Inner strength alignment and positive self-visualization.',
+    instructions: [
+      'Sit comfortably and bring a straight, confident posture to your spine.',
+      'Recall a moment in your life when you felt capable, strong, and in flow.',
+      'Allow the physical sensations of that memory to expand across your chest.',
+      'Incorporate this feeling of capacity into your breath cycles.'
+    ],
+    completionCriteria: 'Complete the timer to transition to reflection.',
     time: 10
+  },
+  'gratitude-meditation-l1-ex1': {
+    type: EXERCISE_TYPE.MEDITATION,
+    title: 'Gratitude Meditation',
+    goal: 'Rewire your focus toward the positive aspects of your life through active appreciation.',
+    instructions: [
+      'Close your eyes and breathe into your heart space.',
+      'Bring to mind three simple things in your life that you appreciate.',
+      'Focus on the physical feeling of appreciation and warmth in your body.',
+      'Wish yourself and those objects of gratitude well.'
+    ],
+    completionCriteria: 'Complete the timer to transition to reflection.',
+    time: 10
+  },
+  'self-compassion-meditation-l1-ex1': {
+    type: EXERCISE_TYPE.MEDITATION,
+    title: 'Self Compassion Meditation',
+    goal: 'Cultivating warmth, understanding, and kind acceptance of ourselves.',
+    instructions: [
+      'Place a hand gently over your heart or on your arm.',
+      'Acknowledge any current difficulty or discomfort you are experiencing.',
+      'Offer yourself warm, kind thoughts: "May I accept myself as I am, may I be gentle with myself."',
+      'Let go of the need for perfection or self-criticism.'
+    ],
+    completionCriteria: 'Complete the timer to transition to reflection.',
+    time: 12
   },
 
-  // Self Compassion
-  'self-compassion-l1': {
+  // ─── Wellness Studio Redesign ───────────────────────────────────────
+  'gratitude-journal-l1-ex1': {
     type: EXERCISE_TYPE.JOURNALING,
-    title: 'Loving-Kindness Practice',
-    goal: 'Cultivate friendly, accepting attitudes toward yourself',
+    title: 'Gratitude Journal',
+    goal: 'Write down small things that brought you comfort, joy, or satisfaction today.',
     instructions: [
-      'Find a comfortable posture and place a hand over your heart.',
-      'Bring to mind a mental picture of yourself.',
-      'Offer yourself warm support: "May I be safe, happy, and live with ease."',
-      'Breathe into the warmth of these wishes.'
+      'Take a moment to reflect on your day from morning until now.',
+      'Identify three distinct items (people, events, comforts) that you are grateful for.',
+      'Write down each item and describe why it made a difference to your day.'
     ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-  'self-compassion-l2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Softening Inner Critic',
-    goal: 'Soften critical self-talk using empathetic phrases',
-    instructions: [
-      'Recall a recent mistake or failure that made you criticize yourself.',
-      'Imagine how you would support a dear friend facing the same struggle.',
-      'Offer yourself that same warmth, support, and friendship.',
-      'Let go of the critical narrative.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-  'self-compassion-l3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Embracing Imperfection',
-    goal: 'Accept your limitations with kindness',
-    instructions: [
-      'Reflect on a personal flaw or mistake that triggers feelings of inadequacy.',
-      'Acknowledge that imperfection is part of the shared human experience.',
-      'Offer yourself self-acceptance and let go of perfectionism.',
-      'Breathe into the feeling of self-acceptance.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-  'self-compassion-l4': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Common Humanity Map',
-    goal: 'Connect personal struggles to the shared human experience',
-    instructions: [
-      'Write down a recent struggle or self-doubt.',
-      'Reflect on how many other people in the world feel this exact way right now.',
-      'Acknowledge that struggle is a normal, healthy part of being human.',
-      'Write a grounding statement of shared connection.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-  'self-compassion-l5': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Self-Compassion Integration',
-    goal: 'Build a go-to self-compassion break ritual for moments of stress',
-    instructions: [
-      'Select a persistent daily stressor.',
-      'Apply the three components: Mindfulness, Common Humanity, and Self-Kindness.',
-      'Design a 2-minute self-compassion break response.',
-      'Commit to practicing this tool the next time stress arises.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-
-  // CBT - Resilience
-  'resilience-l1': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Resilient Reframe',
-    goal: 'Shift from a fixed mindset to a growth mindset under stress',
-    instructions: [
-      'Identify a recent setback or challenge you faced.',
-      'Acknowledge your negative thoughts about this challenge.',
-      'Reframe the challenge as feedback and an opportunity to learn.',
-      'List one positive action step you can take next.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-  'resilience-l2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Optimistic Explanation',
-    goal: 'Practice seeing challenges as temporary and specific',
-    instructions: [
-      'Write down a recent negative event that occurred.',
-      'Audit your internal explanation of why it happened.',
-      'Rewrite the event as temporary (not permanent) and specific (not pervasive).',
-      'Acknowledge your capability to move past it.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-  'resilience-l3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Locus of Control Audit',
-    goal: 'Distinguish between controllable and uncontrollable stressors',
-    instructions: [
-      'Identify a current situation causing you stress or worry.',
-      'List the aspects of the situation that are outside of your control.',
-      'List the aspects of the situation that you *can* control.',
-      'Formulate one action step focusing only on what you can control.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-  'resilience-l4': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Stress Hardiness Planner',
-    goal: 'Incorporate daily micro-recovery activities to build reserves',
-    instructions: [
-      'Audit your current daily energy levels and stress points.',
-      'Brainstorm three micro-recovery activities that take under 5 minutes.',
-      'Schedule these activities into your typical day.',
-      'Commit to preserving this space for your mental health.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-  'resilience-l5': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Resilience Playbook Builder',
-    goal: 'Create an emergency playbook for handling future life storms',
-    instructions: [
-      'Reflect on the key tools of resilience you have learned.',
-      'Write down your primary grounding thought for times of stress.',
-      'Outline your immediate action steps when a setback occurs.',
-      'List the people or resources you can reach out to for support.'
-    ],
-    completionCriteria: 'Complete all steps of the guided journal.',
-    time: 8
-  },
-
-  // Mindfulness Basics
-  'mindfulness-basics-l1': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Breath Awareness',
-    goal: 'Observe the breath simply as it is, without controlling it',
-    instructions: [
-      'Sit comfortably and close your eyes.',
-      'Observe the natural flow of your breath. Do not force it.',
-      'Notice the pauses between the inhalation and exhalation.',
-      'Rest in simple, effortless awareness.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-  'mindfulness-basics-l2': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Somatic Check-in',
-    goal: 'Anchor attention in raw physical sensations',
-    instructions: [
-      'Bring your attention to your physical body.',
-      'Scan from your head to your feet, observing sensations of weight and touch.',
-      'Feel the air on your skin, and the support of the chair.',
-      'Observe everything objectively, without labeling it as good or bad.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-  'mindfulness-basics-l3': {
-    type: EXERCISE_TYPE.MEDITATION,
-    title: 'Living Mindfully',
-    goal: 'Bring presence into daily actions and sensory contact',
-    instructions: [
-      'Open your eyes and tune into the sounds around you.',
-      'Observe colors, shapes, and textures in your environment without labeling.',
-      'Practice bringing this same open, sensory presence into your next task.',
-      'Rest in the present moment.'
-    ],
-    completionCriteria: 'Meditate for 10 minutes.',
-    time: 10
-  },
-
-  // Guided Journaling
-  'guided-journaling-l1': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Mental Download',
-    goal: 'Empty your mind by writing freely',
-    instructions: [
-      'Set aside all distractions and prepare to write.',
-      'Write continuously about whatever is on your mind. Do not filter.',
-      'Don\'t worry about spelling or grammar; just let the words flow.',
-      'Write until your mind feels lighter.'
-    ],
-    time: 10
-  },
-  'guided-journaling-l2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Emotion Map Log',
-    goal: 'Trace complex feelings to boundaries and needs',
-    instructions: [
-      'Describe your dominant emotion right now.',
-      'Write about what triggered this feeling today.',
-      'Identify what boundary or personal need this emotion is pointing to.',
-      'Formulate one constructive action to support this need.'
-    ],
-    time: 10
-  },
-  'guided-journaling-l3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Future Vision Script',
-    goal: 'Align daily actions with your future self',
-    instructions: [
-      'Visualize yourself six months from now, feeling healthy and aligned.',
-      'Describe your morning routine, your work day, and your evenings in detail.',
-      'Identify the main value driving this future version of you.',
-      'Write down one micro-habit you can practice tomorrow to align with this vision.'
-    ],
-    time: 10
-  },
-
-  // Gratitude Practice
-  'gratitude-practice-l1': {
-    type: EXERCISE_TYPE.GRATITUDE,
-    title: 'Three Daily Blessings',
-    goal: 'Scan for and appreciate positive daily events',
-    instructions: [
-      'Write down three positive things that happened in the last 24 hours.',
-      'For each, describe *why* it happened and how it made you feel.',
-      'Acknowledge any person who contributed to these moments.'
-    ],
+    completionCriteria: 'Write and save your journal entry to complete.',
     time: 5
   },
-  'gratitude-practice-l2': {
-    type: EXERCISE_TYPE.GRATITUDE,
-    title: 'Micro-Gratitude Tracker',
-    goal: 'Find appreciation in small, routine sensory details',
+  'positive-affirmations-l1-ex1': {
+    type: EXERCISE_TYPE.JOURNALING,
+    title: 'Positive Affirmations',
+    goal: 'Ground yourself in supportive, self-directed beliefs to counter self-doubt.',
     instructions: [
-      'Identify three ordinary things you usually ignore (e.g. coffee, warm water).',
-      'Reflect on how these elements improve your quality of life.',
-      'Write a brief note of appreciation for each item.'
+      'Read or formulate statements of capacity: e.g., "I am resilient, I grow through challenges."',
+      'Focus on the feeling of these statements in your body.',
+      'Write down the affirmations that resonate with you most right now.'
     ],
+    completionCriteria: 'Write and save your affirmations to complete.',
     time: 5
   },
-  'gratitude-practice-l3': {
-    type: EXERCISE_TYPE.GRATITUDE,
-    title: 'Appreciation Draft',
-    goal: 'Cultivate gratitude for key relationships',
+  'digital-detox-l1-ex1': {
+    type: EXERCISE_TYPE.JOURNALING,
+    title: 'Digital Detox',
+    goal: 'Step away from screen activities and clear cognitive stimulation.',
     instructions: [
-      'Think of a person who has supported or helped you recently.',
-      'Draft a short message expressing exactly what they did and why you appreciate it.',
-      'Reflect on how focusing on their kindness shifts your perspective.',
-      'Consider sending the message to them.'
+      'Place your device screen-down or set it aside.',
+      'Spend the next 15 minutes engaging with your immediate physical environment (stretch, look out a window, sit in silence).',
+      'Once the timer ends, write down a brief reflection on your sensory experience.'
     ],
+    completionCriteria: 'Complete the pause and log your reflection to finish.',
+    time: 15
+  },
+  'sleep-preparation-l1-ex1': {
+    type: EXERCISE_TYPE.JOURNALING,
+    title: 'Sleep Preparation',
+    goal: 'Slowing down breathing patterns and body cues to prepare for deep rest.',
+    instructions: [
+      'Dim the lights in your room and sit comfortably.',
+      'Follow a slow, diaphragmatic breathing rhythm (e.g. 5s inhale, 5s exhale).',
+      'Reflect on winding down and write down any thoughts you want to park for tomorrow.'
+    ],
+    completionCriteria: 'Log your bedtime transition reflections to complete.',
+    time: 10
+  },
+  'mindful-walking-l1-ex1': {
+    type: EXERCISE_TYPE.JOURNALING,
+    title: 'Mindful Walking',
+    goal: 'Bring sensory awareness to your physical steps and surrounding environment.',
+    instructions: [
+      'Walk at a natural, unhurried pace.',
+      'Notice the sensation of your feet connecting with the ground on each step.',
+      'Identify three sounds, three colors, and two physical textures around you.',
+      'After walking, write down the sights and sensations you observed.'
+    ],
+    completionCriteria: 'Log your sensory walking observations to complete.',
+    time: 10
+  },
+  'body-scan-l1-ex1': {
+    type: EXERCISE_TYPE.MEDITATION,
+    title: 'Body Scan',
+    goal: 'Progressively scanning your body to release stored somatic tension.',
+    instructions: [
+      'Find a comfortable posture, seated or lying down.',
+      'Close your eyes and bring your attention to the top of your head.',
+      'Gradually move your focus down your body, noting and softening any tight areas.',
+      'Reflect on how your somatic awareness shifted during the scan.'
+    ],
+    completionCriteria: 'Complete the body scan to progress.',
+    time: 15
+  },
+  'self-check-in-l1-ex1': {
+    type: EXERCISE_TYPE.JOURNALING,
+    title: 'Self Check-in',
+    goal: 'Scan your current physical, mental, and emotional state.',
+    instructions: [
+      'Pause and close your eyes. Take a deep, settling breath.',
+      'Scan your body for physical tension, your mind for active thoughts, and your heart for current feelings.',
+      'Log these observations to capture a snapshot of your state.'
+    ],
+    completionCriteria: 'Save your self check-in details to complete.',
     time: 5
   },
-
-  // Emotional Reflection
-  'emotional-reflection-l1': {
+  'grounding-exercise-l1-ex1': {
     type: EXERCISE_TYPE.JOURNALING,
-    title: 'Name Your State',
-    goal: 'Develop emotional awareness by labeling feelings',
+    title: 'Grounding Exercise',
+    goal: 'Somatic pauses to stabilize your state in stressful transitions.',
     instructions: [
-      'Sit quietly for a moment. What is the main feeling present?',
-      'Use specific emotional labels (e.g. anxious, disappointed, grateful).',
-      'Describe the physical sensations associated with this emotion.',
-      'Reflect on the message this feeling is bringing you.'
+      'Find a steady seated or standing posture, feeling your weight fully supported.',
+      'Name 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell, and 1 you can taste.',
+      'Take three slow, deep breaths, letting the shoulders sink on exhalations.',
+      'Reflect on how this pause affected your level of calm.'
     ],
-    time: 10
-  },
-  'emotional-reflection-l2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Trigger Map',
-    goal: 'Connect daily events to mood shifts',
-    instructions: [
-      'Identify a moment today when your mood changed.',
-      'Describe the event or thought that triggered this shift.',
-      'Reflect on how you held this mood in your body.',
-      'Write down how you would like to handle this trigger next time.'
-    ],
-    time: 10
-  },
-  'emotional-reflection-l3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Tension Write-Off',
-    goal: 'Release residual emotional energy through writing',
-    instructions: [
-      'Write down any frustration, resentment, or worry you are carrying.',
-      'Write continuously, expressing all raw thoughts.',
-      'Once finished, write: "I release this energy. I am in control of my peace."',
-      'Define one physical activity to complete the release.'
-    ],
-    time: 10
-  },
-
-  // Goal Setting
-  'goal-setting-l1': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Values Alignment Planner',
-    goal: 'Ensure goals align with core personal values',
-    instructions: [
-      'Identify your top personal value (e.g., health, growth, kindness).',
-      'Write down your main focus goal.',
-      'Analyze how this goal supports your identified value.',
-      'Rephrase your goal to reflect this value connection.'
-    ],
-    time: 10
-  },
-  'goal-setting-l2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Micro Habit Blueprint',
-    goal: 'Deconstruct goals into small daily habit steps',
-    instructions: [
-      'Select a goal you want to achieve.',
-      'Break it down into the smallest possible daily habit.',
-      'Create your trigger stack: "When [cue], I will [micro habit]."',
-      'Commit to a tracking method.'
-    ],
-    time: 10
-  },
-  'goal-setting-l3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Review System Setup',
-    goal: 'Design a simple weekly accountability checklist',
-    instructions: [
-      'Define when and where you will review your habit progress.',
-      'Outline three questions to ask yourself: what went well, what was hard, what will I adjust?',
-      'Commit to a supportive, compassionate self-review style.'
-    ],
-    time: 10
-  },
-
-  // Weekly Review
-  'weekly-review-l1': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Wins & Consistency Audit',
-    goal: 'Celebrate successes and evaluate habit execution',
-    instructions: [
-      'List three wins or successes from your week.',
-      'Review your habit execution consistency percentage.',
-      'Acknowledge the effort you put in, regardless of the completion rate.'
-    ],
-    time: 10
-  },
-  'weekly-review-l2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Friction Analysis',
-    goal: 'Learn from weekly setbacks and plan adaptations',
-    instructions: [
-      'Identify the main challenge or friction point from this week.',
-      'Analyze why it was difficult.',
-      'Write down one adjustment to make this habit easier next week.'
-    ],
-    time: 10
-  },
-  'weekly-review-l3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Intentional Week Planner',
-    goal: 'Set clear objectives and intentions for the upcoming week',
-    instructions: [
-      'Select one value focus for the week ahead.',
-      'Commit to three specific habit targets.',
-      'Write a brief motivational message to your future self.'
-    ],
-    time: 10
-  },
-
-  // Daily Reset
-  'daily-reset-l1': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Mid-Day Grounding',
-    goal: 'Pause and ground attention during daily tasks',
-    instructions: [
-      'Take three slow, deep breaths.',
-      'Check in with your body and release any tension in your jaw or shoulders.',
-      'Write down one priority intention for the rest of your day.'
-    ],
-    time: 10
-  },
-  'daily-reset-l2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Transition Write-off',
-    goal: 'Release daily mental tension before resting',
-    instructions: [
-      'Write down any pending work tasks or worries from today.',
-      'Write: "I am parking these items for tomorrow. My day is done."',
-      'Commit to fully logging off for the evening.'
-    ],
-    time: 10
-  },
-  'daily-reset-l3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Daily Close Reflection',
-    goal: 'Conclude the day with appreciation and rest intentions',
-    instructions: [
-      'Write down one thing that went well today.',
-      'Acknowledge your efforts and progress.',
-      'Set a gentle intention for relaxation and restorative sleep.'
-    ],
-    time: 10
+    completionCriteria: 'Save your grounding reflection to complete.',
+    time: 5
   }
 };
 

@@ -1,8 +1,27 @@
 // src/features/home/components/QuickActionsBar.tsx
 //
-// Five circular icon buttons for one-tap access to core wellness actions.
-// Stagger-animated on mount. Each button: 52×52 circle + label beneath.
-// Phase 3: Spring scale + glow ring on press for premium feel.
+// QuickActionsBar v2 — Five premium quick-action buttons.
+//
+// Design:
+//   • 56×56 white circular containers (surface.primary)
+//   • No gradients — solid surface only
+//   • 1px subtle border, soft shadow (4-6% opacity)
+//   • Lucide outline icons — 24px, 2px stroke, rounded caps
+//   • Icon-only coloring (container stays white)
+//   • 13px medium-weight labels
+//   • 16px gap between buttons, 8px icon-to-label
+//
+// Press:  scale → 0.96, shadow reduces, icon rotates 2°, 150ms spring
+// Selected: soft purple outline ring (not solid fill)
+//
+// Icons (rendered via react-native-svg so they work on both web + native —
+// the raw react-icons glyphs would crash on native because they emit HTML
+// <svg>/<path> elements):
+//   Breathe  → FaLeaf            (Cyan)    — react-icons/fa6
+//   Journal  → IoIosJournal      (Violet)  — react-icons/io
+//   Meditate → MdSelfImprovement (Amber)   — react-icons/md
+//   Sleep    → GiNightSleep      (Indigo)  — react-icons/gi
+//   AI Chat  → RiChatAi3Fill     (Emerald) — react-icons/ri
 
 import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
@@ -12,16 +31,111 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 
 import { useTheme } from '@/hooks/useTheme';
+
+// ── Icon Glyphs (react-icons path data, rendered with react-native-svg) ───────
+
+type IconGlyphChild =
+  | { tag: 'path'; d: string; fill?: 'none' }
+  | { tag: 'circle'; cx: string; cy: string; r: string };
+
+interface IconGlyph {
+  viewBox: string;
+  children: IconGlyphChild[];
+}
+
+const GLYPHS = {
+  leaf: {
+    viewBox: '0 0 512 512',
+    children: [
+      {
+        tag: 'path',
+        d: 'M272 96c-78.6 0-145.1 51.5-167.7 122.5c33.6-17 71.5-26.5 111.7-26.5l88 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-16 0-72 0s0 0 0 0c-16.6 0-32.7 1.9-48.3 5.4c-25.9 5.9-49.9 16.4-71.4 30.7c0 0 0 0 0 0C38.3 298.8 0 364.9 0 440l0 16c0 13.3 10.7 24 24 24s24-10.7 24-24l0-16c0-48.7 20.7-92.5 53.8-123.2C121.6 392.3 190.3 448 272 448l1 0c132.1-.7 239-130.9 239-291.4c0-42.6-7.5-83.1-21.1-119.6c-2.6-6.9-12.7-6.6-16.2-.1C455.9 72.1 418.7 96 376 96L272 96z',
+      },
+    ],
+  },
+  journal: {
+    viewBox: '0 0 512 512',
+    children: [
+      {
+        tag: 'path',
+        d: 'M92.1 32C76.6 32 64 44.6 64 60.1V452c0 15.5 12.6 28.1 28.1 28.1H432c8.8 0 16-7.2 16-16s-7.2-16-16-16H112.5c-8.2 0-15.4-6-16.4-14.1-1.1-9.7 6.5-18 15.9-18h208V32H92.1z',
+      },
+      {
+        tag: 'path',
+        d: 'M432 416c8.8 0 16-7.2 16-16V60.1c0-15.5-12.6-28.1-28.1-28.1H368v384h64z',
+      },
+    ],
+  },
+  meditate: {
+    viewBox: '0 0 24 24',
+    children: [
+      { tag: 'circle', cx: '12', cy: '6', r: '2' },
+      {
+        tag: 'path',
+        d: 'M21 16v-2c-2.24 0-4.16-.96-5.6-2.68l-1.34-1.6A1.98 1.98 0 0 0 12.53 9h-1.05c-.59 0-1.15.26-1.53.72l-1.34 1.6C7.16 13.04 5.24 14 3 14v2c2.77 0 5.19-1.17 7-3.25V15l-3.88 1.55c-.67.27-1.12.93-1.12 1.66C5 19.2 5.8 20 6.79 20H9v-.5a2.5 2.5 0 0 1 2.5-2.5h3c.28 0 .5.22.5.5s-.22.5-.5.5h-3c-.83 0-1.5.67-1.5 1.5v.5h7.21c.99 0 1.79-.8 1.79-1.79 0-.73-.45-1.39-1.12-1.66L14 15v-2.25c1.81 2.08 4.23 3.25 7 3.25',
+      },
+    ],
+  },
+  sleep: {
+    viewBox: '0 0 512 512',
+    children: [
+      {
+        tag: 'path',
+        d: 'M294.8 26.57L238 60.37l7.8 13.17L281 52.59 270.8 118l6.3 10.6L336 93.53l-7.8-13.17-37.3 22.14L301 37.12l-6.2-10.55zM147.1 60.55A224 224 0 0 0 32 256a224 224 0 0 0 224 224 224 224 0 0 0 214.9-161.2A208 208 0 0 1 320 384a208 208 0 0 1-208-208 208 208 0 0 1 35.1-115.45zm244.5 52.05l-6.9 16.5 44.1 18.4-68.3 35.9-5.5 13.2 73.7 30.8 6.9-16.5-46.7-19.5 68.3-35.9 5.5-13.2-71.1-29.7zm-115 64l-97.8 35 8.1 22.7 60.6-21.7-35.4 97.9 6.5 18.1L320 292.4l-8.1-22.7-64.2 23 35.4-97.9-6.5-18.2z',
+      },
+    ],
+  },
+  chatAi: {
+    viewBox: '0 0 24 24',
+    children: [
+      {
+        tag: 'path',
+        d: 'M20.7134 8.12811L20.4668 8.69379C20.2864 9.10792 19.7136 9.10792 19.5331 8.69379L19.2866 8.12811C18.8471 7.11947 18.0555 6.31641 17.0677 5.87708L16.308 5.53922C15.8973 5.35653 15.8973 4.75881 16.308 4.57612L17.0252 4.25714C18.0384 3.80651 18.8442 2.97373 19.2761 1.93083L19.5293 1.31953C19.7058 0.893489 20.2942 0.893489 20.4706 1.31953L20.7238 1.93083C21.1558 2.97373 21.9616 3.80651 22.9748 4.25714L23.6919 4.57612C24.1027 4.75881 24.1027 5.35653 23.6919 5.53922L22.9323 5.87708C21.9445 6.31641 21.1529 7.11947 20.7134 8.12811ZM20 11C20.6986 11 21.3694 10.8806 21.9929 10.6611C21.9976 10.7735 22 10.8865 22 11C22 15.4183 18.4183 19 14 19V22.5C9 20.5 2 17.5 2 11C2 6.58172 5.58172 3 10 3H14C14.1135 3 14.2265 3.00237 14.3389 3.00705C14.1194 3.63061 14 4.30136 14 5C14 8.31371 16.6863 11 20 11Z',
+      },
+    ],
+  },
+} satisfies Record<string, IconGlyph>;
+
+type GlyphName = keyof typeof GLYPHS;
+
+function GlyphIcon({
+  glyph,
+  size = 24,
+  color = '#000',
+}: {
+  glyph: GlyphName;
+  size?: number;
+  color?: string;
+}) {
+  const def = GLYPHS[glyph];
+  return (
+    <Svg width={size} height={size} viewBox={def.viewBox}>
+      {def.children.map((child, i) => {
+        if (child.tag === 'circle') {
+          return (
+            <Circle key={i} cx={child.cx} cy={child.cy} r={child.r} fill={color} />
+          );
+        }
+        if (child.fill === 'none') return null;
+        return <Path key={i} d={child.d} fill={color} />;
+      })}
+    </Svg>
+  );
+}
+
+// ── Action Definitions ──────────────────────────────────────────────────────
 
 interface QuickAction {
   id: string;
   label: string;
-  Icon: React.ComponentType<{ size: number; color: string }>;
+  glyph: GlyphName;
   color: string;
   onPress: () => void;
+  /** Optional context badge — a tiny dot below the button */
+  badge?: boolean;
 }
 
 interface QuickActionsBarProps {
@@ -32,130 +146,95 @@ interface QuickActionsBarProps {
   onOpenJournal?: () => void;
 }
 
-function SelfImprovementIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 512 512" fill={color}>
-      <Path d="M263.375 19.375c-11.768 0-22.676 6.137-31.156 17.22-7.267 9.494-12.397 22.54-13.72 37.25 11.14-4.926 22.473-7.91 33.813-9V83.25c-10.965 1.377-22.008 5.008-33.157 11.03 1.968 12.487 6.703 23.502 13.063 31.814 8.48 11.082 19.387 17.22 31.155 17.22s22.707-6.138 31.188-17.22c6.167-8.06 10.783-18.667 12.843-30.688-12.07-6.832-24.194-10.997-36.406-12.344V64.75c12.676 1.087 25.22 4.516 37.344 10.188-1.155-15.158-6.336-28.614-13.78-38.344-8.482-11.082-19.42-17.22-31.19-17.22zm-46.594 117.25c-10.442 4.8-18.39 11.182-22.593 18.47l-.375-.095-41.625 64.438-50.656-21.97c-29.375-16.118-61.574 24-30.624 41.688l94.47 44.063 38.03-50.064c18.7 33.703 16.77 67.43-10.97 101.156-8.344-.642-16.37-.958-23.967-.906-40.312.278-68.942 10.254-73.907 28.78l.03.002c-4.44 16.58 10.992 36.67 39.126 55.28 55.675 29.297 95.38 38.468 156.968 42.344h1.562l.438.125c.424.026.823.07 1.25.094l-.032.314 92.063 28.72-22.19-53.72L183.595 375.5l5.875-17.72 71.81 23.845 71.845-23.844L339 375.5l-48.094 15.97 94.438 31.374c33.494-20.046 52.528-42.468 47.656-60.656-5.95-22.21-45.925-32.107-99.25-27.782-26.392-33.215-26.196-66.41-9.53-99.625L361 283.22l94.47-44.064c30.95-17.687-1.25-57.806-30.626-41.687l-50.688 21.968L332.562 155h-.062c-4.217-7.246-12.135-13.596-22.53-18.375-.2.27-.392.547-.595.813-11.268 14.725-27.633 24.562-46 24.562s-34.732-9.837-46-24.563c-.203-.265-.394-.543-.594-.812zm-63.686 311l-16.72 40.5 69.876-21.78c-17.624-4.574-34.93-10.634-53.156-18.72z" />
-    </Svg>
-  );
-}
+// ── Individual Button ───────────────────────────────────────────────────────
 
-function JournalIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 512 512" fill={color}>
-      <Path d="M92.1 32C76.6 32 64 44.6 64 60.1V452c0 15.5 12.6 28.1 28.1 28.1H432c8.8 0 16-7.2 16-16s-7.2-16-16-16H112.5c-8.2 0-15.4-6-16.4-14.1-1.1-9.7 6.5-18 15.9-18h208V32H92.1z" />
-      <Path d="M432 416c8.8 0 16-7.2 16-16V60.1c0-15.5-12.6-28.1-28.1-28.1H368v384h64z" />
-    </Svg>
-  );
-}
-
-function LeafIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <Path d="M3.055 14.328l-.018 -.168l-.004 -.043a11 11 0 0 1 -.047 -1.12c.018 -6.29 4.29 -9.997 13 -9.997h4.014a1 1 0 0 1 1 1l-.002 2.057c-.498 8.701 -4.74 12.943 -11.998 12.943h-2.631a16 16 0 0 0 -.375 2.11a1 1 0 1 1 -1.988 -.22q .174 -1.568 .58 -2.947l-.118 -.146l-.208 -.28l-.157 -.229l-.182 -.293l-.098 -.171l-.065 -.122a6 6 0 0 1 -.397 -.941l-.072 -.237l-.085 -.327l-.057 -.268l-.043 -.242zm8.539 -4.242c-2.845 1.265 -4.854 3.13 -6.108 5.583q .098 .2 .218 .4l.185 .281l.07 .097q .12 .164 .258 .329l.197 .224h.649c1.037 -2.271 2.777 -3.946 5.343 -5.086a1 1 0 0 0 -.812 -1.828" />
-    </Svg>
-  );
-}
-
-function SleepIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 512 512" fill={color}>
-      <Path d="M294.8 26.57L238 60.37l7.8 13.17L281 52.59 270.8 118l6.3 10.6L336 93.53l-7.8-13.17-37.3 22.14L301 37.12l-6.2-10.55zM147.1 60.55A224 224 0 0 0 32 256a224 224 0 0 0 224 224 224 224 0 0 0 214.9-161.2A208 208 0 0 1 320 384a208 208 0 0 1-208-208 208 208 0 0 1 35.1-115.45zm97.4 51.5l-6.9 16.5 44.1 18.4-68.3 35.9-5.5 13.2 73.7 30.8 6.9-16.5-46.7-19.5 68.3-35.9 5.5-13.2-71.1-29.7zM226.4 168l-97.8 35 8.1 22.7 60.6-21.7-35.4 97.9 6.5 18.1L320 292.4l-8.1-22.7-64.2 23 35.4-97.9-6.5-18.2z" />
-    </Svg>
-  );
-}
-
-function ChatIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <Path d="M20.7134 8.12811L20.4668 8.69379C20.2864 9.10792 19.7136 9.10792 19.5331 8.69379L19.2866 8.12811C18.8471 7.11947 18.0555 6.31641 17.0677 5.87708L16.308 5.53922C15.8973 5.35653 15.8973 4.75881 16.308 4.57612L17.0252 4.25714C18.0384 3.80651 18.8442 2.97373 19.2761 1.93083L19.5293 1.31953C19.7058 0.893489 20.2942 0.893489 20.4706 1.31953L20.7238 1.93083C21.1558 2.97373 21.9616 3.80651 22.9748 4.25714L23.6919 4.57612C24.1027 4.75881 24.1027 5.35653 23.6919 5.53922L22.9323 5.87708C21.9445 6.31641 21.1529 7.11947 20.7134 8.12811ZM20 11C20.6986 11 21.3694 10.8806 21.9929 10.6611C21.9976 10.7735 22 10.8865 22 11C22 15.4183 18.4183 19 14 19V22.5C9 20.5 2 17.5 2 11C2 6.58172 5.58172 3 10 3H14C14.1135 3 14.2265 3.00237 14.3389 3.00705C14.1194 3.63061 14 4.30136 14 5C14 8.31371 16.6863 11 20 11Z" />
-    </Svg>
-  );
-}
-
-// Individual action button with premium spring & icon lift interaction
-function QuickActionButton({ action, index, textColor }: {
+function QuickActionButton({
+  action,
+  index,
+  labelColor,
+  surfaceColor,
+  borderColor,
+}: {
   action: QuickAction;
   index: number;
-  textColor: string;
+  labelColor: string;
+  surfaceColor: string;
+  borderColor: string;
 }) {
   const scale = useSharedValue(1);
-  const glow = useSharedValue(0);
-  const iconTranslateY = useSharedValue(0);
+  const shadowOpacity = useSharedValue(0.05);
+  const iconRotate = useSharedValue(0);
 
-  const animatedCircleStyle = useAnimatedStyle(() => ({
+  const containerStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    shadowOpacity: withSpring(glow.value * 0.35, { damping: 15 }),
-    shadowColor: action.color,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
+    shadowOpacity: shadowOpacity.value,
   }));
 
-  const animatedGlowStyle = useAnimatedStyle(() => ({
-    opacity: glow.value,
-    transform: [{ scale: 1 + (1 - scale.value) * 1.5 }],
-  }));
-
-  const animatedIconStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: iconTranslateY.value } as any,
-      { scale: 1 + (1 - scale.value) * 0.25 } as any,
-    ],
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${iconRotate.value}deg` }],
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.88, { damping: 14, stiffness: 350 });
-    glow.value = withSpring(1, { damping: 12 });
-    iconTranslateY.value = withSpring(-3, { damping: 10 });
-  }, [scale, glow, iconTranslateY]);
+    scale.value = withSpring(0.96, { damping: 14, stiffness: 350 });
+    shadowOpacity.value = withSpring(0.02, { damping: 14, stiffness: 350 });
+    iconRotate.value = withSpring(2, { damping: 14, stiffness: 350 });
+  }, [scale, shadowOpacity, iconRotate]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 280 });
-    glow.value = withSpring(0, { damping: 12 });
-    iconTranslateY.value = withSpring(0, { damping: 10 });
-  }, [scale, glow, iconTranslateY]);
+    scale.value = withSpring(1, { damping: 12, stiffness: 300 });
+    shadowOpacity.value = withSpring(0.05, { damping: 12, stiffness: 300 });
+    iconRotate.value = withSpring(0, { damping: 12, stiffness: 300 });
+  }, [scale, shadowOpacity, iconRotate]);
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(index * 40).duration(400)}
+      entering={FadeInDown.duration(350)}
       style={styles.actionWrapper}
     >
-      <View style={styles.buttonContainer}>
-        {/* Outer Glow Halo Ring */}
-        <Animated.View
+      {/* Circle container */}
+      <Animated.View
+        style={[
+          styles.circleOuter,
+          {
+            shadowColor: '#000',
+          },
+          containerStyle,
+        ]}
+      >
+        <Pressable
+          onPress={action.onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
           style={[
-            styles.glowRing,
-            { borderColor: action.color },
-            animatedGlowStyle,
+            styles.circle,
+            {
+              backgroundColor: surfaceColor,
+              borderColor: borderColor,
+            },
           ]}
-          pointerEvents="none"
-        />
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
+        >
+          <Animated.View style={iconStyle}>
+            <GlyphIcon glyph={action.glyph} size={24} color={action.color} />
+          </Animated.View>
+        </Pressable>
+      </Animated.View>
 
-        {/* Tactile Button */}
-        <Animated.View style={animatedCircleStyle}>
-          <Pressable
-            onPress={action.onPress}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            style={[
-              styles.circle,
-              { backgroundColor: `${action.color}14`, borderColor: `${action.color}25` },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={action.label}
-          >
-            <Animated.View style={animatedIconStyle}>
-              <action.Icon size={22} color={action.color} />
-            </Animated.View>
-          </Pressable>
-        </Animated.View>
-      </View>
-      <Text style={[styles.label, { color: textColor }]}>
+      {/* Context badge dot */}
+      {action.badge && (
+        <View style={[styles.badgeDot, { backgroundColor: action.color }]} />
+      )}
+
+      {/* Label */}
+      <Text style={[styles.label, { color: labelColor }]}>
         {action.label}
       </Text>
     </Animated.View>
   );
 }
+
+// ── Bar ─────────────────────────────────────────────────────────────────────
 
 export function QuickActionsBar({
   onBreathe,
@@ -170,36 +249,36 @@ export function QuickActionsBar({
     {
       id: 'breathing',
       label: 'Breathe',
-      Icon: LeafIcon,
-      color: '#06B6D4',
+      glyph: 'leaf',
+      color: '#06B6D4',     // Cyan
       onPress: onBreathe ?? (() => {}),
     },
     {
       id: 'journal',
       label: 'Journal',
-      Icon: JournalIcon,
-      color: '#EC4899',
+      glyph: 'journal',
+      color: '#8B5CF6',     // Violet
       onPress: onOpenJournal ?? (() => {}),
     },
     {
       id: 'meditation',
       label: 'Meditate',
-      Icon: SelfImprovementIcon,
-      color: '#F59E0B',
+      glyph: 'meditate',
+      color: '#F59E0B',     // Amber
       onPress: onMeditate ?? (() => {}),
     },
     {
       id: 'sleep',
       label: 'Sleep',
-      Icon: SleepIcon,
-      color: '#3B82F6',
+      glyph: 'sleep',
+      color: '#6366F1',     // Indigo
       onPress: onSleep ?? (() => {}),
     },
     {
       id: 'chat',
       label: 'AI Chat',
-      Icon: ChatIcon,
-      color: '#10B981',
+      glyph: 'chatAi',
+      color: '#10B981',     // Emerald
       onPress: onOpenChat ?? (() => {}),
     },
   ];
@@ -211,50 +290,52 @@ export function QuickActionsBar({
           key={action.id}
           action={action}
           index={index}
-          textColor={colors.text.secondary}
+          labelColor={colors.text.secondary}
+          surfaceColor={colors.surface.primary}
+          borderColor={colors.border.default}
         />
       ))}
     </View>
   );
 }
 
+// ── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 16,
     paddingVertical: 4,
   },
   actionWrapper: {
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     flex: 1,
   },
-  buttonContainer: {
-    position: 'relative',
-    width: 52,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glowRing: {
-    position: 'absolute',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1.5,
-    zIndex: -1,
+  circleOuter: {
+    // Soft shadow — 4-6% opacity
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
   },
   circle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: -4,
+  },
   label: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
     letterSpacing: 0.1,

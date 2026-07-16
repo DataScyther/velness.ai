@@ -23,6 +23,8 @@ interface MessageBubbleProps {
   isFirst?: boolean;
   /** True when this is the last message in its group */
   isLast?: boolean;
+  /** Tracks message IDs already spoken so historical messages aren't re-read */
+  spokenIdsRef?: React.MutableRefObject<Set<string>>;
 }
 
 export const MessageBubble = React.memo(function MessageBubble({
@@ -40,6 +42,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   isGrouped,
   isFirst,
   isLast,
+  spokenIdsRef,
 }: MessageBubbleProps) {
   if (message.role === 'user') {
     return (
@@ -78,6 +81,7 @@ export const MessageBubble = React.memo(function MessageBubble({
       isGrouped={isGrouped}
       isFirst={isFirst}
       isLast={isLast}
+      spokenIdsRef={spokenIdsRef}
     />
   );
 });

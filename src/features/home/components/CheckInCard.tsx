@@ -28,8 +28,13 @@ export function CheckInCard({ onCheckIn }: CheckInCardProps) {
             </Text>
           </View>
         </View>
-        <Pressable style={[styles.button, { backgroundColor: colors.brand.primary }]} onPress={onCheckIn}>
-          <Text style={[styles.buttonText, { color: colors.brand.contrastText }]}>Check in now</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Check in now"
+          style={[styles.button, { backgroundColor: colors.brand.primary, borderColor: colors.brand.border }]}
+          onPress={onCheckIn}
+        >
+          <Text style={[styles.buttonText, { color: colors.brand.contrastText || '#FFFFFF' }]}>Check in now</Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -72,7 +77,15 @@ const styles = StyleSheet.create({
   button: {
     paddingHorizontal: 18,
     paddingVertical: 10,
+    minHeight: 44,
     borderRadius: 10,
+    borderWidth: 1,
+    opacity: 1,
+    shadowColor: '#634EB8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonText: {
     fontSize: 13,

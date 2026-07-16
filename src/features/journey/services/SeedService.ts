@@ -4,7 +4,7 @@ import { DEFAULT_EXERCISES } from '@/features/journey/data/exercises';
 import { logger } from '@/services/logging';
 import { slugToUUID } from '../utils/uuidMapping';
 
-const SEEDED_FLAG_KEY = 'velness_journey_seeded_sprint4_v2';
+const SEEDED_FLAG_KEY = 'velness_journey_seeded_sprint4_v5_meditation_redesign';
 
 let seedingInProgress = false;
 

@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.4)',
-    fontFamily: 'SF Pro Text',
+    fontFamily: 'Geomini, SF Pro Text',
     fontWeight: '500',
   },
   divider: {

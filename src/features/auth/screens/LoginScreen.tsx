@@ -49,7 +49,6 @@ export function LoginScreen() {
   const setOnboardingCompleted = useAppStore((state) => state.setOnboardingCompleted);
 
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [facebookLoading, setFacebookLoading] = useState(false);
   const hasNavigated = useRef(false);
 
   const { control, handleSubmit, formState } = useForm<LoginFormData>({
@@ -112,16 +111,6 @@ export function LoginScreen() {
     }
   }, [clearError, addToast]);
 
-  const handleFacebookSignIn = useCallback(async () => {
-    setFacebookLoading(true);
-    clearError();
-    analyticsService.trackEvent('login_attempt', { action: 'facebook' });
-    try {
-    } finally {
-      setFacebookLoading(false);
-    }
-  }, [clearError, addToast]);
-
   const handleGuestMode = useCallback(async () => {
     analyticsService.trackEvent('login_attempt', { action: 'guest' });
 
@@ -176,8 +165,8 @@ export function LoginScreen() {
                   style={{
                     width: 28,
                     height: 28,
-                    resizeMode: 'contain',
-                    borderRadius: 7,
+                    resizeMode: 'cover',
+                    borderRadius: 14,
                   }}
                 />
               </View>
@@ -295,19 +284,6 @@ export function LoginScreen() {
               loading={googleLoading}
               disabled={loading}
             />
-
-            <Pressable
-              onPress={handleFacebookSignIn}
-              disabled={loading || facebookLoading}
-              className="flex-row items-center justify-center rounded-xl px-8 py-3.5 border border-border-default bg-surface-primary active:opacity-85 shadow-sm mt-4"
-              style={{ borderRadius: borderRadius.md }}
-              accessibilityRole="button"
-              accessibilityLabel="Continue with Facebook"
-            >
-              <Text className="text-text-primary font-semibold ml-3 text-body">
-                Continue with Facebook
-              </Text>
-            </Pressable>
 
             <Pressable
               onPress={handleGuestMode}

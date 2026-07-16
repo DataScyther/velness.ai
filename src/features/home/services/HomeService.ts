@@ -19,6 +19,7 @@ import type {
   HomeState,
   TodaysMissionSection,
   ProgressSummary,
+  RecommendationItem,
 } from './HomeState';
 
 import { missionService } from '../../../../backend/services/MissionService';
@@ -160,7 +161,7 @@ function generateSmartRecommendation(
   journals: JournalRow[],
   journey: any,
   recentEvents: any[]
-): { recommendation: any, reason: string } {
+): { recommendation: RecommendationItem, reason: string } {
   const now = new Date();
   const hour = now.getHours();
 
@@ -299,7 +300,7 @@ class HomeService {
       },
       recommendation: {
         primary: smartRec.recommendation,
-        all: [smartRec.recommendation, ...base.recommendations],
+        all: base.recommendations,
         reason: smartRec.reason,
       },
       progress: summarizeProgress(progressRows, base.streak),

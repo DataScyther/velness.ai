@@ -32,7 +32,7 @@ export function HomeHeader({ onNotificationPress, unreadCount = 0 }: HomeHeaderP
         <Image
           source={require('@/shared/assets/velness-logo.jpg')}
           style={styles.logo}
-          resizeMode="contain"
+          resizeMode="cover"
         />
         <Text style={[styles.wordmark, { color: colors.text.primary }]}>Velness</Text>
       </View>
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 30,
     height: 30,
-    borderRadius: 8,
+    borderRadius: 15,
   },
   wordmark: {
     fontSize: 19,

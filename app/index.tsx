@@ -74,8 +74,10 @@ export default function AppEntry() {
             style={{
               width: width * 0.45,
               height: width * 0.45,
-              resizeMode: 'contain',
-              borderRadius: 32,
+              resizeMode: 'cover',
+              borderRadius: (width * 0.45) / 2,
+              borderWidth: 1.5,
+              borderColor: 'rgba(255, 255, 255, 0.15)',
             }}
           />
         </Animated.View>

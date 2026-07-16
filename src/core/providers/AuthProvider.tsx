@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/core/store/useAppStore';
 import { authService } from '@/services/auth';
 import { useProfileSync } from '@/hooks/useProfileSync';
@@ -13,6 +13,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
   const initialize = useAppStore((state) => state.initialize);
 
+  const mountedRef = useRef(true);
+
   useProfileSync(uid);
 
   useEffect(() => {
@@ -20,19 +22,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [initialize]);
 
   useEffect(() => {
+    mountedRef.current = true;
+
     const unsubscribe = authService.onAuthStateChanged(async (profile) => {
-      if (profile) {
-        setUser(profile);
-        setEmailVerified(authService.isEmailVerified());
-        const onboardingCompleted = await authService.isOnboardingCompleted();
-        setOnboardingCompleted(onboardingCompleted);
-      } else {
-        clearSession();
+      try {
+        if (profile) {
+          setUser(profile);
+          setEmailVerified(authService.isEmailVerified());
+          const onboardingCompleted = await authService.isOnboardingCompleted();
+          setOnboardingCompleted(onboardingCompleted);
+        } else {
+          clearSession();
+        }
+      } catch (err) {
+        // Don't let a failed profile/onboarding lookup crash the app (guest mode).
+        console.warn('[AuthProvider] auth state handler failed:', err);
+      } finally {
+        if (mountedRef.current) {
+          setAuthInitialized(true);
+        }
       }
-      setAuthInitialized(true);
     });
 
-    return unsubscribe;
+    return () => {
+      mountedRef.current = false;
+      unsubscribe();
+    };
   }, [setUser, clearSession, setOnboardingCompleted, setEmailVerified, setAuthInitialized]);
 
   return <>{children}</>;

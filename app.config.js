@@ -105,14 +105,16 @@ const firebaseExtra = {
   EXPO_PUBLIC_NVIDIA_BASE_URL: pick('EXPO_PUBLIC_NVIDIA_BASE_URL') || pick('VITE_NVIDIA_BASE_URL'),
 
   EXPO_PUBLIC_SENTRY_DSN: pick('EXPO_PUBLIC_SENTRY_DSN'),
+
+  EXPO_PUBLIC_SUPABASE_URL: pick('EXPO_PUBLIC_SUPABASE_URL') || pick('VITE_SUPABASE_URL'),
+  EXPO_PUBLIC_SUPABASE_ANON_KEY:
+    pick('EXPO_PUBLIC_SUPABASE_ANON_KEY') || pick('VITE_SUPABASE_ANON_KEY'),
 };
 
 const androidPackage =
   googleEnv.ANDROID_PACKAGE || pick('EXPO_PUBLIC_ANDROID_PACKAGE') || 'com.mentalhealth.app';
 
 function appNameForEnvironment() {
-  if (APP_ENV === 'development') return 'Velness (Dev)';
-  if (APP_ENV === 'staging') return 'Velness (Staging)';
   return 'Velness';
 }
 
@@ -127,7 +129,7 @@ module.exports = {
     userInterfaceStyle: 'automatic',
     splash: {
       image: './src/shared/assets/splash.png',
-      resizeMode: 'contain',
+      resizeMode: 'cover',
       backgroundColor: '#0F0A1A',
     },
     ios: {
@@ -139,6 +141,12 @@ module.exports = {
       },
     },
     android: {
+      // `resize` maps to `android:windowSoftInputMode="adjustResize"`. This is the
+      // robust choice for Gboard: the OS resizes the window in sync with the IME
+      // (including its dynamic suggestion/sticker bar), so the composer is lifted
+      // natively and never ends up behind the keyboard. `pan` only re-pans on focus
+      // /inset changes and lags behind Gboard's mid-open height changes.
+      softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: './src/shared/assets/adaptive-icon.png',
         backgroundColor: '#0F0A1A',
@@ -151,6 +159,7 @@ module.exports = {
     },
     plugins: [
       'expo-router',
+      'expo-font',
       'expo-secure-store',
       'expo-speech-recognition',
       'expo-system-ui',

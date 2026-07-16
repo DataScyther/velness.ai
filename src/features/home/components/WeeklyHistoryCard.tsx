@@ -1,7 +1,7 @@
 // src/features/home/components/WeeklyHistoryCard.tsx
 //
 // Compact mood timeline card — premium, optimized edition.
-// - Soft animated ambient glow behind the card
+// - Clean, calm flat surface tile (solid surface + border)
 // - Gradient-bordered glass surface
 // - Shimmer sweep across the chart line (filled state)
 // - Glowing "now" dot + refined average pill
@@ -9,7 +9,7 @@
 // - MoodTimeline SVG chart above the 7 emoji dots
 
 import React, { useMemo, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   FadeInDown,
   ZoomIn,
@@ -70,8 +70,6 @@ export const WeeklyHistoryCard = React.memo(({
 }: WeeklyHistoryCardProps) => {
   const { colors } = useTheme();
 
-  // Ambient glow pulse (behind card)
-  const glowScale = useSharedValue(1);
   // Slow rotating orbit (empty state)
   const orbitRotate = useSharedValue(0);
   // Marching-dash phase + traveling-dot angle for the orbit rings
@@ -80,14 +78,6 @@ export const WeeklyHistoryCard = React.memo(({
   const shimmerX = useSharedValue(-SVG_WIDTH);
 
   useEffect(() => {
-    glowScale.value = withRepeat(
-      withSequence(
-        withTiming(1.12, { duration: 2600, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.96, { duration: 2600, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      true,
-    );
     orbitRotate.value = withRepeat(
       withSequence(
         withTiming(360, { duration: 24000, easing: Easing.linear }),
@@ -104,7 +94,7 @@ export const WeeklyHistoryCard = React.memo(({
       -1,
       false,
     );
-  }, [glowScale, orbitRotate, orbitPhase]);
+  }, [orbitRotate, orbitPhase]);
 
   const weekData = useMemo(() => {
     const today = new Date();
@@ -196,10 +186,6 @@ export const WeeklyHistoryCard = React.memo(({
     );
   }, [hasData, shimmerX]);
 
-  const glowAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: glowScale.value }],
-  }));
-
   const orbitAnimStyle = useAnimatedStyle(() => ({
     transform: [{ rotateZ: `${orbitRotate.value}deg` }],
   }));
@@ -231,18 +217,8 @@ export const WeeklyHistoryCard = React.memo(({
 
   return (
     <Animated.View entering={FadeInDown.duration(400)} style={styles.wrap}>
-      {/* Ambient glow behind the card */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.ambientGlow,
-          glowAnimStyle,
-          { backgroundColor: colors.brand.primary },
-        ]}
-      />
-
       {/* Gradient-border shell */}
-      <View style={[styles.borderShell, { opacity: 0.9 }]}>
+      <View style={styles.borderShell}>
         <Pressable
           onPress={onPress}
           style={[
@@ -253,19 +229,6 @@ export const WeeklyHistoryCard = React.memo(({
             },
           ]}
         >
-          {/* Soft inner gradient + glow so the surface never reads as flat white */}
-          <View style={styles.innerGlow} pointerEvents="none">
-            <Svg width="100%" height="100%" viewBox="0 0 320 200" preserveAspectRatio="none">
-              <Defs>
-                <RadialGradient id="cardGlow" cx="78%" cy="0%" r="90%">
-                  <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0.1} />
-                  <Stop offset="55%" stopColor={colors.brand.primary} stopOpacity={0.03} />
-                  <Stop offset="100%" stopColor={colors.brand.primary} stopOpacity={0} />
-                </RadialGradient>
-              </Defs>
-              <Rect x="0" y="0" width="320" height="200" fill="url(#cardGlow)" />
-            </Svg>
-          </View>
           {/* Header row */}
           <View style={styles.headerRow}>
             <View style={styles.titleContainer}>
@@ -371,61 +334,73 @@ export const WeeklyHistoryCard = React.memo(({
           ) : (
             /* Friendly empty state with illustration */
             <View style={styles.emptyContainer}>
-              <View style={styles.illustrationContainer}>
-                {/* Pulsing glow background */}
-                <Animated.View
-                  style={[
-                    styles.glowBack,
-                    { backgroundColor: colors.brand.primary },
-                    glowAnimStyle,
-                  ]}
-                />
+              <View
+                style={[
+                  styles.emptyPanel,
+                  {
+                    backgroundColor: colors.surface.secondary,
+                    borderColor: colors.border.default,
+                  },
+                ]}
+              >
+                <View style={styles.illustrationContainer}>
+                  {/* Calm static glow backdrop */}
+                  <View
+                    style={[
+                      styles.glowBack,
+                      { backgroundColor: colors.brand.primary },
+                    ]}
+                  />
 
-                {/* Rotating Concentric SVG Orbits */}
-                <Animated.View style={[styles.orbitWrap, orbitAnimStyle]}>
-                  <Svg width={96} height={96} viewBox="0 0 110 110">
-                    <Defs>
-                      <RadialGradient id="orbitDot" cx="50%" cy="50%" r="50%">
-                        <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0.9} />
-                        <Stop offset="100%" stopColor={colors.brand.primary} stopOpacity={0} />
-                      </RadialGradient>
-                    </Defs>
-                    <AnimatedCircle
-                      cx="55"
-                      cy="55"
-                      r="38"
-                      stroke={`${colors.brand.primary}22`}
-                      strokeWidth="1.5"
-                      fill="none"
-                      strokeDasharray="4, 4"
-                      animatedProps={orbitProps}
-                    />
-                    <AnimatedCircle
-                      cx="55"
-                      cy="55"
-                      r="48"
-                      stroke={`${colors.brand.primary}12`}
-                      strokeWidth="1"
-                      fill="none"
-                      strokeDasharray="8, 6"
-                      animatedProps={orbitProps}
-                    />
-                    {/* Glowing dot traveling along the outer orbit */}
-                    <AnimatedCircle r="4" fill="url(#orbitDot)" animatedProps={dotProps} />
-                    <AnimatedCircle r="1.6" fill={colors.brand.primary} animatedProps={dotProps} />
-                  </Svg>
-                </Animated.View>
+                  {/* Rotating Concentric SVG Orbits */}
+                  <Animated.View style={[styles.orbitWrap, orbitAnimStyle]}>
+                    <Svg width={96} height={96} viewBox="0 0 110 110">
+                      <Defs>
+                        <RadialGradient id="orbitDot" cx="50%" cy="50%" r="50%">
+                          <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0.7} />
+                          <Stop offset="100%" stopColor={colors.brand.primary} stopOpacity={0} />
+                        </RadialGradient>
+                      </Defs>
+                      <AnimatedCircle
+                        cx="55"
+                        cy="55"
+                        r="38"
+                        stroke={`${colors.brand.primary}20`}
+                        strokeWidth="1.2"
+                        fill="none"
+                        strokeDasharray="4, 4"
+                        animatedProps={orbitProps}
+                      />
+                      <AnimatedCircle
+                        cx="55"
+                        cy="55"
+                        r="48"
+                        stroke={`${colors.brand.primary}14`}
+                        strokeWidth="0.8"
+                        fill="none"
+                        strokeDasharray="8, 6"
+                        animatedProps={orbitProps}
+                      />
+                      {/* Glowing dot traveling along the outer orbit */}
+                      <AnimatedCircle r="3" fill="url(#orbitDot)" animatedProps={dotProps} />
+                      <AnimatedCircle r="1.4" fill={colors.brand.primary} animatedProps={dotProps} />
+                    </Svg>
+                  </Animated.View>
 
-                {/* Centered central icon badge (same exact icon) */}
-                <View
-                  style={[
-                    styles.emptyIconWrap,
-                    { backgroundColor: `${colors.brand.primary}14` },
-                  ]}
-                >
-                  <Svg width={22} height={22} viewBox="0 0 512 512">
-                    <Path d={FA_SEEDLING_PATH} fill={colors.brand.primary} />
-                  </Svg>
+                  {/* Centered central icon badge (same exact icon) */}
+                  <View
+                    style={[
+                      styles.emptyIconWrap,
+                      {
+                        backgroundColor: colors.brand.subtle,
+                        borderColor: `${colors.brand.primary}26`,
+                      },
+                    ]}
+                  >
+                    <Svg width={22} height={22} viewBox="0 0 512 512">
+                      <Path d={FA_SEEDLING_PATH} fill={colors.brand.primary} />
+                    </Svg>
+                  </View>
                 </View>
               </View>
               <View style={styles.emptyText}>
@@ -436,19 +411,6 @@ export const WeeklyHistoryCard = React.memo(({
                   weekly insights.
                 </Text>
               </View>
-              {onCheckIn && (
-                <Pressable
-                  onPress={onCheckIn}
-                  style={({ pressed }) => [
-                    styles.emptyBtn,
-                    { backgroundColor: colors.brand.primary },
-                    pressed && { opacity: 0.88, transform: [{ scale: 0.96 }] },
-                  ]}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.emptyBtnText}>Check in</Text>
-                </Pressable>
-              )}
             </View>
           )}
         </Pressable>
@@ -463,20 +425,6 @@ const styles = StyleSheet.create({
   wrap: {
     position: 'relative',
   },
-  ambientGlow: {
-    position: 'absolute',
-    top: -18,
-    left: '10%',
-    right: '10%',
-    height: 90,
-    borderRadius: 45,
-    opacity: 0.12,
-    ...Platform.select({
-      web: { filter: 'blur(20px)' },
-      default: {},
-    }),
-    zIndex: 0,
-  },
   borderShell: {
     borderRadius: 18,
     padding: 1.2,
@@ -490,14 +438,6 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingBottom: 10,
     overflow: 'hidden',
-  },
-  innerGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
   },
   headerRow: {
     flexDirection: 'row',
@@ -613,7 +553,16 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 12,
-    gap: 10,
+    gap: 12,
+  },
+  // Cohesive rounded tile that holds the empty-state illustration
+  emptyPanel: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 132,
+    height: 132,
+    borderRadius: 20,
+    borderWidth: 1,
   },
   illustrationContainer: {
     width: 96,
@@ -625,10 +574,10 @@ const styles = StyleSheet.create({
   },
   glowBack: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    opacity: 0.08,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    opacity: 0.06,
   },
   orbitWrap: {
     position: 'absolute',
@@ -641,6 +590,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
@@ -656,21 +606,6 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 12,
     lineHeight: 17,
-  },
-  emptyBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
-    marginTop: 4,
-  },
-  emptyBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
   },
 });
 

@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { journeyRepository } from '@/repositories/JourneyRepository';
+import { guidedProgressRepository } from 'backend/repositories/GuidedProgressRepository';
 import { journeyCache } from '@/features/journey/services/JourneyCache';
 import { JourneyNavigationService } from '@/features/journey/services/JourneyNavigationService';
 import { useAuth } from '@/shared/hooks/useAuth';
@@ -46,11 +47,13 @@ export function useJourney() {
     if (cacheRead.current) return;
     cacheRead.current = true;
 
-    cachedPromise.then((cached) => {
-      if (cached) {
-        setCachedJourney(cached);
-      }
-    });
+    cachedPromise
+      .then((cached) => {
+        if (cached) {
+          setCachedJourney(cached);
+        }
+      })
+      .catch((err) => console.warn('[useJourney] cached journey read failed:', err));
   }, []);
 
   useEffect(() => {
@@ -151,7 +154,6 @@ export function useJourney() {
     queryFn: async () => {
       if (!uid || !activeExerciseId) return null;
       try {
-        const { guidedProgressRepository } = await import('../../../backend/repositories/GuidedProgressRepository');
         return guidedProgressRepository.get(activeExerciseId);
       } catch {
         return null;
@@ -275,6 +277,70 @@ export function useJourney() {
     return computeExercisesCompleted(userProgress);
   }, [userProgress]);
 
+  const daysPracticed = useMemo(() => {
+    if (!exercisesQuery.data) return 0;
+    const uniqueDays = new Set<string>();
+    for (const ex of exercisesQuery.data) {
+      if (ex.lastCompletedAt) {
+        uniqueDays.add(new Date(ex.lastCompletedAt).toDateString());
+      }
+    }
+    return uniqueDays.size;
+  }, [exercisesQuery.data]);
+
+  const minutesCompleted = useMemo(() => {
+    if (!exercisesQuery.data) return 0;
+    let total = 0;
+    for (const ex of exercisesQuery.data) {
+      if (ex.lastCompletedAt) {
+        total += ex.estimatedTime || 5;
+      }
+    }
+    return total;
+  }, [exercisesQuery.data]);
+
+  const programsCompleted = useMemo(() => {
+    if (!programsQuery.data || !userProgress) return 0;
+    return programsQuery.data.filter((p) => {
+      const prog = userProgress.programProgress[p.id];
+      return prog?.status === 'completed' || prog?.completionPercent === 100;
+    }).length;
+  }, [programsQuery.data, userProgress]);
+
+  const favoritePractice = useMemo(() => {
+    if (!exercisesQuery.data) return 'None yet';
+    const counts: Record<string, number> = {
+      cbt: 0,
+      breathing: 0,
+      meditation: 0,
+      wellness: 0,
+    };
+    for (const ex of exercisesQuery.data) {
+      if (ex.lastCompletedAt) {
+        const categoryId = ex.id.startsWith('cbt') ? 'cbt' :
+                           ex.id.startsWith('1-minute-reset') || ex.id.startsWith('3-minute-calm') || ex.id.startsWith('box-breathing') || ex.id.startsWith('4-7-8-breathing') || ex.id.startsWith('deep-relaxation') || ex.id.startsWith('focus-breathing') || ex.id.startsWith('sleep-breathing') ? 'breathing' :
+                           ex.id.includes('meditation') ? 'meditation' :
+                           'wellness';
+        counts[categoryId] = (counts[categoryId] || 0) + 1;
+      }
+    }
+    let maxCat = 'None';
+    let maxCount = 0;
+    const catNames: Record<string, string> = {
+      cbt: '🧠 CBT',
+      breathing: '🌬 Breathing',
+      meditation: '🧘 Meditation',
+      wellness: '✨ Wellness Studio',
+    };
+    for (const [cat, count] of Object.entries(counts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        maxCat = catNames[cat] || cat;
+      }
+    }
+    return maxCount > 0 ? maxCat : 'None yet';
+  }, [exercisesQuery.data]);
+
   const journey = journeyQuery.data ?? cachedJourney ?? null;
 
   const allQueries = [
@@ -339,6 +405,10 @@ export function useJourney() {
     streak,
     weeklyProgress,
     exercisesCompleted,
+    daysPracticed,
+    minutesCompleted,
+    programsCompleted,
+    favoritePractice,
     journey,
     activeGuidedProgress: guidedProgressQuery.data || null,
     journeyLoading: isLoading,

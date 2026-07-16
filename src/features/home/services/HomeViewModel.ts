@@ -386,6 +386,11 @@ class HomeViewModel {
         profileService.getCurrent(),
       ]);
 
+    // Compute journey in parallel with (not after) the main queries above.
+    const journey = profile?.id
+      ? await journeyRepository.computeUserProgress(profile.id)
+      : null;
+
     const moodEntries = moodRows
       .map(moodRowToMood)
       .sort(
@@ -394,7 +399,6 @@ class HomeViewModel {
       );
 
     const streak = calcStreak(moodEntries);
-    const journey = profile?.id ? await journeyRepository.computeUserProgress(profile.id) : null;
     const daysSinceLast = calcDaysSinceLastCheckIn(moodEntries);
     const firstName = getFirstName(profile);
     const hasCheckedInToday = !!getTodayMood(moodEntries);

@@ -227,7 +227,6 @@ export function getRecommendations(
     moodHistory,
     recentExercises,
     completedLessons,
-    preferences: [],
   });
 }
 

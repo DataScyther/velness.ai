@@ -22,6 +22,9 @@ import {
   AlertCircle,
   HelpCircle,
   RotateCcw,
+  BookOpen,
+  Clock,
+  Heart,
 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { generateResponse } from '@/services/ai';
@@ -58,6 +61,8 @@ export function GuidedExerciseEngine({
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [inputText, setInputText] = useState('');
   const [inputError, setInputError] = useState<string | null>(null);
+  const [learnSecondsLeft, setLearnSecondsLeft] = useState(60);
+  const [hasCommitted, setHasCommitted] = useState(false);
   
   // Session details
   const [dbRowId, setDbRowId] = useState<string | null>(null);
@@ -294,6 +299,35 @@ export function GuidedExerciseEngine({
     }
   }, [breathingCyclesLeft, breathingPhase]);
 
+  // Learn Countdown Effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (currentStep?.type === 'learn') {
+      const words = currentStep.explanation?.split(/\s+/).length || 0;
+      const readingDuration = Math.max(5, Math.min(25, Math.ceil(words / 3))); // ~180 words per minute
+      setLearnSecondsLeft(readingDuration);
+      interval = setInterval(() => {
+        setLearnSecondsLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentStepIndex, currentStep?.type]);
+
+  // Reset commitment state on apply step change
+  useEffect(() => {
+    if (currentStep?.type === 'apply') {
+      setHasCommitted(false);
+    }
+  }, [currentStepIndex, currentStep?.type]);
+
   // Generate AI Reflection
   const generateReflection = async (questionStepId: string, userInput: string) => {
     setIsGeneratingAI(true);
@@ -446,7 +480,7 @@ Their evidence: "${userInput}"`;
           source: 'cbt',
         }).then(async (rec) => {
           await recommendationRepository.complete(rec.id);
-        });
+        }).catch((err) => console.warn('[GuidedExercise] completion note failed:', err));
       } catch (err) {
         if ((err as { name?: string })?.name !== 'NotAuthenticatedError') {
           console.warn('Failed to record completion in recommendations:', err);
@@ -635,6 +669,71 @@ Their evidence: "${userInput}"`;
             </View>
           )}
 
+          {/* Learn Screen */}
+          {currentStep?.type === 'learn' && (
+            <View style={[styles.stepContainer, { alignItems: 'center' }]}>
+              <View style={[styles.iconWrapper, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+                <BookOpen size={48} color="#8B5CF6" />
+              </View>
+              <Text style={styles.title}>{currentStep.title}</Text>
+              <Text style={styles.description}>{currentStep.explanation}</Text>
+              
+              <View style={styles.timerCircle}>
+                <Clock size={28} color="#8B5CF6" />
+                <Text style={styles.timerCountdown}>
+                  {learnSecondsLeft > 0 ? `${learnSecondsLeft}s` : 'Done'}
+                </Text>
+                <Text style={styles.timerSubtext}>explanation read time</Text>
+              </View>
+
+              {learnSecondsLeft > 0 && (
+                <Pressable
+                  onPress={() => setLearnSecondsLeft(0)}
+                  style={styles.skipBreathingButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Skip reading timer"
+                >
+                  <Text style={styles.skipBreathingText}>Skip Timer</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {/* Apply Screen */}
+          {currentStep?.type === 'apply' && (
+            <View style={[styles.stepContainer, { alignItems: 'center' }]}>
+              <View style={[styles.iconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                <Heart size={48} color="#10B981" />
+              </View>
+              <Text style={styles.title}>{currentStep.title}</Text>
+              <Text style={styles.description}>{currentStep.explanation}</Text>
+
+              <Pressable
+                onPress={() => setHasCommitted(!hasCommitted)}
+                style={[
+                  styles.commitmentCard,
+                  {
+                    borderColor: hasCommitted ? '#10B981' : 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: hasCommitted ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                  }
+                ]}
+              >
+                <View style={[
+                  styles.checkbox,
+                  {
+                    backgroundColor: hasCommitted ? '#10B981' : 'transparent',
+                    borderColor: hasCommitted ? '#10B981' : 'rgba(255, 255, 255, 0.3)',
+                  }
+                ]}>
+                  {hasCommitted && <Check size={14} color="#FFF" />}
+                </View>
+                <Text style={[styles.commitmentText, { color: hasCommitted ? '#FFF' : 'rgba(255, 255, 255, 0.6)' }]}>
+                  I commit to applying this in my life today.
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           {/* Question / Summary Input Screen */}
           {(currentStep?.type === 'question' || currentStep?.type === 'summary') && (
             <View style={styles.stepContainer}>
@@ -769,14 +868,19 @@ Their evidence: "${userInput}"`;
             onPress={handleContinue}
             disabled={
               isGeneratingAI ||
-              (currentStep?.type === 'breathing' && breathingPhase !== 'complete')
+              (currentStep?.type === 'breathing' && breathingPhase !== 'complete') ||
+              (currentStep?.type === 'apply' && !hasCommitted) ||
+              (currentStep?.type === 'learn' && learnSecondsLeft > 0)
             }
             style={[
               styles.continueButton,
               {
-                backgroundColor: isGeneratingAI || (currentStep?.type === 'breathing' && breathingPhase !== 'complete')
-                  ? 'rgba(139, 92, 246, 0.4)'
-                  : '#8B5CF6',
+                backgroundColor: isGeneratingAI || 
+                  (currentStep?.type === 'breathing' && breathingPhase !== 'complete') ||
+                  (currentStep?.type === 'apply' && !hasCommitted) ||
+                  (currentStep?.type === 'learn' && learnSecondsLeft > 0)
+                    ? 'rgba(139, 92, 246, 0.4)'
+                    : '#8B5CF6',
               },
             ]}
           >
@@ -785,7 +889,17 @@ Their evidence: "${userInput}"`;
             ) : (
               <>
                 <Text style={styles.continueButtonText}>
-                  {currentStep?.type === 'welcome' ? 'Get Started' : currentStep?.type === 'breathing' && breathingPhase !== 'complete' ? 'Grounding...' : 'Continue'}
+                  {currentStep?.type === 'welcome'
+                    ? 'Get Started'
+                    : currentStep?.type === 'learn' && learnSecondsLeft > 0
+                    ? `Study (${learnSecondsLeft}s)`
+                    : currentStep?.type === 'learn'
+                    ? 'Continue'
+                    : currentStep?.type === 'breathing' && breathingPhase !== 'complete'
+                    ? 'Grounding...'
+                    : currentStep?.type === 'apply' && !hasCommitted
+                    ? 'Commit to practice'
+                    : 'Continue'}
                 </Text>
                 <ArrowRight size={20} color="#FFFFFF" />
               </>
@@ -1204,5 +1318,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  timerCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 3,
+    borderColor: '#8B5CF6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xl,
+    backgroundColor: 'rgba(139, 92, 246, 0.05)',
+  },
+  timerCountdown: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: spacing.xs,
+  },
+  timerSubtext: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.4)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  commitmentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    marginTop: spacing.xl,
+    gap: spacing.md,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commitmentText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
   },
 });

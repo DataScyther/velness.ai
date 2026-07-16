@@ -4,6 +4,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   useSharedValue,
+  interpolateColor,
   FadeInDown,
 } from 'react-native-reanimated';
 
@@ -28,8 +29,10 @@ export const MoodOption = React.memo(({
   onPress,
 }: MoodOptionProps) => {
   const scale = useSharedValue(1);
+  const progress = useSharedValue(0);
   const { colors } = useTheme();
   const PRIMARY = colors.brand.primary;
+  const SELECTED_BG = `${PRIMARY}22`;
 
   useEffect(() => {
     if (isSelected) {
@@ -38,6 +41,7 @@ export const MoodOption = React.memo(({
     } else {
       scale.value = withSpring(1, { damping: 12, stiffness: 200 });
     }
+    progress.value = withSpring(isSelected ? 1 : 0, { damping: 20, stiffness: 200 });
   }, [isSelected]);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -47,13 +51,17 @@ export const MoodOption = React.memo(({
           scale: scale.value,
         },
       ],
-      borderColor: withSpring(
-        isSelected ? PRIMARY : colors.border.default,
-        { damping: 20, stiffness: 200 }
+      // NOTE: withSpring must animate numbers, not color strings. Use a numeric
+      // progress value and interpolateColor so the background/border animate validly.
+      borderColor: interpolateColor(
+        progress.value,
+        [0, 1],
+        [colors.border.default, PRIMARY]
       ),
-      backgroundColor: withSpring(
-        isSelected ? `${PRIMARY}22` : colors.surface.secondary,
-        { damping: 20, stiffness: 200 }
+      backgroundColor: interpolateColor(
+        progress.value,
+        [0, 1],
+        [colors.surface.secondary, SELECTED_BG]
       ),
     };
   });
@@ -72,7 +80,7 @@ export const MoodOption = React.memo(({
   }, [onPress]);
 
   return (
-    <Animated.View entering={FadeInDown.duration(400).springify()}>
+    <Animated.View entering={FadeInDown.duration(250)} style={{ flex: 1 }}>
       <AnimatedPressable
         onPress={handlePress}
         onPressIn={handlePressIn}
@@ -84,12 +92,12 @@ export const MoodOption = React.memo(({
       >
         <EmotionAvatar
           emotion={emotion}
-          size={34}
+          size={32}
           animated
           selected={isSelected}
           showGlow={false}
         />
-        <Text style={[styles.label, { color: colors.text.secondary }, isSelected && { color: colors.brand.primary, fontWeight: '600' }]}>
+        <Text style={[styles.label, { color: colors.text.secondary }, isSelected && { color: colors.brand.primary, fontWeight: '700' }]}>
           {label}
         </Text>
       </AnimatedPressable>
@@ -99,10 +107,10 @@ export const MoodOption = React.memo(({
 
 const styles = StyleSheet.create({
   card: {
-    width: 64,
-    height: 80,
-    borderRadius: 16,
-    borderWidth: 2,
+    width: '100%',
+    height: 76,
+    borderRadius: 14,
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },

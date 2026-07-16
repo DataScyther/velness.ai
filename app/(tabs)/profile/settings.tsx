@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Moon, Sun, Monitor, Volume2, Languages, Trash2, Check } from 'lucide-react-native';
 import { useAppStore, type ThemeMode } from '@/core/store/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
+import { speechSynthesisAvailable } from '@/services/speech/SpeechSynthesis';
 import type { Tone } from '@/services/auth/types';
 
 const themeOptions: { label: string; value: ThemeMode; icon: typeof Moon }[] = [
@@ -27,6 +28,8 @@ export default function SettingsScreen() {
   
   const uiTheme = useAppStore((state) => state.ui.theme);
   const setTheme = useAppStore((state) => state.setTheme);
+  const voiceEnabled = useAppStore((state) => state.ui.voiceEnabled);
+  const setVoiceEnabled = useAppStore((state) => state.setVoiceEnabled);
   const user = useAppStore((state) => state.session.user);
   const updateUserProfile = useAppStore((state) => state.updateUserProfile);
 
@@ -45,6 +48,39 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Failed to update preferences.');
     }
   }, [user, updateUserProfile]);
+
+  const handleToggleVoice = useCallback(() => {
+    setVoiceEnabled(!voiceEnabled);
+  }, [voiceEnabled, setVoiceEnabled]);
+
+  const renderVoiceToggle = useCallback(() => {
+    if (!speechSynthesisAvailable) {
+      return (
+        <Text style={[styles.badgeText, { color: colors.text.secondary }]}>
+          Unavailable
+        </Text>
+      );
+    }
+    return (
+      <TouchableOpacity
+        onPress={handleToggleVoice}
+        activeOpacity={0.7}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: voiceEnabled }}
+        style={[
+          styles.toggleTrack,
+          { backgroundColor: voiceEnabled ? colors.brand.primary : colors.border.default },
+        ]}
+      >
+        <View
+          style={[
+            styles.toggleKnob,
+            { backgroundColor: '#FFFFFF', transform: [{ translateX: voiceEnabled ? 18 : 0 }] },
+          ]}
+        />
+      </TouchableOpacity>
+    );
+  }, [voiceEnabled, speechSynthesisAvailable, colors, handleToggleVoice]);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
@@ -138,6 +174,23 @@ export default function SettingsScreen() {
         </View>
         <Text style={[styles.hintText, { color: colors.text.secondary }]}>
           Choose how your AI wellness companion speaks to you during chat sessions.
+        </Text>
+
+        {/* Voice Responses Section */}
+        <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>
+          Voice Responses
+        </Text>
+        <View style={[styles.cardGroup, { backgroundColor: colors.surface.secondary, borderColor: colors.border.default }]}>
+          <View style={[styles.cardRow, styles.noBorder]}>
+            <Volume2 size={18} color={colors.text.secondary} style={styles.rowIcon} />
+            <Text style={[styles.rowText, { color: colors.text.primary }]}>
+              Speak responses aloud
+            </Text>
+            {renderVoiceToggle()}
+          </View>
+        </View>
+        <Text style={[styles.hintText, { color: colors.text.secondary }]}>
+          When enabled, Velness reads new AI responses aloud. You can also tap the speaker icon on any message to replay it.
         </Text>
 
         {/* Language Section */}
@@ -285,5 +338,17 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  toggleTrack: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    padding: 3,
+    justifyContent: 'flex-start',
+  },
+  toggleKnob: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
   },
 });

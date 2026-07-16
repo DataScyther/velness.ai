@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { ArrowLeft, Brain, Wind, Sparkles, Leaf } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useJourney } from '@/shared/hooks/useJourney';
-import { ProgressBar } from '@/shared/components/ProgressBar';
+import { DEFAULT_LESSONS } from '@/features/journey/data/programs';
 import { ROUTES, buildRoute } from '@/core/config/routes';
 import { spacing, borderRadius } from '@/core/theme';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
@@ -75,7 +75,8 @@ export function LibraryScreen() {
               </View>
               {catPrograms.map((program) => {
                 const progProg = userProgress?.programProgress[program.id];
-                const percent = progProg?.completionPercent ?? 0;
+                const totalLessons = DEFAULT_LESSONS.filter(l => l.programId === program.id).length;
+                const completedLessons = progProg?.completedLessonIds?.length ?? 0;
                 return (
                   <Pressable
                     key={program.id}
@@ -88,12 +89,9 @@ export function LibraryScreen() {
                       <Text style={[styles.programMeta, { color: colors.text.secondary }]}>
                         {program.difficulty} · {program.duration} min
                       </Text>
-                      {percent > 0 && (
-                        <View style={styles.programProgress}>
-                          <ProgressBar percent={percent} height={4} color={colors.brand.primary} trackColor={colors.border.default} />
-                          <Text style={[styles.progressLabel, { color: colors.text.secondary }]}>{percent}%</Text>
-                        </View>
-                      )}
+                      <Text style={[styles.progressLabel, { color: colors.text.secondary }]}>
+                        {`${completedLessons} of ${totalLessons} lessons`}
+                      </Text>
                     </View>
                     <View style={[styles.viewButton, { backgroundColor: colors.brand.primary }]}>
                       <Text style={[styles.viewButtonText, { color: colors.brand.contrastText }]}>View</Text>

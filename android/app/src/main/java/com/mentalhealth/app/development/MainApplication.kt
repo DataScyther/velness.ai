@@ -1,4 +1,4 @@
-package com.mentalhealth.app
+package com.mentalhealth.app.development
 
 import android.app.Application
 import android.content.res.Configuration

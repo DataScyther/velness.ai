@@ -29,7 +29,6 @@ export type OAuthProvider =
   | 'apple'
   | 'github'
   | 'azure'
-  | 'facebook'
   | 'twitter'
   | 'gitlab'
   | 'bitbucket'

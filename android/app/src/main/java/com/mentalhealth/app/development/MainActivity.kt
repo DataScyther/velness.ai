@@ -1,4 +1,4 @@
-package com.mentalhealth.app
+package com.mentalhealth.app.development
 
 import android.os.Build
 import android.os.Bundle

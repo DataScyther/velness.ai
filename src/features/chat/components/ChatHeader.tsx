@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
-import { ArrowLeft, Bell } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { Avatar } from '@/shared/components/Avatar';
 import { useTheme } from '@/hooks/useTheme';
@@ -49,15 +49,12 @@ interface ChatHeaderProps {
   avatarUrl?: string | null;
   userName?: string | null;
   onBackPress?: () => void;
-  onNotificationPress?: () => void;
   inConversation?: boolean;
   sessionStartedAt?: Date;
 }
 
 const BACK_BUTTON_SIZE = 40;
-const BELL_ICON_SIZE = 20;
 const STATUS_DOT_SIZE = 8;
-const NOTIFICATION_DOT_SIZE = 8;
 
 export function ChatHeader({
   showBackButton = false,
@@ -66,7 +63,6 @@ export function ChatHeader({
   avatarUrl,
   userName,
   onBackPress,
-  onNotificationPress,
   inConversation = false,
   sessionStartedAt,
 }: ChatHeaderProps) {
@@ -132,7 +128,7 @@ export function ChatHeader({
           <Image
             source={require('@/shared/assets/velness-logo.jpg')}
             style={styles.logoImage}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         )}
         <View style={styles.titleContainer}>
@@ -163,22 +159,6 @@ export function ChatHeader({
       </View>
 
       <View style={styles.rightSection}>
-        <Pressable
-          onPress={onNotificationPress}
-          style={({ pressed }) => [
-            styles.iconButton,
-            { backgroundColor: pressed ? colors.background.secondary : 'transparent' }
-          ]}
-          hitSlop={spacing.sm}
-          accessibilityLabel="Notifications"
-          accessibilityRole="button"
-        >
-          <Bell size={BELL_ICON_SIZE} color={colors.text.secondary} />
-          <View
-            style={[styles.notificationDot, { backgroundColor: colors.brand.primary }]}
-          />
-        </Pressable>
-
         <Avatar
           photoURL={avatarUrl ?? null}
           name={userName ?? null}
@@ -262,27 +242,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: spacing.md,
   },
-  iconButton: {
-    width: BACK_BUTTON_SIZE,
-    height: BACK_BUTTON_SIZE,
-    borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.xs,
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: spacing.sm - 2,
-    right: spacing.sm - 2,
-    width: NOTIFICATION_DOT_SIZE,
-    height: NOTIFICATION_DOT_SIZE,
-    borderRadius: NOTIFICATION_DOT_SIZE / 2,
-  },
   logoImage: {
     width: 28,
     height: 28,
     marginRight: spacing.sm,
-    borderRadius: 7,
+    borderRadius: 14,
   },
 });
 

@@ -441,6 +441,8 @@ export class JourneyRepository {
         (p) => p.completedLessonIds,
       );
 
+      // Under the New Journey Architecture, getRecommendations returns exactly one
+      // personalized recommendation instead of multiple candidate options.
       const recs = getRecommendations(
         userProgress,
         DEFAULT_CATEGORIES,
@@ -774,6 +776,42 @@ export class JourneyRepository {
       return true;
     } catch (error) {
       logger.error('journey', 'Atomic lesson completion failed', { uid, programId, lessonId, error: String(error) });
+      return false;
+    }
+  }
+
+  async saveLessonReflection(
+    uid: string,
+    programId: string,
+    lessonId: string,
+    rating: number | null,
+    reflection: string
+  ): Promise<boolean> {
+    if (!uid) return false;
+
+    try {
+      const lessonObj = DEFAULT_LESSONS.find((l) => l.id === lessonId);
+      const programObj = DEFAULT_PROGRAMS.find((p) => p.id === programId);
+      
+      const { journalRepository } = await import('../../backend/repositories/JournalRepository');
+      
+      await journalRepository.create({
+        title: `Reflection on Lesson: ${lessonObj?.title || 'CBT Lesson'}`,
+        body: `Program: ${programObj?.title || programId}\nLesson Rating: ${rating ? `${rating} / 5 stars` : 'Not Rated'}\n\nReflection Notes:\n${reflection}`,
+        attachments: [
+          {
+            type: 'lesson-completion-feedback',
+            programId,
+            lessonId,
+            rating,
+            reflectionText: reflection,
+          }
+        ] as any,
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('journey', 'Failed to save lesson reflection', { uid, lessonId, error: String(error) });
       return false;
     }
   }

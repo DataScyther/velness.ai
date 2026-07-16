@@ -9,17 +9,25 @@ import Animated, {
   FadeInDown,
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
+  Easing,
 } from 'react-native-reanimated';
-import { Sparkles, ArrowRight } from 'lucide-react-native';
+import Svg, { Path } from 'react-native-svg';
+import { ArrowRight } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { shadows } from '@/core/theme';
+
+// MdSpoke (react-icons/md) — rendered via react-native-svg so it works on both
+// web and native (raw react-icons glyphs crash on native).
+const MD_SPOKE_PATH =
+  'M16 7c0 2.21-1.79 4-4 4S8 9.21 8 7s1.79-4 4-4 4 1.79 4 4m-9 6c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4m10 0c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4';
 
 interface SmartRecommendationCardProps {
   reason: string;        // "Because you've been studying CBT"
   title: string;         // "Thought Logging"
   subtitle?: string;     // Optional description
-  onPress: () => void;
+  onPress?: () => void;  // (deprecated) generic press
+  onTry?: () => void;    // "Try" CTA — navigate to the recommendation
 }
 
 export function SmartRecommendationCard({
@@ -27,6 +35,7 @@ export function SmartRecommendationCard({
   title,
   subtitle,
   onPress,
+  onTry,
 }: SmartRecommendationCardProps) {
   const { colors } = useTheme();
   const scale = useSharedValue(1);
@@ -36,12 +45,20 @@ export function SmartRecommendationCard({
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.98, { damping: 14, stiffness: 300 });
+    scale.value = withTiming(0.98, { duration: 160, easing: Easing.out(Easing.quad) });
   }, [scale]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 280 });
+    scale.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) });
   }, [scale]);
+
+  const handleTry = useCallback(() => {
+    if (onTry) {
+      onTry();
+    } else if (onPress) {
+      onPress();
+    }
+  }, [onTry, onPress]);
 
   // Generate contextual reasoning bullets based on time and context
   const reasonBullets = useMemo(() => {
@@ -72,11 +89,11 @@ export function SmartRecommendationCard({
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(100).duration(500)}
+      entering={FadeInDown.duration(400)}
       style={animatedStyle}
     >
       <Pressable
-        onPress={onPress}
+        onPress={handleTry}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={[
@@ -92,8 +109,10 @@ export function SmartRecommendationCard({
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={[styles.iconBadge, { backgroundColor: `${colors.text.tertiary}14` }]}>
-            <Sparkles size={14} color={colors.text.secondary} />
+          <View style={[styles.iconBadge, { backgroundColor: `${colors.brand.primary}14` }]}>
+            <Svg width={15} height={15} viewBox="0 0 24 24">
+              <Path d={MD_SPOKE_PATH} fill={colors.brand.primary} />
+            </Svg>
           </View>
           <Text style={[styles.reasonText, { color: colors.text.secondary }]}>
             {reason}
@@ -106,7 +125,7 @@ export function SmartRecommendationCard({
             {reasonBullets.map((bullet, idx) => (
               <Animated.View
                 key={idx}
-                entering={FadeInDown.delay(200 + idx * 80).duration(400)}
+                entering={FadeInDown.duration(350)}
                 style={styles.bulletRow}
               >
                 <Text style={[styles.bulletDot, { color: colors.text.tertiary }]}>•</Text>
@@ -135,7 +154,7 @@ export function SmartRecommendationCard({
           </View>
           <View style={[styles.cta, { backgroundColor: colors.brand.primary }]}>
             <Text style={styles.ctaText}>Try</Text>
-            <ArrowRight size={14} color="#FFFFFF" />
+            <ArrowRight size={14} color="#FFFFFF" onPress={handleTry} />
           </View>
         </View>
       </Pressable>

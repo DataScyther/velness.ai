@@ -4,18 +4,12 @@ export { CheckInCard } from './CheckInCard';
 export { MoodOption } from './MoodOption';
 export { MoodSelector } from './MoodSelector';
 export { WeeklyHistoryCard } from './WeeklyHistoryCard';
-export { ContinueJourneyCard } from './ContinueJourneyCard';
 export { JourneyThumbnail } from './JourneyThumbnail';
 export { LessonStatus } from './LessonStatus';
 export { ContinueButton } from './ContinueButton';
-export { JourneyLoadingState } from './JourneyLoadingState';
-export { JourneyErrorState } from './JourneyErrorState';
 export { JourneyCompletedState } from './JourneyCompletedState';
 
 // New components — Phases 6-9
 export { HeroCard } from './HeroCard';
 export { QuickActionsBar } from './QuickActionsBar';
 export { SmartRecommendationCard } from './SmartRecommendationCard';
-export { TodaysMissionCard } from './TodaysMissionCard';
-export { DailyGoalsCard } from './DailyGoalsCard';
-export { AchievementsWidget } from './AchievementsWidget';

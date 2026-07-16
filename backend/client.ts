@@ -1,21 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 import type { Database } from './database.types';
 
-/**
- * Shared Supabase client for the Velness backend layer.
- *
- * RULE (Sprint S0.5): the Supabase client and all raw queries live ONLY in the
- * repository layer (backend/repositories). UI/features must never call Supabase
- * directly — they go through repositories.
- *
- * The anon key is safe client-side (RLS enforces per-user access). The
- * service-role client is SERVER-ONLY and must never be bundled into the app.
- */
+// Native builds (Hermes/Metro) only inline *literal* `process.env.EXPO_PUBLIC_*`
+// references, so we read the keys explicitly below rather than via a variable.
+// `extra` covers the case where static inlining didn't happen (e.g. cached
+// bundle); it mirrors src/core/config/env.ts.
+const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
 
-function readEnv(...keys: string[]): string {
-  for (const k of keys) {
-    const v = process.env[k];
-    if (typeof v === 'string' && v.length > 0) return v;
+function fromEnv(...candidates: (string | undefined)[]): string {
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.length > 0) return value;
   }
   return '';
 }
@@ -32,12 +27,10 @@ function resolveRNStorage(): { getItem: (k: string) => Promise<string | null>; s
     return undefined;
   }
   try {
-    const req = (globalThis as { require?: (id: string) => unknown }).require;
-    const mod = (req?.('@react-native-async-storage/async-storage') ?? {}) as {
-      default?: unknown;
-      AsyncStorage?: unknown;
-    };
-    return (mod.default ?? mod.AsyncStorage) as never;
+    const req = typeof require !== 'undefined' ? require : undefined;
+    if (!req) return undefined;
+    const mod = req('@react-native-async-storage/async-storage');
+    return (mod.default ?? mod.AsyncStorage ?? mod) as never;
   } catch {
     return undefined;
   }
@@ -45,8 +38,16 @@ function resolveRNStorage(): { getItem: (k: string) => Promise<string | null>; s
 
 const rnStorage = resolveRNStorage();
 
-const url = readEnv('EXPO_PUBLIC_SUPABASE_URL', 'VITE_SUPABASE_URL');
-const anonKey = readEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY');
+const url = fromEnv(
+  process.env.EXPO_PUBLIC_SUPABASE_URL,
+  extra.EXPO_PUBLIC_SUPABASE_URL as string | undefined,
+  process.env.VITE_SUPABASE_URL,
+);
+const anonKey = fromEnv(
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  extra.EXPO_PUBLIC_SUPABASE_ANON_KEY as string | undefined,
+  process.env.VITE_SUPABASE_ANON_KEY,
+);
 
 if (!url || !anonKey) {
   // Don't hard-crash on import (e.g. during type-check without env) — the
@@ -76,14 +77,18 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
  * Never import this from UI code. Only export in non-browser environments
  * so RN/web bundlers tree-shake it out of the client bundle.
  */
+const isBrowser = typeof window !== 'undefined';
+const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+const isClient = isBrowser || isReactNative;
+
 export const createServiceRoleClient =
-  typeof window === 'undefined'
+  !isClient
     ? (roleKey?: string): SupabaseClient<Database> => {
         const key =
           roleKey ||
-          readEnv(
-            'SUPABASE_PROD_SERVICE_ROLE_KEY',
-            'SUPABASE_DEV_SERVICE_ROLE_KEY',
+          fromEnv(
+            process.env.SUPABASE_PROD_SERVICE_ROLE_KEY,
+            process.env.SUPABASE_DEV_SERVICE_ROLE_KEY,
           );
         if (!key) {
           throw new Error(

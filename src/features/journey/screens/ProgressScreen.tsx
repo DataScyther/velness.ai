@@ -2,14 +2,14 @@ import React, { useMemo } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, Trophy, TrendingUp, BarChart3, Flame, Medal, Star, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Trophy, TrendingUp, BarChart3, Flame, Clock, Star, CheckCircle } from 'lucide-react-native';
 import { StarIcon } from '@/shared/components/SymbolIcons';
 import { useTheme } from '@/hooks/useTheme';
 import { useJourney } from '@/shared/hooks/useJourney';
-import { ProgressBar } from '@/shared/components/ProgressBar';
 import { spacing, borderRadius } from '@/core/theme';
 import { ROUTES, buildRoute } from '@/core/config/routes';
-import { computeWeeklyProgressV2, computeAchievements, computeStreakV2 } from '@/features/journey/services/JourneyService';
+import { computeWeeklyProgressV2, computeAchievements } from '@/features/journey/services/JourneyService';
+import { DEFAULT_LESSONS } from '@/features/journey/data/programs';
 import type { Milestone } from '@/features/journey/models';
 
 function getAchievementIcon(achieved: boolean) {
@@ -19,7 +19,7 @@ function getAchievementIcon(achieved: boolean) {
 
 export function ProgressScreen() {
   const { colors } = useTheme();
-  const { exercises, userProgress, programs, streak, weeklyProgress, exercisesCompleted } = useJourney();
+  const { exercises, userProgress, programs, streak, weeklyProgress, daysPracticed, minutesCompleted, programsCompleted, favoritePractice } = useJourney();
 
   const weeklyData = useMemo(() => {
     if (!exercises) return [];
@@ -32,11 +32,6 @@ export function ProgressScreen() {
     return computeWeeklyProgressV2(progressMap as any);
   }, [exercises]);
 
-  const streakInfo = useMemo(() => {
-    if (!userProgress) return { current: 0, longest: 0 };
-    return computeStreakV2(userProgress);
-  }, [userProgress]);
-
   const achievements = useMemo(() => {
     if (!userProgress) return [];
     return computeAchievements(userProgress);
@@ -46,10 +41,13 @@ export function ProgressScreen() {
     if (!userProgress || !programs) return [];
     return programs.map(program => {
       const prog = userProgress.programProgress[program.id];
+      const total = DEFAULT_LESSONS.filter((l) => l.programId === program.id).length;
+      const completed = prog?.completedLessonIds?.length ?? 0;
       return {
         id: program.id,
         title: program.title,
-        percent: prog?.completionPercent ?? 0,
+        completed,
+        total,
         status: prog?.status ?? 'not_started',
       };
     });
@@ -68,18 +66,28 @@ export function ProgressScreen() {
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
             <Flame size={22} color="#F97316" />
-            <Text style={[styles.statValue, { color: colors.text.primary }]}>{streakInfo.current}</Text>
+            <Text style={[styles.statValue, { color: colors.text.primary }]}>{daysPracticed}</Text>
+            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Days Practiced</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
+            <Clock size={22} color={colors.brand.primary} />
+            <Text style={[styles.statValue, { color: colors.text.primary }]}>{minutesCompleted}</Text>
+            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Minutes Completed</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
+            <TrendingUp size={22} color="#22C55E" />
+            <Text style={[styles.statValue, { color: colors.text.primary }]}>{streak}</Text>
             <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Current Streak</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
             <Trophy size={22} color={colors.warning} />
-            <Text style={[styles.statValue, { color: colors.text.primary }]}>{streakInfo.longest}</Text>
-            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Longest Streak</Text>
+            <Text style={[styles.statValue, { color: colors.text.primary }]}>{programsCompleted}</Text>
+            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Programs Completed</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}>
-            <BarChart3 size={22} color={colors.brand.primary} />
-            <Text style={[styles.statValue, { color: colors.text.primary }]}>{exercisesCompleted}</Text>
-            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Exercises</Text>
+            <Star size={22} color="#A855F7" />
+            <Text style={[styles.statValue, { color: colors.text.primary }]}>{favoritePractice}</Text>
+            <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Favorite Practice</Text>
           </View>
         </View>
 
@@ -116,14 +124,15 @@ export function ProgressScreen() {
               onPress={() => router.push(buildRoute(ROUTES.JOURNEY.PROGRAM, { programId: prog.id }) as any)}
               accessibilityRole="button"
             >
-              <View style={styles.programInfo}>
-                <Text style={[styles.programName, { color: colors.text.primary }]}>{prog.title}</Text>
-                <Text style={[styles.programStatus, { color: colors.text.secondary }]}>
-                  {prog.status === 'completed' ? 'Completed' : prog.status === 'active' ? 'In Progress' : 'Not Started'}
+                <View style={styles.programInfo}>
+                  <Text style={[styles.programName, { color: colors.text.primary }]}>{prog.title}</Text>
+                  <Text style={[styles.programStatus, { color: colors.text.secondary }]}>
+                    {prog.status === 'completed' ? 'Completed' : prog.status === 'active' ? 'In Progress' : 'Not Started'}
+                  </Text>
+                </View>
+                <Text style={[styles.programPercent, { color: colors.text.secondary }]}>
+                  {prog.completed} of {prog.total} lessons complete
                 </Text>
-              </View>
-              <ProgressBar percent={prog.percent} height={4} color={colors.brand.primary} trackColor={colors.border.default} style={styles.programBar} />
-              <Text style={[styles.programPercent, { color: colors.text.secondary }]}>{prog.percent}%</Text>
             </Pressable>
           ))
         )}
@@ -199,9 +208,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: '700' },
   headerSpacer: { width: 32 },
   scrollContent: { paddingBottom: spacing['5xl'], paddingHorizontal: spacing.xl },
-  statsGrid: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.lg },
   statCard: {
-    flex: 1,
+    width: '31%',
     alignItems: 'center',
     borderRadius: borderRadius.lg,
     borderWidth: 1,

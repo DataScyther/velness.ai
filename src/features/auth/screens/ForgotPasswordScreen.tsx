@@ -95,8 +95,10 @@ export function ForgotPasswordScreen() {
                 style={{
                   width: width * 0.28,
                   height: width * 0.28,
-                  resizeMode: 'contain',
-                  borderRadius: 24,
+                  resizeMode: 'cover',
+                  borderRadius: (width * 0.28) / 2,
+                  borderWidth: 1.5,
+                  borderColor: 'rgba(255, 255, 255, 0.15)',
                 }}
               />
             </View>

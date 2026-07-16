@@ -1,9 +1,26 @@
 import { moodRepository as backendMoodRepo } from '../../backend/repositories/MoodRepository';
 import { NotAuthenticatedError } from '../../backend/repositories/baseRepository';
 import { storageService } from '@/services/storage';
-import type { Mood } from '@/shared/types';
+import type { Mood, MoodRating } from '@/shared/types';
 
 const COLLECTION = 'users';
+
+// App-side Mood.rating (1–5) <-> DB `moods.level` enum (`mood_level`).
+type MoodLevel = 'very_low' | 'low' | 'neutral' | 'good' | 'great';
+const RATING_TO_LEVEL: Record<MoodRating, MoodLevel> = {
+  1: 'very_low',
+  2: 'low',
+  3: 'neutral',
+  4: 'good',
+  5: 'great',
+};
+const LEVEL_TO_RATING: Record<string, MoodRating> = {
+  very_low: 1,
+  low: 2,
+  neutral: 3,
+  good: 4,
+  great: 5,
+};
 
 function getLocalKey(uid: string): string {
   return `moods_${uid}`;
@@ -30,19 +47,21 @@ export class MoodRepository {
     await this.syncToCloud(uid, entry);
   }
 
-  async syncToCloud(uid: string, entry: Mood): Promise<void> {
-    if (!uid) return;
+  async syncToCloud(uid: string, entry: Mood): Promise<boolean> {
+    if (!uid) return false;
     try {
       await backendMoodRepo.create({
-        rating: entry.rating,
+        level: RATING_TO_LEVEL[entry.rating],
         note: entry.note,
         recorded_at: entry.timestamp.toISOString(),
-        ...(entry.label !== undefined ? { label: entry.label } : {}),
       });
+      return true;
     } catch (error) {
-      if (error instanceof NotAuthenticatedError) return;
-      console.error('Error syncing mood to cloud:', error);
-      throw error;
+      if (error instanceof NotAuthenticatedError) return false;
+      // Network/socket failures (timeouts, closed sockets) must never surface
+      // to the UI — the local copy is the source of truth and sync retries later.
+      console.warn('[MoodRepository] Cloud sync skipped (will retry):', error);
+      return false;
     }
   }
 
@@ -78,7 +97,18 @@ export class MoodRepository {
   private async loadFromLocal(uid: string): Promise<Mood[]> {
     try {
       const local = await storageService.getJSON<Mood[]>(getLocalKey(uid));
-      return local || [];
+      if (!local) return [];
+      // `setJSON` serializes Dates to ISO strings, so rehydrate `timestamp`
+      // back into a Date — consumers (e.g. getRecommendations) call .getTime().
+      return local.map((m) => ({
+        ...m,
+        timestamp:
+          m.timestamp instanceof Date
+            ? m.timestamp
+            : m.timestamp
+            ? new Date(m.timestamp)
+            : new Date(),
+      }));
     } catch {
       return [];
     }
@@ -89,10 +119,9 @@ export class MoodRepository {
       const rows = await backendMoodRepo.list();
       return rows.map((row) => ({
         id: row.id,
-        rating: row.rating as Mood['rating'],
+        rating: LEVEL_TO_RATING[row.level] ?? 3,
         note: row.note || '',
         timestamp: new Date(row.recorded_at),
-        ...(row.label ? { label: row.label } : {}),
       }));
     } catch (error) {
       console.error('Error loading moods from cloud:', error);

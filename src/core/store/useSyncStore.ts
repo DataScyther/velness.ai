@@ -159,7 +159,13 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     const updatedQueue = [...get().pendingQueue, newItem];
     set({ pendingQueue: updatedQueue });
-    await storageService.setJSON(STORAGE_KEY, updatedQueue);
+    // Persisting the queue must never block or abort the originating action
+    // (e.g. a mood check-in). The in-memory queue is already authoritative.
+    try {
+      await storageService.setJSON(STORAGE_KEY, updatedQueue);
+    } catch (err) {
+      logger.warn('sync', 'Failed to persist sync queue', { error: String(err) });
+    }
 
     if (type === 'save_mood') {
       const { uid, entry } = payload;

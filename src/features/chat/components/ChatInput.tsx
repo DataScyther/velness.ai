@@ -14,6 +14,7 @@ import {
 } from '@/services/speech/SpeechRecognition';
 import { SendButton } from './SendButton';
 import { saveDraft, loadDraft, clearDraft } from '../persistence/draftStorage';
+import type { SharedValue } from 'react-native-reanimated';
 
 const WARM_PLACEHOLDERS = [
   "Share what's on your mind...",
@@ -27,7 +28,7 @@ interface ChatInputProps {
   onAbort?: () => void;
   isStreaming?: boolean;
   disabled?: boolean;
-  paddingBottom?: number;
+  paddingBottom?: number | SharedValue<number>;
   prefillText?: string | null;
   onPrefillSent?: () => void;
   conversationId?: string | null;
@@ -269,11 +270,13 @@ export function ChatInput({
 
   useEffect(() => {
     if (!conversationId) return;
-    loadDraft(conversationId).then((draft) => {
-      if (draft) {
-        setInputText(draft);
-      }
-    });
+    loadDraft(conversationId)
+      .then((draft) => {
+        if (draft) {
+          setInputText(draft);
+        }
+      })
+      .catch((err) => console.warn('[ChatInput] loadDraft failed:', err));
   }, [conversationId]);
 
   useEffect(() => {
@@ -326,14 +329,19 @@ export function ChatInput({
 
   const placeholder = isStreaming ? 'Velness is responding...' : WARM_PLACEHOLDERS[0];
 
+  const paddingBottomValue =
+    typeof paddingBottom === 'object' && paddingBottom !== null && 'value' in paddingBottom
+      ? (paddingBottom as SharedValue<number>)
+      : null;
+
+  const outerStyle = useAnimatedStyle(() => {
+    const pb = paddingBottomValue ? paddingBottomValue.value : (paddingBottom as number) ?? 0;
+    return { paddingBottom: pb };
+  }, [paddingBottomValue, paddingBottom]);
+
   return (
-    <View
-      style={[
-        styles.outerContainer,
-        {
-          paddingBottom: paddingBottom + 16,
-        },
-      ]}
+    <Animated.View
+      style={[styles.outerContainer, outerStyle]}
     >
       {isListening ? (
         // Voice Typing View
@@ -488,7 +496,7 @@ export function ChatInput({
           {inputText.length}/1000
         </Text>
       )}
-    </View>
+    </Animated.View>
   );
 }
 

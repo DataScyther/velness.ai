@@ -6,7 +6,6 @@ import { ArrowLeft, CheckCircle, Circle, Lock, Play, Star } from 'lucide-react-n
 import { useTheme } from '@/hooks/useTheme';
 import { useJourney } from '@/shared/hooks/useJourney';
 import { useJourneyStore } from '@/features/journey/store/useJourneyStore';
-import { ProgressBar } from '@/shared/components/ProgressBar';
 import { SkeletonLoader } from '@/shared/components/SkeletonLoader';
 import { ROUTES, buildRoute } from '@/core/config/routes';
 import { spacing, borderRadius } from '@/core/theme';
@@ -94,11 +93,6 @@ export function ProgramScreen() {
 
   const firstAvailable = useMemo(() => lessons.find(l => l.status === 'available'), [lessons]);
 
-  const percent = useMemo(() => {
-    if (!userProgress?.programProgress[programId || '']) return 0;
-    return userProgress.programProgress[programId || '']?.completionPercent ?? 0;
-  }, [userProgress, programId]);
-
   const handleLessonPress = useCallback((lessonId: string) => {
     setCurrentProgram(programId || null);
     setCurrentLesson(lessonId);
@@ -171,8 +165,9 @@ export function ProgramScreen() {
             <Text style={[styles.metaText, { color: colors.text.secondary }]}>{program.duration} min · {program.lessonCount} lessons</Text>
           </View>
           <View style={styles.progressSection}>
-            <ProgressBar percent={percent} height={6} color={colors.brand.primary} trackColor={colors.border.default} />
-            <Text style={[styles.progressPercent, { color: colors.text.secondary }]}>{percent}% complete</Text>
+            <Text style={[styles.progressPercent, { color: colors.text.secondary }]}>
+              {`${userProgress?.programProgress[programId || '']?.completedLessonIds?.length ?? 0} of ${program.lessonCount} lessons complete`}
+            </Text>
           </View>
         </View>
 

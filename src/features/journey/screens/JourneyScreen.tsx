@@ -1,117 +1,65 @@
 /**
  * JourneyScreen — Guided Progression System
  *
- * This is NOT a content library.
- * This is a guided progression system.
- * Think less like Netflix. Think more like Duolingo.
+ * This is NOT a Netflix-style content library.
+ * This is a guided progression system answering one simple question:
+ * "What should I do next?"
  *
- * Information Hierarchy (strict priority order):
- *  1. Header — Identity + streak
- *  2. JourneyHero — Motivation + stats
- *  3. Continue Current Journey — Primary action
- *  4. Explore Practices — Secondary discovery
- *  5. Recommended Activities — Personalised suggestion
- *  6. Your Progress — Weekly accountability
- *
- * Every section has a reason to exist.
+ * Information Hierarchy (5 Sections):
+ *  1. Continue Your Journey (Hero Card)
+ *  2. Recommended Today (Single custom suggestion)
+ *  3. Explore Practices (CBT, Breathing, Meditation, Wellness Studio 2x2 Grid)
+ *  4. Completed Sessions (List of finished activities)
+ *  5. Your Progress (Streak, Session stats, Weekly progress)
  */
 
 import React, { useMemo, useCallback, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, RefreshControl } from 'react-native';
-import { Brain, Wind, Sparkles, Leaf } from 'lucide-react-native';
+import { ScrollView, View, Text, StyleSheet, RefreshControl, Pressable } from 'react-native';
+import { Brain, Wind, Sparkles, Leaf, CheckCircle2, ChevronRight, Flame, Trophy, Play } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useJourney } from '@/shared/hooks/useJourney';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
-import { ROUTES, buildRoute } from '@/core/config/routes';
-import { spacing } from '@/core/theme';
+import { ROUTES } from '@/core/config/routes';
+import { spacing, borderRadius } from '@/core/theme';
 
 import {
   JourneyHeader,
-  JourneyHero,
   JourneySectionHeader,
-  CurrentProgramCard,
-  PracticeCategoryCard,
-  RecommendationCard,
-  AIRecommendationCard,
   WeeklyProgressTracker,
-  PersonalReflectionCard,
 } from '../components';
-import { usePersonalization } from '@/services/ai/personalization/usePersonalization';
 
-import type { Category } from '@/features/journey/models';
-import { CATEGORY_ID } from '@/features/journey/constants';
+import { COMPLETION_STATUS } from '@/features/journey/constants';
 import { DEFAULT_LESSONS } from '@/features/journey/data/programs';
 import { DEFAULT_EXERCISES } from '@/features/journey/data/exercises';
-
-// ── Practice categories data ───────────────────────────────────────────────
-
-function getCategoryIcon(type: string, color: string) {
-  const size = 24;
-  switch (type) {
-    case 'brain': return <Brain size={size} color={color} />;
-    case 'wind': return <Wind size={size} color={color} />;
-    case 'sparkles': return <Sparkles size={size} color={color} />;
-    case 'leaf': return <Leaf size={size} color={color} />;
-    default: return <Sparkles size={size} color={color} />;
-  }
-}
-
-const categoryColors: Record<string, string> = {
-  cbt: '#A78BFA',
-  breathing: '#34D399',
-  meditation: '#60A5FA',
-  wellness: '#F472B6',
-};
-
-function getProgramCategoryIcon(categoryId: string, color: string) {
-  switch (categoryId) {
-    case 'cbt': return getCategoryIcon('brain', color);
-    case 'breathing': return getCategoryIcon('wind', color);
-    case 'meditation': return getCategoryIcon('leaf', color);
-    case 'wellness': return getCategoryIcon('sparkles', color);
-    default: return getCategoryIcon('sparkles', color);
-  }
-}
-
-// ── Component ──────────────────────────────────────────────────────────────
+import { DEFAULT_PROGRAMS } from '@/features/journey/data/programs';
 
 export function JourneyScreen() {
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
   const { user } = useAuth();
   const uid = user?.uid || null;
   const [refreshing, setRefreshing] = useState(false);
 
-  const displayName = useMemo(() => {
-    const name = (user as any)?.name || (user as any)?.displayName || '';
-    if (!name || name === 'User') return '';
-    return name.split(' ')[0];
-  }, [user]);
-
   const {
     journey,
-    categories,
+    userProgress,
     recommendations,
     streak,
     weeklyProgress,
     exercisesCompleted,
     isLoading,
-    isEmpty,
     error,
     resumeJourney,
     refresh,
-    refreshRecommendation,
     startExercise,
-    favorites,
     programs,
-    activeGuidedProgress,
-    userProgress,
+    exercises,
   } = useJourney();
-
-  const { data: personalization, isLoading: personalizationLoading } = usePersonalization();
 
   const activeProg = useMemo(() => {
     if (!journey || !programs) return null;
@@ -119,46 +67,55 @@ export function JourneyScreen() {
   }, [journey, programs]);
 
   const minutesRemaining = useMemo(() => {
+    if (!journey) return 8;
+    const prog = userProgress?.programProgress[journey.programId];
+    if (prog?.estimatedRemainingTime != null) return Math.max(prog.estimatedRemainingTime, 1);
     if (!activeProg) return 8;
-    return Math.max(Math.round(activeProg.duration * (1 - (journey?.completionPercent || 0) / 100)), 5);
-  }, [activeProg, journey?.completionPercent]);
+    return Math.max(Math.round(activeProg.duration * (1 - (journey.completionPercent || 0) / 100)), 5);
+  }, [journey, activeProg, userProgress]);
 
-  const continueSubtitle = useMemo(() => {
-    if (!journey) return undefined;
-    if (activeGuidedProgress && activeGuidedProgress.status === 'in_progress') {
-      const activeEx = DEFAULT_EXERCISES.find((ex) => ex.id === activeGuidedProgress.exercise_id);
-      const activeLes = DEFAULT_LESSONS.find((l) => l.id === activeEx?.lessonId);
-      if (activeEx && activeLes) {
-        return `Lesson ${activeLes.order}, ${activeEx.title} (Step ${activeGuidedProgress.current_step + 1} of 11)`;
-      }
-    }
-    return undefined;
-  }, [journey, activeGuidedProgress]);
+  const lessonTitle = useMemo(() => {
+    if (!journey) return 'Understanding Thought Patterns';
+    const activeProgLessons = DEFAULT_LESSONS.filter((l) => l.programId === journey.programId)
+      .sort((a, b) => a.order - b.order);
+    const currentLessonObj = activeProgLessons.find((l) => l.order === journey.currentLesson) || activeProgLessons[0];
+    return currentLessonObj?.title || 'Understanding Thought Patterns';
+  }, [journey]);
 
-  const timelineData = useMemo(() => {
-    if (!journey || !userProgress) return null;
-    const progProg = userProgress.programProgress[journey.programId];
-    if (!progProg) return null;
-    
-    return {
-      programTitle: journey.title,
-      currentLesson: progProg.currentLesson || 1,
-      estimatedRemainingTime: progProg.estimatedRemainingTime ?? 8,
-      completionPercentage: progProg.completionPercentage || 0,
-      activeGuidedProgress: activeGuidedProgress && activeGuidedProgress.status === 'in_progress' ? activeGuidedProgress : null,
-    };
-  }, [journey, userProgress, activeGuidedProgress]);
-
-  const categoryLabels: Record<string, string> = {
-    cbt: 'CBT Program',
-    breathing: 'Breathing Practice',
-    meditation: 'Guided Meditation',
-    wellness: 'Wellness Studio',
-  };
   const categoryLabel = useMemo(() => {
-    if (!activeProg) return 'CBT Program';
-    return categoryLabels[activeProg.categoryId] || 'Wellness Program';
+    if (!activeProg) return 'CBT FOUNDATIONS';
+    if (activeProg.categoryId === 'cbt') return 'CBT Foundations';
+    if (activeProg.categoryId === 'breathing') return 'Breathing Practice';
+    if (activeProg.categoryId === 'meditation') return 'Guided Meditation';
+    return 'Wellness Program';
   }, [activeProg]);
+
+  // Filter completed exercises
+  const completedSessions = useMemo(() => {
+    const list = exercises
+      .filter((ex) => ex.completionStatus === COMPLETION_STATUS.COMPLETED || ex.lastCompletedAt)
+      .map((ex) => {
+        const lesson = DEFAULT_LESSONS.find((l) => l.id === ex.lessonId);
+        const program = DEFAULT_PROGRAMS.find((p) => p.id === lesson?.programId);
+        return {
+          id: ex.id,
+          title: ex.title,
+          type: ex.type,
+          lastCompletedAt: ex.lastCompletedAt ? new Date(ex.lastCompletedAt) : new Date(),
+          programTitle: program?.title || 'Practice',
+          duration: ex.estimatedTime,
+        };
+      })
+      .sort((a, b) => b.lastCompletedAt.getTime() - a.lastCompletedAt.getTime());
+    return list.slice(0, 5); // display top 5 completed sessions
+  }, [exercises]);
+
+  const practiceCategories = [
+    { id: 'cbt', title: 'CBT', emoji: '🧠', description: 'Reframe thoughts & build cognitive skills', countLabel: '6 lessons', color: '#8B5CF6' },
+    { id: 'breathing', title: 'Breathing', emoji: '🌬', description: 'Regulate your nervous system & relax', countLabel: '3 lessons', color: '#06B6D4' },
+    { id: 'meditation', title: 'Meditation', emoji: '🧘', description: 'Cultivate presence & daily focus', countLabel: '3 lessons', color: '#EC4899' },
+    { id: 'wellness', title: 'Wellness Studio', emoji: '✨', description: 'Reflect and build positive habits', countLabel: '3 lessons', color: '#10B981' },
+  ];
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
@@ -166,8 +123,8 @@ export function JourneyScreen() {
     setRefreshing(true);
     try {
       await refresh();
-    } catch (error) {
-      console.error('[JourneyScreen] Refresh error:', error);
+    } catch (err) {
+      console.error('[JourneyScreen] Refresh error:', err);
     } finally {
       setRefreshing(false);
     }
@@ -180,30 +137,22 @@ export function JourneyScreen() {
   }, [journey, resumeJourney]);
 
   const handleCategoryPress = useCallback((categoryId: string) => {
-    const path = ROUTES.JOURNEY.CATEGORY.replace('[categoryId]', categoryId);
+    if (categoryId === 'breathing' || categoryId === 'meditation' || categoryId === 'wellness') {
+      const path = ROUTES.JOURNEY.CATEGORY.replace('[categoryId]', categoryId);
+      router.push(path as any);
+      return;
+    }
+    const path = ROUTES.JOURNEY.PROGRAM.replace('[programId]', 'cbt-foundations');
     router.push(path as any);
   }, []);
 
-  const handleRecommendationStart = useCallback(() => {
-    const rec = personalization?.todaysRecommendation;
-    if (rec?.exerciseId) {
-      startExercise(rec.exerciseId);
-    } else if (recommendations.length > 0) {
+  const handleStartRecommendation = useCallback(() => {
+    if (recommendations && recommendations.length > 0) {
       startExercise(recommendations[0].exerciseId);
     } else {
-      startExercise('morning-breathing');
+      startExercise('box-breathing-l1');
     }
-  }, [personalization, recommendations, startExercise]);
-
-  const handleViewAll = useCallback(() => {
-    router.push(ROUTES.JOURNEY.LIBRARY as any);
-  }, []);
-
-  const handleRefreshRecommendation = useCallback(() => {
-    refreshRecommendation();
-  }, [refreshRecommendation]);
-
-  // ── Render ─────────────────────────────────────────────────────────────
+  }, [recommendations, startExercise]);
 
   if (isLoading) {
     return (
@@ -226,7 +175,7 @@ export function JourneyScreen() {
     );
   }
 
-  const weeklyProgressPercent = Math.min(Math.round((weeklyProgress / 7) * 100), 100);
+  const primaryRecommendation = recommendations && recommendations.length > 0 ? recommendations[0] : null;
 
   return (
     <ScreenContainer>
@@ -244,221 +193,233 @@ export function JourneyScreen() {
           />
         }
       >
-        {/* ── 1. Header ─────────────────────────────────────────── */}
+        {/* Header */}
         <JourneyHeader streak={streak} />
 
-        {/* ── 2. JourneyHero ────────────────────────────────────── */}
-        {!isEmpty && (
-          <JourneyHero
-            firstName={displayName}
-            weeklyProgress={weeklyProgressPercent}
-            exercisesCompleted={exercisesCompleted}
-          />
-        )}
-
-        {/* ── 3. Continue Current Journey (HIGHEST PRIORITY) ──── */}
-        <View style={styles.sectionSpacing}>
-          <JourneySectionHeader
-            title="Continue where you left off"
-            actionText="View all"
-            onActionPress={handleViewAll}
-          />
-          <View style={styles.cardPadding}>
-            <CurrentProgramCard
-              title={journey?.title || 'Managing Overthinking'}
-              currentLesson={journey?.currentLesson || 1}
-              totalLessons={journey?.totalLessons || 5}
-              completionPercent={journey?.completionPercent || 0}
-              minutesRemaining={minutesRemaining}
-              category={categoryLabel.toUpperCase()}
-              onContinue={handleContinue}
-              subtitle={continueSubtitle}
-            />
-
-            {timelineData && (
-              <View
-                style={{
-                  marginTop: spacing.md,
-                  padding: spacing.lg,
-                  borderRadius: 16,
-                  backgroundColor: 'rgba(26, 20, 40, 0.6)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.08)',
-                  gap: spacing.sm,
-                }}
-              >
-                <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                  Active Timeline
-                </Text>
-                
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>
-                    {timelineData.programTitle}
-                  </Text>
-                  <Text style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.5)' }}>
-                    ({timelineData.completionPercentage}% complete)
-                  </Text>
-                </View>
-
-                {/* Progress Visual Sequence */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginVertical: 4 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#A78BFA' }}>
-                    Lesson {timelineData.currentLesson}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.3)' }}>→</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#06B6D4' }}>
-                    Exercise 1
-                  </Text>
-                  {timelineData.activeGuidedProgress && (
-                    <>
-                      <Text style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.3)' }}>→</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#34D399' }}>
-                        Step {timelineData.activeGuidedProgress.current_step + 1}
-                      </Text>
-                    </>
-                  )}
-                </View>
-
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: 0.5 }}>
-                    ESTIMATED TIME LEFT:
-                  </Text>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#F59E0B' }}>
-                    {timelineData.estimatedRemainingTime} min
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* ── 4. Explore Practices ───────────────────────────── */}
-        <View style={styles.sectionSpacing}>
-          <JourneySectionHeader
-            title="Explore practices"
-          />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContainer}
-          >
-            {categories.map((cat, idx) => (
-              <View key={cat.id} style={idx < categories.length - 1 ? styles.categoryGap : undefined}>
-                <PracticeCategoryCard
-                  icon={getCategoryIcon(cat.iconType, cat.accentColor)}
-                  title={cat.title}
-                  description={cat.description}
-                  countLabel={`${cat.exerciseCount} ${cat.id === CATEGORY_ID.WELLNESS ? 'Tools' : cat.id === CATEGORY_ID.CBT ? 'Lessons' : 'Sessions'}`}
-                  accentColor={cat.accentColor}
-                  width={140}
-                  animationDelay={240 + idx * 60}
-                  onPress={() => handleCategoryPress(cat.id)}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* ── 4b. Favorite Practices ─────────────────────────── */}
-        {favorites && favorites.length > 0 && (
-          <View style={styles.sectionSpacing}>
-            <JourneySectionHeader
-              title="Your favorite practices"
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesContainer}
+        {/* ── Pillar 1: Continue Your Journey ─────────────────────────────── */}
+        <View style={styles.sectionContainer}>
+          <JourneySectionHeader title="Continue your journey" />
+          <Pressable onPress={handleContinue} style={styles.heroPressable}>
+            <LinearGradient
+              colors={isDark ? ['#312E81', '#1E1B4B'] : ['#F3E8FF', '#FAF5FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.heroCard,
+                {
+                  borderColor: isDark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(108, 76, 241, 0.15)',
+                },
+              ]}
             >
-              {favorites.map((favProg, idx) => {
-                const accentColor = categoryColors[favProg.categoryId] || '#A78BFA';
-                return (
-                  <View key={favProg.id} style={idx < favorites.length - 1 ? styles.categoryGap : undefined}>
-                    <PracticeCategoryCard
-                      icon={getProgramCategoryIcon(favProg.categoryId, accentColor)}
-                      title={favProg.title}
-                      description={favProg.description}
-                      countLabel={`${favProg.lessonCount} Lessons`}
-                      accentColor={accentColor}
-                      width={160}
-                      animationDelay={100 + idx * 50}
-                      onPress={() => router.push(buildRoute(ROUTES.JOURNEY.PROGRAM, { programId: favProg.id }) as any)}
-                    />
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
+              <View style={styles.heroBadgeRow}>
+                <View style={[styles.heroBadge, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : 'rgba(108, 76, 241, 0.1)' }]}>
+                  <Text style={[styles.heroBadgeText, { color: isDark ? '#A78BFA' : '#6C4CF1' }]}>
+                    CONTINUE
+                  </Text>
+                </View>
+                <Text style={[styles.heroDurationText, { color: colors.text.secondary }]}>
+                  {minutesRemaining} min remaining
+                </Text>
+              </View>
 
-        {/* ── 5. Recommended Activities ──────────────────────── */}
-        <View style={styles.sectionSpacing}>
-          <JourneySectionHeader
-            title="Recommended for you today"
-            actionText="Refresh ↻"
-            onActionPress={handleRefreshRecommendation}
-          />
-          <View style={styles.cardPadding}>
-            {personalization?.todaysRecommendation ? (
-              <AIRecommendationCard
-                title={personalization.todaysRecommendation.title}
-                description={personalization.todaysRecommendation.description}
-                reason={personalization.todaysRecommendation.reason}
-                durationMinutes={personalization.todaysRecommendation.durationMinutes}
-                isAIGenerated={personalization.todaysRecommendation.source === 'ai'}
-                onStart={handleRecommendationStart}
-              />
-            ) : recommendations.length > 0 ? (
-              <RecommendationCard
-                title={recommendations[0].title}
-                description={recommendations[0].description}
-                category={recommendations[0].reason.toUpperCase()}
-                categoryColor="#F97316"
-                durationMinutes={recommendations[0].durationMinutes}
-                onStart={handleRecommendationStart}
-              />
-            ) : (
-              <RecommendationCard
-                title="5-Minute Breathing Space"
-                description="Start your day with calm and clarity."
-                category="MORNING RESET"
-                categoryColor="#F97316"
-                durationMinutes={5}
-                onStart={handleRecommendationStart}
-              />
-            )}
+              <Text style={[styles.heroProgramTitle, { color: colors.text.primary }]}>
+                {journey?.title || 'CBT Foundations'}
+              </Text>
+
+              <Text style={[styles.heroLessonOrder, { color: colors.text.secondary }]}>
+                Lesson {journey?.currentLesson || 1} of {journey?.totalLessons || 8}
+              </Text>
+
+              <Text style={[styles.heroLessonTitle, { color: colors.text.primary }]}>
+                {lessonTitle}
+              </Text>
+
+              <View style={styles.heroFooter}>
+                <Text style={[styles.progressPercentText, { color: colors.text.secondary }]}>
+                  {minutesRemaining} min remaining
+                </Text>
+                <View style={[styles.heroButton, { backgroundColor: isDark ? '#8B5CF6' : '#6C4CF1' }]}>
+                  <Text style={styles.heroButtonText}>Continue →</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </Pressable>
+        </View>
+
+        {/* ── Pillar 2: Recommended Today ────────────────────────────────── */}
+        <View style={styles.sectionContainer}>
+          <JourneySectionHeader title="Recommended today" />
+          {primaryRecommendation ? (
+            <Pressable onPress={handleStartRecommendation} style={styles.recPressable}>
+              <View
+                style={[
+                  styles.recCard,
+                  {
+                    backgroundColor: colors.surface.primary,
+                    borderColor: isDark ? colors.border.default : '#E5E7EB',
+                  },
+                ]}
+              >
+                <View style={styles.recContent}>
+                  <View style={[styles.recBadge, { backgroundColor: isDark ? 'rgba(249, 115, 22, 0.15)' : 'rgba(249, 115, 22, 0.08)' }]}>
+                    <Text style={styles.recBadgeText}>
+                      {primaryRecommendation.reason.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={[styles.recTitle, { color: colors.text.primary }]}>
+                    {primaryRecommendation.title}
+                  </Text>
+                  <Text style={[styles.recDescription, { color: colors.text.secondary }]}>
+                    {primaryRecommendation.description}
+                  </Text>
+                </View>
+
+                <Pressable
+                  onPress={handleStartRecommendation}
+                  style={[styles.recPlayButton, { backgroundColor: isDark ? '#8B5CF6' : '#6C4CF1' }]}
+                >
+                  <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
+                </Pressable>
+              </View>
+            </Pressable>
+          ) : (
+            <View
+              style={[
+                styles.recCard,
+                {
+                  backgroundColor: colors.surface.primary,
+                  borderColor: isDark ? colors.border.default : '#E5E7EB',
+                  justifyContent: 'center',
+                  paddingVertical: spacing.xl,
+                },
+              ]}
+            >
+              <Text style={[styles.recDescription, { color: colors.text.secondary, textAlign: 'center' }]}>
+                Your recommendation is loading...
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* ── Pillar 3: Explore Practices ─────────────────────────────────── */}
+        <View style={styles.sectionContainer}>
+          <JourneySectionHeader title="Explore practices" />
+          <View style={styles.gridContainer}>
+            {practiceCategories.map((cat) => (
+              <Pressable
+                key={cat.id}
+                onPress={() => handleCategoryPress(cat.id)}
+                style={[
+                  styles.gridItem,
+                  {
+                    backgroundColor: colors.surface.primary,
+                    borderColor: isDark ? colors.border.default : '#E5E7EB',
+                  },
+                ]}
+              >
+                <Text style={styles.gridEmoji}>{cat.emoji}</Text>
+                <Text style={[styles.gridTitle, { color: colors.text.primary }]}>
+                  {cat.title}
+                </Text>
+                <Text style={[styles.gridDescription, { color: colors.text.secondary }]} numberOfLines={2}>
+                  {cat.description}
+                </Text>
+                <View style={[styles.gridCountBadge, { backgroundColor: `${cat.color}15` }]}>
+                  <Text style={[styles.gridCountText, { color: cat.color }]}>
+                    {cat.countLabel}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
           </View>
         </View>
 
-        {/* ── 5b. Personal Reflection ─────────────────────── */}
-        {personalization?.personalReflection && (
-          <View style={styles.sectionSpacing}>
-            <JourneySectionHeader
-              title="A thought for you"
-            />
-            <View style={styles.cardPadding}>
-              <PersonalReflectionCard
-                prompt={personalization.personalReflection.prompt}
-                context={personalization.personalReflection.context}
-                onReflect={() => {
-                  const path = `/chat?prompt=${encodeURIComponent(personalization.personalReflection!.prompt)}` as any;
-                  router.push(path);
-                }}
-              />
+        {/* ── Pillar 4: Completed Sessions ───────────────────────────────── */}
+        <View style={styles.sectionContainer}>
+          <JourneySectionHeader title="Completed sessions" />
+          {completedSessions.length > 0 ? (
+            <View style={styles.completedContainer}>
+              {completedSessions.map((session, index) => (
+                <View
+                  key={session.id}
+                  style={[
+                    styles.completedItem,
+                    {
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F3F4F6',
+                      borderBottomWidth: index < completedSessions.length - 1 ? 1 : 0,
+                    },
+                  ]}
+                >
+                  <CheckCircle2 size={20} color={colors.success} style={styles.completedIcon} />
+                  <View style={styles.completedContent}>
+                    <Text style={[styles.completedTitle, { color: colors.text.primary }]}>
+                      {session.title}
+                    </Text>
+                    <Text style={[styles.completedMeta, { color: colors.text.secondary }]}>
+                      {session.programTitle} · {session.duration} min
+                    </Text>
+                  </View>
+                  <Text style={[styles.completedDate, { color: colors.text.tertiary }]}>
+                    {session.lastCompletedAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View
+              style={[
+                styles.emptyCompletedCard,
+                {
+                  backgroundColor: colors.surface.primary,
+                  borderColor: isDark ? colors.border.default : '#E5E7EB',
+                },
+              ]}
+            >
+              <Trophy size={28} color={isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'} style={styles.emptyIcon} />
+              <Text style={[styles.emptyCompletedText, { color: colors.text.secondary }]}>
+                Your completed sessions will appear here as you practice.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* ── Pillar 5: Your Progress ────────────────────────────────────── */}
+        <View style={styles.sectionContainer}>
+          <JourneySectionHeader title="Your progress" />
+          <View style={styles.progressStatsRow}>
+            <View
+              style={[
+                styles.statCard,
+                {
+                  backgroundColor: colors.surface.primary,
+                  borderColor: isDark ? colors.border.default : '#E5E7EB',
+                },
+              ]}
+            >
+              <Flame size={20} color="#F97316" />
+              <View style={styles.statContent}>
+                <Text style={[styles.statValue, { color: colors.text.primary }]}>{streak}</Text>
+                <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Day Streak</Text>
+              </View>
+            </View>
+            <View
+              style={[
+                styles.statCard,
+                {
+                  backgroundColor: colors.surface.primary,
+                  borderColor: isDark ? colors.border.default : '#E5E7EB',
+                },
+              ]}
+            >
+              <CheckCircle2 size={20} color="#10B981" />
+              <View style={styles.statContent}>
+                <Text style={[styles.statValue, { color: colors.text.primary }]}>{exercisesCompleted}</Text>
+                <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Sessions</Text>
+              </View>
             </View>
           </View>
-        )}
-
-        {/* ── 6. Your Progress ───────────────────────────────── */}
-        <View style={styles.sectionSpacing}>
-          <JourneySectionHeader
-            title="Your progress"
-            actionText="This week ▾"
-          />
-          <View style={styles.cardPadding}>
-            <WeeklyProgressTracker
-              activeDays={weeklyProgress}
-            />
+          <View style={styles.weeklyTrackerWrapper}>
+            <WeeklyProgressTracker activeDays={weeklyProgress} />
           </View>
         </View>
       </ScrollView>
@@ -471,27 +432,294 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 110,
+    paddingBottom: 120,
     paddingHorizontal: spacing.xl,
   },
-  sectionSpacing: {
+  sectionContainer: {
     marginTop: spacing['2xl'],
-  },
-
-  cardPadding: {
-    // Cards already have their own padding
-  },
-  categoriesContainer: {
-    paddingRight: spacing.xl,
-  },
-  categoryGap: {
-    marginRight: spacing.md,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
+  },
+
+  // Pillar 1: Continue Your Journey
+  heroPressable: {
+    marginTop: spacing.md,
+  },
+  heroCard: {
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    padding: spacing.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  heroBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  heroBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  heroDurationText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  heroProgramTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 28,
+    marginBottom: 4,
+  },
+  heroLessonOrder: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  heroLessonTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
+    marginBottom: spacing.xl,
+  },
+  heroFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  progressBarWrapper: {
+    flex: 1,
+    marginRight: spacing.xl,
+  },
+  progressBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressPercentText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  heroButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  heroButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // Pillar 2: Recommended Today
+  recPressable: {
+    marginTop: spacing.md,
+  },
+  recCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    padding: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  recContent: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  recBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  recBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#F97316',
+    letterSpacing: 0.5,
+  },
+  recTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 22,
+    marginBottom: 4,
+  },
+  recDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  recPlayButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  // Pillar 3: Explore Practices
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    gap: spacing.md,
+  },
+  gridItem: {
+    width: '47.5%',
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    padding: spacing.md,
+    minHeight: 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  gridEmoji: {
+    fontSize: 28,
+    marginBottom: spacing.xs,
+  },
+  gridTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  gridDescription: {
+    fontSize: 10,
+    lineHeight: 14,
+    marginBottom: spacing.sm,
+    flex: 1,
+  },
+  gridCountBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  gridCountText: {
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+
+  // Pillar 4: Completed Sessions
+  completedContainer: {
+    marginTop: spacing.md,
+    borderRadius: borderRadius.xl,
+    borderWidth: 0,
+    overflow: 'hidden',
+  },
+  completedItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  completedIcon: {
+    marginRight: spacing.md,
+  },
+  completedContent: {
+    flex: 1,
+  },
+  completedTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  completedMeta: {
+    fontSize: 11,
+  },
+  completedDate: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  emptyCompletedCard: {
+    marginTop: spacing.md,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIcon: {
+    marginBottom: spacing.sm,
+  },
+  emptyCompletedText: {
+    fontSize: 13,
+    textAlign: 'center',
+  },
+
+  // Pillar 5: Your Progress
+  progressStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    gap: spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    padding: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statContent: {
+    marginLeft: spacing.md,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  weeklyTrackerWrapper: {
+    marginTop: spacing.md,
   },
 });
 

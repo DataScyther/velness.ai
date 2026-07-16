@@ -46,9 +46,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <Text style={{ fontSize: 20, fontWeight: '600', marginBottom: 8, color: '#FFF' }}>
             Something went wrong
           </Text>
-          <Text style={{ fontSize: 14, color: '#888', textAlign: 'center', marginBottom: 24 }}>
+          <Text style={{ fontSize: 14, color: '#888', textAlign: 'center', marginBottom: 12 }}>
             {this.state.error?.message ?? 'An unexpected error occurred'}
           </Text>
+          <View style={{ maxHeight: 200, width: '100%', marginBottom: 24 }}>
+            <Text
+              selectable
+              style={{ fontSize: 11, color: '#bbb', textAlign: 'left', lineHeight: 16 }}
+            >
+              {this.state.error?.stack ?? 'No stack available.'}
+            </Text>
+          </View>
           <TouchableOpacity
             onPress={this.handleReset}
             style={{

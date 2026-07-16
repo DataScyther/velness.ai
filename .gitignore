@@ -85,3 +85,5 @@ skills-lock.json
 icon.png
 
 opencode.jsonc
+# local AI/Playwright test artifacts
+.playwright-mcp/

@@ -3,21 +3,12 @@ import { DEFAULT_PROGRAMS, DEFAULT_LESSONS } from '../programs';
 import { CATEGORY_ID } from '../../constants';
 
 describe('CBT Curriculum and Lesson Blueprint validation', () => {
-  it('should have exactly 8 CBT programs', () => {
+  it('should have exactly 1 CBT program', () => {
     const cbtPrograms = DEFAULT_PROGRAMS.filter(p => p.categoryId === CATEGORY_ID.CBT);
-    expect(cbtPrograms.length).toBe(8);
+    expect(cbtPrograms.length).toBe(1);
 
     const programIds = cbtPrograms.map(p => p.id).sort();
-    const expectedIds = [
-      'understanding-thoughts',
-      'challenging-negative-thinking',
-      'managing-anxiety',
-      'emotional-regulation',
-      'building-confidence',
-      'healthy-habits',
-      'self-compassion',
-      'resilience'
-    ].sort();
+    const expectedIds = ['cbt-foundations'];
 
     expect(programIds).toEqual(expectedIds);
   });
@@ -28,8 +19,8 @@ describe('CBT Curriculum and Lesson Blueprint validation', () => {
 
     const cbtLessons = DEFAULT_LESSONS.filter(l => cbtProgramIds.has(l.programId));
 
-    // There should be exactly 5 lessons per CBT program, totaling 40 lessons
-    expect(cbtLessons.length).toBe(40);
+    // There should be exactly 6 lessons for the cbt-foundations program
+    expect(cbtLessons.length).toBe(6);
 
     for (const lesson of cbtLessons) {
       // 1. Learning Goal (learningObjective)
@@ -69,24 +60,15 @@ describe('CBT Curriculum and Lesson Blueprint validation', () => {
     }
   });
 
-  it('should verify all 15 building-confidence exercises have guided steps config', async () => {
+  it('should verify all 6 CBT Foundations exercises have guided steps config', async () => {
     const { GUIDED_STEPS_CONFIG } = await import('../guidedSteps');
     const expectedExerciseIds = [
-      'building-confidence-l1-ex1',
-      'building-confidence-l1-ex2',
-      'building-confidence-l1-ex3',
-      'building-confidence-l2-ex1',
-      'building-confidence-l2-ex2',
-      'building-confidence-l2-ex3',
-      'building-confidence-l3-ex1',
-      'building-confidence-l3-ex2',
-      'building-confidence-l3-ex3',
-      'building-confidence-l4-ex1',
-      'building-confidence-l4-ex2',
-      'building-confidence-l4-ex3',
-      'building-confidence-l5-ex1',
-      'building-confidence-l5-ex2',
-      'building-confidence-l5-ex3',
+      'cbt-foundations-l1-ex1',
+      'cbt-foundations-l2-ex1',
+      'cbt-foundations-l3-ex1',
+      'cbt-foundations-l4-ex1',
+      'cbt-foundations-l5-ex1',
+      'cbt-foundations-l6-ex1',
     ];
 
     for (const exId of expectedExerciseIds) {
@@ -95,127 +77,152 @@ describe('CBT Curriculum and Lesson Blueprint validation', () => {
     }
   });
 
-  it('should verify all 13 understanding-thoughts exercises have guided steps config', async () => {
-    const { GUIDED_STEPS_CONFIG } = await import('../guidedSteps');
-    const expectedExerciseIds = [
-      'understanding-thoughts-l1-ex1',
-      'understanding-thoughts-l1-ex2',
-      'understanding-thoughts-l1-ex3',
-      'understanding-thoughts-l2-ex1',
-      'understanding-thoughts-l2-ex2',
-      'understanding-thoughts-l2-ex3',
-      'understanding-thoughts-l3-ex1',
-      'understanding-thoughts-l3-ex2',
-      'understanding-thoughts-l3-ex3',
-      'understanding-thoughts-l4-ex1',
-      'understanding-thoughts-l4-ex2',
-      'understanding-thoughts-l4-ex3',
-      'understanding-thoughts-l5-ex1',
-    ];
+  it('should have exactly 7 breathing programs (sessions)', () => {
+    const breathingPrograms = DEFAULT_PROGRAMS.filter(p => p.categoryId === CATEGORY_ID.BREATHING);
+    expect(breathingPrograms.length).toBe(7);
 
-    for (const exId of expectedExerciseIds) {
-      expect(GUIDED_STEPS_CONFIG[exId]).toBeDefined();
-      expect(GUIDED_STEPS_CONFIG[exId].length).toBeGreaterThan(0);
+    const programIds = breathingPrograms.map(p => p.id).sort();
+    const expectedIds = [
+      '1-minute-reset',
+      '3-minute-calm',
+      'box-breathing',
+      '4-7-8-breathing',
+      'deep-relaxation',
+      'focus-breathing',
+      'sleep-breathing'
+    ].sort();
+
+    expect(programIds).toEqual(expectedIds);
+  });
+
+  it('should verify every breathing lesson has all blueprint fields populated', () => {
+    const breathingPrograms = DEFAULT_PROGRAMS.filter(p => p.categoryId === CATEGORY_ID.BREATHING);
+    const breathingProgramIds = new Set(breathingPrograms.map(p => p.id));
+
+    const breathingLessons = DEFAULT_LESSONS.filter(l => breathingProgramIds.has(l.programId));
+
+    // There should be exactly 7 lessons total (1 per program)
+    expect(breathingLessons.length).toBe(7);
+
+    for (const lesson of breathingLessons) {
+      expect(lesson.learningObjective).toBeDefined();
+      expect(typeof lesson.learningObjective).toBe('string');
+      expect(lesson.learningObjective?.trim().length).toBeGreaterThan(0);
+
+      expect(lesson.duration).toBeDefined();
+      expect(typeof lesson.duration).toBe('number');
+      expect(lesson.duration).toBeGreaterThan(0);
+
+      expect(lesson.introduction).toBeDefined();
+      expect(typeof lesson.introduction).toBe('string');
+      expect(lesson.introduction?.trim().length).toBeGreaterThan(0);
+
+      expect(lesson.reflectionPrompt).toBeDefined();
+      expect(typeof lesson.reflectionPrompt).toBe('string');
+      expect(lesson.reflectionPrompt?.trim().length).toBeGreaterThan(0);
+
+      expect(lesson.completionSummary).toBeDefined();
+      expect(typeof lesson.completionSummary).toBe('string');
+      expect(lesson.completionSummary?.trim().length).toBeGreaterThan(0);
     }
   });
 
-  it('should verify all 25 managing-anxiety exercises have guided steps config', async () => {
-    const { GUIDED_STEPS_CONFIG } = await import('../guidedSteps');
-    const expectedExerciseIds = [
-      'managing-anxiety-l1-ex1',
-      'managing-anxiety-l1-ex2',
-      'managing-anxiety-l1-ex3',
-      'managing-anxiety-l1-ex4',
-      'managing-anxiety-l1-ex5',
-      'managing-anxiety-l2-ex1',
-      'managing-anxiety-l2-ex2',
-      'managing-anxiety-l2-ex3',
-      'managing-anxiety-l2-ex4',
-      'managing-anxiety-l2-ex5',
-      'managing-anxiety-l3-ex1',
-      'managing-anxiety-l3-ex2',
-      'managing-anxiety-l3-ex3',
-      'managing-anxiety-l3-ex4',
-      'managing-anxiety-l3-ex5',
-      'managing-anxiety-l4-ex1',
-      'managing-anxiety-l4-ex2',
-      'managing-anxiety-l4-ex3',
-      'managing-anxiety-l4-ex4',
-      'managing-anxiety-l4-ex5',
-      'managing-anxiety-l5-ex1',
-      'managing-anxiety-l5-ex2',
-      'managing-anxiety-l5-ex3',
-      'managing-anxiety-l5-ex4',
-      'managing-anxiety-l5-ex5',
-    ];
+  it('should have exactly 7 meditation programs (sessions)', () => {
+    const meditationPrograms = DEFAULT_PROGRAMS.filter(p => p.categoryId === CATEGORY_ID.MEDITATION);
+    expect(meditationPrograms.length).toBe(7);
 
-    for (const exId of expectedExerciseIds) {
-      expect(GUIDED_STEPS_CONFIG[exId]).toBeDefined();
-      expect(GUIDED_STEPS_CONFIG[exId].length).toBeGreaterThan(0);
+    const programIds = meditationPrograms.map(p => p.id).sort();
+    const expectedIds = [
+      'sleep-meditation',
+      'stress-meditation',
+      'focus-meditation',
+      'anxiety-meditation',
+      'confidence-meditation',
+      'gratitude-meditation',
+      'self-compassion-meditation'
+    ].sort();
+
+    expect(programIds).toEqual(expectedIds);
+  });
+
+  it('should verify every meditation lesson has all blueprint fields populated', () => {
+    const meditationPrograms = DEFAULT_PROGRAMS.filter(p => p.categoryId === CATEGORY_ID.MEDITATION);
+    const meditationProgramIds = new Set(meditationPrograms.map(p => p.id));
+
+    const meditationLessons = DEFAULT_LESSONS.filter(l => meditationProgramIds.has(l.programId));
+
+    expect(meditationLessons.length).toBe(7);
+
+    for (const lesson of meditationLessons) {
+      expect(lesson.learningObjective).toBeDefined();
+      expect(typeof lesson.learningObjective).toBe('string');
+      expect(lesson.learningObjective?.trim().length).toBeGreaterThan(0);
+
+      expect(lesson.duration).toBeDefined();
+      expect(typeof lesson.duration).toBe('number');
+      expect(lesson.duration).toBeGreaterThan(0);
+
+      expect(lesson.introduction).toBeDefined();
+      expect(typeof lesson.introduction).toBe('string');
+      expect(lesson.introduction?.trim().length).toBeGreaterThan(0);
+
+      expect(lesson.reflectionPrompt).toBeDefined();
+      expect(typeof lesson.reflectionPrompt).toBe('string');
+      expect(lesson.reflectionPrompt?.trim().length).toBeGreaterThan(0);
+
+      expect(lesson.completionSummary).toBeDefined();
+      expect(typeof lesson.completionSummary).toBe('string');
+      expect(lesson.completionSummary?.trim().length).toBeGreaterThan(0);
     }
   });
 
-  it('should verify all 5 emotional-regulation exercises have guided steps config', async () => {
-    const { GUIDED_STEPS_CONFIG } = await import('../guidedSteps');
-    const expectedExerciseIds = [
-      'emotional-regulation-l1-ex1',
-      'emotional-regulation-l2-ex1',
-      'emotional-regulation-l3-ex1',
-      'emotional-regulation-l4-ex1',
-      'emotional-regulation-l5-ex1',
-    ];
+  it('should have exactly 8 wellness studio programs (sessions)', () => {
+    const wellnessPrograms = DEFAULT_PROGRAMS.filter(p => p.categoryId === CATEGORY_ID.WELLNESS);
+    expect(wellnessPrograms.length).toBe(8);
 
-    for (const exId of expectedExerciseIds) {
-      expect(GUIDED_STEPS_CONFIG[exId]).toBeDefined();
-      expect(GUIDED_STEPS_CONFIG[exId].length).toBeGreaterThan(0);
-    }
+    const programIds = wellnessPrograms.map(p => p.id).sort();
+    const expectedIds = [
+      'gratitude-journal',
+      'positive-affirmations',
+      'digital-detox',
+      'sleep-preparation',
+      'mindful-walking',
+      'body-scan',
+      'self-check-in',
+      'grounding-exercise'
+    ].sort();
+
+    expect(programIds).toEqual(expectedIds);
   });
 
-  it('should verify all 5 healthy-habits exercises have guided steps config', async () => {
-    const { GUIDED_STEPS_CONFIG } = await import('../guidedSteps');
-    const expectedExerciseIds = [
-      'healthy-habits-l1-ex1',
-      'healthy-habits-l2-ex1',
-      'healthy-habits-l3-ex1',
-      'healthy-habits-l4-ex1',
-      'healthy-habits-l5-ex1',
-    ];
+  it('should verify every wellness lesson has all blueprint fields populated', () => {
+    const wellnessPrograms = DEFAULT_PROGRAMS.filter(p => p.categoryId === CATEGORY_ID.WELLNESS);
+    const wellnessProgramIds = new Set(wellnessPrograms.map(p => p.id));
 
-    for (const exId of expectedExerciseIds) {
-      expect(GUIDED_STEPS_CONFIG[exId]).toBeDefined();
-      expect(GUIDED_STEPS_CONFIG[exId].length).toBeGreaterThan(0);
-    }
-  });
+    const wellnessLessons = DEFAULT_LESSONS.filter(l => wellnessProgramIds.has(l.programId));
 
-  it('should verify all 5 challenging-negative-thinking exercises have guided steps config', async () => {
-    const { GUIDED_STEPS_CONFIG } = await import('../guidedSteps');
-    const expectedExerciseIds = [
-      'challenging-negative-thinking-l1-ex1',
-      'challenging-negative-thinking-l2-ex1',
-      'challenging-negative-thinking-l3-ex1',
-      'challenging-negative-thinking-l4-ex1',
-      'challenging-negative-thinking-l5-ex1',
-    ];
+    expect(wellnessLessons.length).toBe(8);
 
-    for (const exId of expectedExerciseIds) {
-      expect(GUIDED_STEPS_CONFIG[exId]).toBeDefined();
-      expect(GUIDED_STEPS_CONFIG[exId].length).toBeGreaterThan(0);
-    }
-  });
+    for (const lesson of wellnessLessons) {
+      expect(lesson.learningObjective).toBeDefined();
+      expect(typeof lesson.learningObjective).toBe('string');
+      expect(lesson.learningObjective?.trim().length).toBeGreaterThan(0);
 
-  it('should verify all 5 self-compassion exercises have guided steps config', async () => {
-    const { GUIDED_STEPS_CONFIG } = await import('../guidedSteps');
-    const expectedExerciseIds = [
-      'self-compassion-l1-ex1',
-      'self-compassion-l2-ex1',
-      'self-compassion-l3-ex1',
-      'self-compassion-l4-ex1',
-      'self-compassion-l5-ex1',
-    ];
+      expect(lesson.duration).toBeDefined();
+      expect(typeof lesson.duration).toBe('number');
+      expect(lesson.duration).toBeGreaterThan(0);
 
-    for (const exId of expectedExerciseIds) {
-      expect(GUIDED_STEPS_CONFIG[exId]).toBeDefined();
-      expect(GUIDED_STEPS_CONFIG[exId].length).toBeGreaterThan(0);
+      expect(lesson.introduction).toBeDefined();
+      expect(typeof lesson.introduction).toBe('string');
+      expect(lesson.introduction?.trim().length).toBeGreaterThan(0);
+
+      expect(lesson.reflectionPrompt).toBeDefined();
+      expect(typeof lesson.reflectionPrompt).toBe('string');
+      expect(lesson.reflectionPrompt?.trim().length).toBeGreaterThan(0);
+
+      expect(lesson.completionSummary).toBeDefined();
+      expect(typeof lesson.completionSummary).toBe('string');
+      expect(lesson.completionSummary?.trim().length).toBeGreaterThan(0);
     }
   });
 });

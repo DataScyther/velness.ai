@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   percentText: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.4)',
-    fontFamily: 'SF Pro Text',
+    fontFamily: 'Geomini, SF Pro Text',
     marginTop: 6,
   },
 });

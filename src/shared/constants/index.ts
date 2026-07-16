@@ -55,14 +55,7 @@ export const LAYOUT = {
   TAB_BAR_HEIGHT: 72,
   TAB_BAR_MARGIN: 16,
   CHAT_COMPOSER_SPACING: 12,
+  CHAT_KEYBOARD_GAP: 16,
+  CHAT_KEYBOARD_ANIM_DURATION: 250,
   HEADER_HEIGHT: 56,
-} as const;
-
-export const MOCK_DATA = {
-  GREETINGS: [
-    'How are you feeling today?',
-    'Welcome back. Let\'s check in.',
-    'Hi there. I\'m here for you.',
-    'Good to see you again.',
-  ],
 } as const;

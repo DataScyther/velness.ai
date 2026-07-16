@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { MessageSquare, LogOut } from 'lucide-react';
-import { ImHome } from '@react-icons/all-files/im/ImHome';
+import { MessageSquare, LogOut, Home } from 'lucide-react-native';
 import { useAppStore } from '@/core/store/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
 import { HomeScreen } from '@/features/home/screens/HomeScreen';
@@ -108,7 +107,7 @@ function AppContent() {
                   : 'text-text-secondary hover:bg-surface-secondary/70 hover:text-text-primary'
               }`}
             >
-              <ImHome size={20} color={currentTab === 'home' ? colors.brand.primary : colors.text.secondary} />
+              <Home size={20} color={currentTab === 'home' ? colors.brand.primary : colors.text.secondary} />
               <Text className={`font-semibold text-sm ${
                 currentTab === 'home' ? 'text-brand-primary' : 'text-text-secondary'
               }`}>

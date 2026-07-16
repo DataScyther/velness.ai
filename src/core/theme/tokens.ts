@@ -8,8 +8,8 @@
 
 export const typography = {
   fontFamily: {
-    sans: 'SF Pro Text',
-    display: 'SF Pro Display',
+    sans: 'Geomini, SF Pro Text',
+    display: 'Geomini, SF Pro Display',
     mono: 'JetBrains Mono',
   },
   fontSize: {
