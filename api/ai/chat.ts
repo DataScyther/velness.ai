@@ -17,6 +17,7 @@ type ChatRequest = {
     history?: ChatHistoryMessage[];
     mode?: 'standard' | 'deep';
     memoryContext?: Record<string, unknown>;
+    requestId?: string;
 };
 
 function jsonResponse(data: unknown, status = 200) {
@@ -94,6 +95,7 @@ export default async function handler(request: Request) {
                     history,
                     mode,
                     memoryContext: body.memoryContext as any,
+                    requestId: body.requestId,
                 })) {
                     controller.enqueue(encoder.encode(JSON.stringify(chunk) + '\n'));
                     if (chunk.done) break;

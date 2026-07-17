@@ -1,5 +1,5 @@
 export interface ConversationController {
-  sendMessage(text: string): Promise<void>;
+  sendMessage(text: string, mode?: 'standard' | 'deep'): Promise<void>;
   retry(): Promise<void>;
   regenerate(): Promise<void>;
   abort(): void;

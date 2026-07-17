@@ -20,6 +20,7 @@ import Animated, {
   withSequence,
   Easing,
   interpolate,
+  useReducedMotion,
 } from 'react-native-reanimated';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 
@@ -40,8 +41,15 @@ interface AuroraBackgroundProps {
 export function AuroraBackground({ intensity = 1 }: AuroraBackgroundProps) {
   // ── Animation Controllers ──────────────────────────────────────────────
   const animationProgress = useSharedValue(0);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    // Respect OS "Reduce Motion": park the orbs at a neutral frame instead
+    // of running the continuous loop (avoids jank / motion sickness).
+    if (reduced) {
+      animationProgress.value = 0.5;
+      return;
+    }
     // A single unified slow time base loop for organic phase alignments
     animationProgress.value = withRepeat(
       withSequence(
@@ -57,7 +65,7 @@ export function AuroraBackground({ intensity = 1 }: AuroraBackgroundProps) {
       -1, // infinite loop
       false
     );
-  }, [animationProgress]);
+  }, [animationProgress, reduced]);
 
   // ── Animated Purple Orb Styles ─────────────────────────────────────────
   const purpleOrbStyle = useAnimatedStyle(() => {

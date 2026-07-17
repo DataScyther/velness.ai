@@ -46,12 +46,8 @@ export function CheckInPanel({
   onSubmit,
   onDismiss,
 }: CheckInPanelProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const reduced = useReducedMotion();
-
-  const brandPrimary = colors?.brand?.primary ?? '#634EB8';
-  const brandBorder = colors?.brand?.border ?? 'rgba(99, 78, 184, 0.45)';
-  const onBrandText = colors?.text?.onBrand ?? '#FFFFFF';
 
   const progress = useSharedValue(visible ? 1 : 0);
 
@@ -78,7 +74,10 @@ export function CheckInPanel({
     // Fabric unmounts the host node, which nulls the fiber handle and crashes
     // the responder/inspector chain on the next tap. We hide via opacity +
     // pointerEvents on the animated inner layer instead (node never unmounts).
-    <View style={{ marginTop: 20, height: visible ? undefined : 0, overflow: 'hidden' }}>
+    // IMPORTANT: no `overflow: 'hidden'` here — it would clip the card's soft
+    // drop shadow into a rectangle, producing square shadow corners over the
+    // rounded card. The inner layer is hidden via opacity + pointerEvents.
+    <View style={{ marginTop: 20, height: visible ? undefined : 0 }}>
       <Animated.View
         style={[styles.inner, innerStyle]}
         pointerEvents={visible ? 'auto' : 'none'}
@@ -138,17 +137,31 @@ export function CheckInPanel({
                   style={({ pressed }) => [
                     styles.submitButton,
                     {
-                      backgroundColor: brandPrimary,
-                      borderColor: brandBorder,
+                      // High-contrast fill so the white label is always legible.
+                      // In light mode the brand purple (#634EB8) is too light for
+                      // white text, so use a deeper purple; in dark mode the
+                      // brand purple is already light enough. Explicit fallbacks
+                      // keep the button visible even if a token is missing.
+                      backgroundColor: isSaving
+                        ? (colors.surface?.tertiary ?? '#EAEEF6')
+                        : (isDark
+                            ? (colors.brand?.primary ?? '#7E60CD')
+                            : '#4C1D95'),
+                      borderColor: isSaving
+                        ? (colors.border?.default ?? '#E2E8F0')
+                        : (colors.brand?.border ?? 'rgba(99, 78, 184, 0.45)'),
                     },
                     pressed && !isSaving && styles.submitButtonPressed,
-                    isSaving && styles.submitButtonDisabled,
                   ]}
                 >
                   <Text
                     style={[
                       styles.submitButtonText,
-                      { color: onBrandText },
+                      {
+                        color: isSaving
+                          ? (colors.text?.secondary ?? '#475569')
+                          : (colors.text?.onBrand ?? '#FFFFFF'),
+                      },
                     ]}
                   >
                     {isSaving ? 'Saving…' : 'Save check-in'}
@@ -176,11 +189,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: spacing.md,
     gap: spacing.sm,
-    shadowColor: '#634EB8',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 6,
+    // Precise, refined lift: a tight, low-opacity shadow (not a wide blur) so
+    // the rounded corners stay crisp and polished rather than soft/uneven.
+    shadowColor: '#05030C',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 5,
   },
   confirmBox: {
     marginTop: spacing.xs,
@@ -217,13 +232,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    shadowColor: '#05030C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
   },
   submitButtonPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
-  },
-  submitButtonDisabled: {
-    opacity: 0.55,
   },
   submitButtonText: {
     fontSize: 15,

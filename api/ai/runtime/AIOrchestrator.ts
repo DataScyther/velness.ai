@@ -87,7 +87,9 @@ export class AIOrchestrator {
   }
 
   async *handle(req: AIRequest): AsyncGenerator<StreamChunk> {
-    const requestId = crypto.randomUUID();
+    const requestId = req.requestId && typeof req.requestId === 'string' && req.requestId.trim().length > 0
+      ? req.requestId.trim()
+      : crypto.randomUUID();
     const flags = getFeatureFlags();
     const intentTimer = new Timer();
     const totalTimer = new Timer();
@@ -126,10 +128,21 @@ export class AIOrchestrator {
 
     const llmTimer = new Timer();
     let firstChunk = true;
+    const toolsUsed = results.map((r) => r.capability);
     for await (const chunk of this.gateway.streamCompletion(messages, req.mode ?? 'standard')) {
       if (firstChunk) {
         firstChunk = false;
         llmTimer.stop(); // measured from first token
+        // Echo correlation + observability fields on the first streamed chunk
+        // so a client can deterministically map its request to the server's
+        // [ai-trace] and to the provider-selection decision (plan §1.2/§1.6).
+        yield {
+          ...chunk,
+          requestId,
+          capabilities: intent.capabilities,
+          toolsUsed,
+        };
+        continue;
       }
       yield chunk;
     }

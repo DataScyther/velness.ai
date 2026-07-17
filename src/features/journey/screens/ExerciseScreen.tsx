@@ -369,7 +369,7 @@ export function ExerciseScreen() {
   const uid = user?.uid || null;
   const { exerciseId, sessionId } = useLocalSearchParams<{ exerciseId?: string; sessionId?: string }>();
   const targetId = exerciseId || sessionId;
-  const { exercises, daysPracticed, minutesCompleted, startExercise } = useJourney();
+  const { exercises, daysPracticed, minutesCompleted, startExercise, completeLesson } = useJourney();
   const queryClient = useQueryClient();
 
   const exercise = useMemo(() => {
@@ -590,17 +590,24 @@ export function ExerciseScreen() {
           programId={lesson?.programId || ''}
           lessonId={exercise.lessonId}
           onComplete={async () => {
+            const completeProgramId = lesson?.programId || '';
+            const completeLessonId = exercise.lessonId || '';
+            try {
+              if (uid && completeProgramId && completeLessonId) {
+                await completeLesson(completeProgramId, completeLessonId);
+              }
+            } catch (err) {
+              console.warn('[ExerciseScreen] completeLesson failed:', err);
+            }
             await queryClient.invalidateQueries({ queryKey: ['journey', 'exercises', uid] });
             await queryClient.invalidateQueries({ queryKey: ['journey', 'user-progress', uid] });
             await queryClient.invalidateQueries({ queryKey: ['journey', 'legacy', uid] });
             await queryClient.invalidateQueries({ queryKey: ['homeState'] });
             router.replace({
-              pathname: '/journey/summary',
+              pathname: '/journey/completion',
               params: {
-                exerciseId: exercise.id,
-                title: exercise.title,
-                duration: exercise.estimatedTime,
-                type: 'cbt',
+                programId: completeProgramId,
+                lessonId: completeLessonId,
               },
             } as any);
           }}

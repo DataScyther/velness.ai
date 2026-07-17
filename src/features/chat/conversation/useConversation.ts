@@ -32,6 +32,7 @@ export function useConversation(): { state: ConversationState; controller: Conve
   const {
     messages,
     isStreaming,
+    isReflecting,
     conversationId,
     sendMessage,
     retryLast,
@@ -53,8 +54,9 @@ export function useConversation(): { state: ConversationState; controller: Conve
     conversationId: conversationId ?? null,
     messages,
     status,
+    isReflecting,
     error: errorMessage,
-  }), [messages, status, errorMessage, conversationId]);
+  }), [messages, status, errorMessage, conversationId, isReflecting]);
 
   const controller: ConversationController = useMemo(() => ({
     sendMessage,

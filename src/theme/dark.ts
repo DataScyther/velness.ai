@@ -33,6 +33,14 @@ export const darkTheme: ThemeTokens = {
     strong: 'rgba(255, 255, 255, 0.18)',
     subtle: 'rgba(255, 255, 255, 0.05)',
   },
+  // Dark-theme glass tints: subtle white so fills glow on dark surfaces.
+  glass: {
+    highlight: 'rgba(255, 255, 255, 0.10)',
+    light: 'rgba(255, 255, 255, 0.7)',
+    medium: 'rgba(255, 255, 255, 0.5)',
+    dark: 'rgba(15, 10, 26, 0.7)',
+    border: 'rgba(255, 255, 255, 0.20)',
+  },
   brand: {
     primary: '#7E60CD',
     secondary: '#9F8BE6',

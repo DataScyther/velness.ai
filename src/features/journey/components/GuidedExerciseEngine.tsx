@@ -59,6 +59,8 @@ export function GuidedExerciseEngine({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [aiReflections, setAiReflections] = useState<Record<string, string>>({});
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [reflectionError, setReflectionError] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [inputText, setInputText] = useState('');
   const [inputError, setInputError] = useState<string | null>(null);
   const [learnSecondsLeft, setLearnSecondsLeft] = useState(60);
@@ -165,6 +167,8 @@ export function GuidedExerciseEngine({
       if (resumeData.breathingCycle) {
         setBreathingCyclesLeft(resumeData.breathingCycle);
       }
+      // If the saved step was past the reflection, make sure the AI reflection is shown
+      // rather than silently skipped (the reflection text was stored in aiReflections).
     }
     setShowResumeModal(false);
   };
@@ -176,6 +180,13 @@ export function GuidedExerciseEngine({
     } catch (err) {
       console.warn('Failed to clear progress:', err);
     }
+    // Reset local state so the user starts fresh from step 1.
+    setAnswers({});
+    setAiReflections({});
+    setInputText('');
+    setHasCommitted(false);
+    setReflectionError(false);
+    setCurrentStepIndex(0);
   };
 
   // Fade transition helper
@@ -271,6 +282,7 @@ export function GuidedExerciseEngine({
           elapsedSecsRef.current,
           currentStepIndex === 2 ? breathingCyclesLeft : null
         );
+        setSavedAt(Date.now());
       } catch (err) {
         console.warn('Debounced save draft failed:', err);
       }
@@ -388,11 +400,11 @@ Their evidence: "${userInput}"`;
       transitionToStep(currentStepIndex + 1);
     } catch (err) {
       console.warn('AI reflection generation failed:', err);
-      // Fallback in case of API failure so user isn't stuck
-      const fallbackText = "Thank you for sharing this. Recognizing these thoughts is the first step toward releasing them. Let's keep moving forward.";
+      // Mark the reflection step as offline rather than injecting a fake "Velness" insight.
+      setReflectionError(true);
       const newReflections = {
         ...aiReflections,
-        [currentStep.id]: fallbackText,
+        [currentStep.id]: "[offline]",
       };
       setAiReflections(newReflections);
       transitionToStep(currentStepIndex + 1);
@@ -400,6 +412,17 @@ Their evidence: "${userInput}"`;
       setIsGeneratingAI(false);
     }
   };
+
+  // Retry the AI reflection after a failure
+  const retryReflection = () => {
+    setReflectionError(false);
+    const prevQuestionId = steps[currentStepIndex - 1]?.id;
+    const prevInput = prevQuestionId ? answers[prevQuestionId] : '';
+    if (prevQuestionId) {
+      generateReflection(prevQuestionId, prevInput);
+    }
+  };
+
 
   // Save completion and sync
   const saveCompletion = async () => {
@@ -430,14 +453,17 @@ Their evidence: "${userInput}"`;
         const { DEFAULT_EXERCISES } = await import('../data/exercises');
         const exerciseObj = DEFAULT_EXERCISES.find(ex => ex.id === exerciseId);
         const exerciseTitle = exerciseObj?.title || exerciseId;
-        const reflectionText = Object.values(aiReflections).join('\n\n');
+        const reflectionText = Object.values(aiReflections)
+          .filter((t) => t && t !== '[offline]')
+          .join('\n\n');
         await journalRepository.create({
           title: `Reflection on ${exerciseTitle}`,
-          body: `Reflection Summary:\n${reflectionText}\n\nExercise Answers:\n${JSON.stringify(answers, null, 2)}`,
+          body: `Reflection Summary:\n${reflectionText || '(reflection unavailable — offline)'}\n\nCommitted to applying: ${hasCommitted ? 'Yes' : 'No'}\n\nExercise Answers:\n${JSON.stringify(answers, null, 2)}`,
           attachments: [
             {
               type: 'cbt-reflection',
               exerciseId,
+              committed: hasCommitted,
               emotionalTag: 'confident',
               confidenceScore: 0.95,
               completionTime: elapsedSecsRef.current,
@@ -564,8 +590,8 @@ Their evidence: "${userInput}"`;
     }
   };
 
-  // Calculate Progress Percent
-  const progressPercent = steps.length > 0 ? (currentStepIndex / (steps.length - 1)) * 100 : 0;
+  // Calculate Progress Percent (content-weighted: reflects how many steps are done)
+  const progressPercent = steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
 
   // Shimmer opacity calculation
   const shimmerOpacity = shimmerValue.interpolate({
@@ -588,7 +614,11 @@ Their evidence: "${userInput}"`;
             Step {currentStepIndex + 1} of {steps.length}
           </Text>
         </View>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 40, alignItems: 'flex-end' }}>
+          {savedAt ? (
+            <Text style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.4)' }}>Saved</Text>
+          ) : null}
+        </View>
       </View>
 
       {/* Main Content Area with Fade animation */}
@@ -801,6 +831,23 @@ Their evidence: "${userInput}"`;
                     <Text style={styles.aiLoadingText}>Velness AI is reflecting on your thoughts...</Text>
                   </View>
                 </View>
+              ) : reflectionError ? (
+                <View style={[styles.reflectionCard, { borderColor: 'rgba(249, 115, 22, 0.4)' }]}>
+                  <View style={styles.reflectionHeader}>
+                    <AlertCircle size={20} color="#F97316" />
+                    <Text style={[styles.reflectionTitle, { color: '#F97316' }]}>Offline reflection</Text>
+                  </View>
+                  <Text style={[styles.reflectionBody, { color: 'rgba(255, 255, 255, 0.6)' }]}>
+                    We couldn't reach your AI companion just now. Your answers are saved — you can retry, or continue without the reflection.
+                  </Text>
+                  <Pressable
+                    onPress={retryReflection}
+                    style={[styles.commitmentCard, { marginTop: spacing.md, borderColor: '#8B5CF6', backgroundColor: 'rgba(139, 92, 246, 0.08)' }]}
+                  >
+                    <RotateCcw size={16} color="#A78BFA" />
+                    <Text style={[styles.commitmentText, { color: '#FFF' }]}>Retry AI reflection</Text>
+                  </Pressable>
+                </View>
               ) : (
                 <View style={styles.reflectionCard}>
                   <View style={styles.reflectionHeader}>
@@ -869,16 +916,14 @@ Their evidence: "${userInput}"`;
             disabled={
               isGeneratingAI ||
               (currentStep?.type === 'breathing' && breathingPhase !== 'complete') ||
-              (currentStep?.type === 'apply' && !hasCommitted) ||
-              (currentStep?.type === 'learn' && learnSecondsLeft > 0)
+              (currentStep?.type === 'apply' && !hasCommitted)
             }
             style={[
               styles.continueButton,
               {
-                backgroundColor: isGeneratingAI || 
+                backgroundColor: isGeneratingAI ||
                   (currentStep?.type === 'breathing' && breathingPhase !== 'complete') ||
-                  (currentStep?.type === 'apply' && !hasCommitted) ||
-                  (currentStep?.type === 'learn' && learnSecondsLeft > 0)
+                  (currentStep?.type === 'apply' && !hasCommitted)
                     ? 'rgba(139, 92, 246, 0.4)'
                     : '#8B5CF6',
               },
@@ -891,10 +936,8 @@ Their evidence: "${userInput}"`;
                 <Text style={styles.continueButtonText}>
                   {currentStep?.type === 'welcome'
                     ? 'Get Started'
-                    : currentStep?.type === 'learn' && learnSecondsLeft > 0
-                    ? `Study (${learnSecondsLeft}s)`
                     : currentStep?.type === 'learn'
-                    ? 'Continue'
+                    ? 'I\'ve read this'
                     : currentStep?.type === 'breathing' && breathingPhase !== 'complete'
                     ? 'Grounding...'
                     : currentStep?.type === 'apply' && !hasCommitted

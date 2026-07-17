@@ -334,16 +334,7 @@ export const WeeklyHistoryCard = React.memo(({
           ) : (
             /* Friendly empty state with illustration */
             <View style={styles.emptyContainer}>
-              <View
-                style={[
-                  styles.emptyPanel,
-                  {
-                    backgroundColor: colors.surface.secondary,
-                    borderColor: colors.border.default,
-                  },
-                ]}
-              >
-                <View style={styles.illustrationContainer}>
+              <View style={styles.illustrationContainer}>
                   {/* Calm static glow backdrop */}
                   <View
                     style={[
@@ -387,22 +378,13 @@ export const WeeklyHistoryCard = React.memo(({
                     </Svg>
                   </Animated.View>
 
-                  {/* Centered central icon badge (same exact icon) */}
-                  <View
-                    style={[
-                      styles.emptyIconWrap,
-                      {
-                        backgroundColor: colors.brand.subtle,
-                        borderColor: `${colors.brand.primary}26`,
-                      },
-                    ]}
-                  >
-                    <Svg width={22} height={22} viewBox="0 0 512 512">
+                  {/* Centered leaf icon (no bordered canvas) */}
+                  <View style={styles.emptyIconWrap}>
+                    <Svg width={26} height={26} viewBox="0 0 512 512">
                       <Path d={FA_SEEDLING_PATH} fill={colors.brand.primary} />
                     </Svg>
                   </View>
                 </View>
-              </View>
               <View style={styles.emptyText}>
                 <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
                   Your first check-in unlocks
@@ -555,15 +537,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
   },
-  // Cohesive rounded tile that holds the empty-state illustration
-  emptyPanel: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 132,
-    height: 132,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
   illustrationContainer: {
     width: 96,
     height: 96,
@@ -589,8 +562,6 @@ const styles = StyleSheet.create({
   emptyIconWrap: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,

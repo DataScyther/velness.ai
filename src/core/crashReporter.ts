@@ -48,7 +48,10 @@ export function installGlobalErrorHandler(): void {
     RNErrorUtils.setGlobalHandler((error: unknown, isFatal?: boolean) => {
       const e = error instanceof Error ? error : new Error(String(error));
       emit({ message: e.message, stack: e.stack, fatal: !!isFatal, source: 'errorutils' });
-      if (typeof prev === 'function') {
+      // Don't re-invoke RN's default fatal handler: on Android it terminates the
+      // process (the "guest auto-close"). The <CrashOverlay/> now surfaces the
+      // real cause on-screen so we can read it instead of the app dying.
+      if (typeof prev === 'function' && !isFatal) {
         try {
           prev(error, isFatal);
         } catch {

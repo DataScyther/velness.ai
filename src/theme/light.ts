@@ -39,6 +39,16 @@ export interface ThemeTokens {
     strong: string;
     subtle: string;
   };
+  /** Glass / translucent surface tints — MUST adapt to theme (see dark.ts).
+   *  In light mode these are subtle neutral/dark tints so glass fills read as
+   *  refined surfaces instead of white squares on a light background. */
+  glass: {
+    highlight: string;
+    light: string;
+    medium: string;
+    dark: string;
+    border: string;
+  };
   /** Brand ramp */
   brand: {
     primary: string;
@@ -88,6 +98,15 @@ export const lightTheme: ThemeTokens = {
     default: '#E2E8F0',
     strong: '#CBD5E1',
     subtle: '#EEF2F7',
+  },
+  // Light-theme glass tints: subtle neutral/dark so fills blend on light
+  // surfaces instead of appearing as white squares.
+  glass: {
+    highlight: 'rgba(15, 23, 42, 0.04)',
+    light: 'rgba(255, 255, 255, 0.7)',
+    medium: 'rgba(15, 23, 42, 0.06)',
+    dark: 'rgba(15, 23, 42, 0.10)',
+    border: 'rgba(15, 23, 42, 0.10)',
   },
   brand: {
     primary: '#634EB8',

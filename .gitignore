@@ -87,3 +87,8 @@ icon.png
 opencode.jsonc
 # local AI/Playwright test artifacts
 .playwright-mcp/
+
+# ── Markdown Docs (ignore all except critical project docs) ──────
+*.md
+!README.md
+!AGENTS.md

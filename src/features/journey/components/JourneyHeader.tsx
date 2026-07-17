@@ -12,7 +12,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { FlameIcon } from '@/shared/components/SymbolIcons';
 import { useTheme } from '@/hooks/useTheme';
-import { typography, spacing } from '@/core/theme';
+import { typography, spacing, borderRadius } from '@/core/theme';
+import { useCheckInPresence } from '@/shared/hooks/useCheckInPresence';
 
 interface JourneyHeaderProps {
   /** Current day streak count. */
@@ -21,6 +22,7 @@ interface JourneyHeaderProps {
 
 export const JourneyHeader = React.memo(({ streak = 0 }: JourneyHeaderProps) => {
   const { colors } = useTheme();
+  const { lastCheckIn } = useCheckInPresence();
 
   return (
     <Animated.View
@@ -34,6 +36,13 @@ export const JourneyHeader = React.memo(({ streak = 0 }: JourneyHeaderProps) => 
         <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
           Small steps today, stronger tomorrow.
         </Text>
+        {lastCheckIn ? (
+          <View style={[styles.checkInChip, { backgroundColor: colors.surface.secondary, borderColor: colors.border.default }]}>
+            <Text style={styles.checkInChipText}>
+              {lastCheckIn.emoji} {lastCheckIn.label}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       {streak > 0 && (
@@ -100,6 +109,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     lineHeight: 14,
+  },
+  // ── Check-in presence chip ────────────────────────────────────────────
+  checkInChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    marginTop: spacing.sm,
+  },
+  checkInChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: typography.fontFamily.sans,
+    letterSpacing: 0.2,
   },
 });
 

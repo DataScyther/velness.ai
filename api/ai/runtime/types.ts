@@ -57,6 +57,8 @@ export interface AIRequest {
   history?: ChatHistoryMessage[];
   mode?: ChatMode;
   memoryContext?: MemoryContext;
+  /** Optional client-supplied correlation id; when absent the orchestrator generates one. */
+  requestId?: string;
 }
 
 /** A single sourced citation attached to retrieved content. */
@@ -96,6 +98,12 @@ export interface StreamChunk {
   contentDelta: string;
   done?: boolean;
   citations?: Citation[];
+  /** Present on the first chunk only, as a non-content correlation field. */
+  requestId?: string;
+  /** Present on the first chunk only: classifier-chosen capabilities. */
+  capabilities?: Capability[];
+  /** Present on the first chunk only: capability tools that actually ran. */
+  toolsUsed?: Capability[];
 }
 
 /** Minimal gateway contract the orchestrator depends on (DI-friendly). */

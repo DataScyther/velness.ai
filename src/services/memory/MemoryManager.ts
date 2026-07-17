@@ -9,7 +9,8 @@
  */
 
 import { SessionMemory, UserContext, AIContext, ContextEngineInput } from './types';
-import { getTimeOfDay } from '@/prompts/mentalWellnessPrompt';
+import { getTimeOfDay, detectMood, detectCrisisSignals } from '@/prompts/mentalWellnessPrompt';
+import type { ChatMode } from '@/services/ai/types';
 
 export class MemoryManager {
   private session: SessionMemory;
@@ -18,6 +19,7 @@ export class MemoryManager {
   private reflectionStreak: number = 0;
   private currentJourney: string | null = null;
   private sessionCount: number = 0;
+  private crisisDetected = false;
 
   readonly DEFAULT_SUMMARY_TURNS = 8;
 
@@ -60,6 +62,29 @@ export class MemoryManager {
 
   setMood(mood: string): void {
     this.session.recentMood = mood;
+  }
+
+  /**
+   * Records the user's detected mood from an inbound message and flags any
+   * crisis-level content so the next response can escalate reasoning depth.
+   */
+  observeUserMessage(text: string): void {
+    const mood = detectMood(text);
+    if (mood !== 'neutral') {
+      this.setMood(mood);
+    }
+    if (detectCrisisSignals(text)) {
+      this.crisisDetected = true;
+    }
+  }
+
+  /**
+   * Adaptive depth: crisis escalates the model to its deepest reasoning mode
+   * (safety first — the model reasons hardest when it matters most). Otherwise
+   * the standard mode is used.
+   */
+  getRecommendedMode(): ChatMode {
+    return this.crisisDetected ? 'deep' : 'standard';
   }
 
   setSummary(summary: string): void {

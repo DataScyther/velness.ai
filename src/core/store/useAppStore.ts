@@ -61,7 +61,20 @@ export interface SessionState {
   previousGuestUid: string | null;
 }
 
+export interface LastCheckIn {
+  rating: number;
+  label: string;
+  emoji: string;
+  timestamp: string;
+}
+
 export interface AppStore {
+  // ─── Check-in Presence ─────────────────────────────────────────────
+  /** Latest mood check-in, shared reactively across screens (client-side). */
+  lastCheckIn: LastCheckIn | null;
+  setLastCheckIn: (payload: LastCheckIn) => void;
+  clearLastCheckIn: () => void;
+
   // ─── UI State ────────────────────────────────────────────────────────
   ui: UIState;
   setCurrentTab: (tab: UIState['currentTab']) => void;
@@ -127,6 +140,15 @@ const initialSessionState: SessionState = {
 export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
+      // ─── Check-in Presence ─────────────────────────────────────────────
+      lastCheckIn: null,
+
+      setLastCheckIn: (payload) =>
+        set(() => ({ lastCheckIn: payload })),
+
+      clearLastCheckIn: () =>
+        set(() => ({ lastCheckIn: null })),
+
       // ─── UI State ──────────────────────────────────────────────────
       ui: { ...initialUIState },
 

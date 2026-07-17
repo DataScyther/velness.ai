@@ -280,7 +280,7 @@ export function MessageList({
           ) : null
         }
         ListFooterComponent={
-          state.status === 'streaming' && messages.length > 0 && messages[messages.length - 1].role === 'user' ? (
+          state.isReflecting ? (
             <TypingIndicator />
           ) : null
         }

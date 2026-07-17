@@ -124,16 +124,6 @@ function ChatScreenContent() {
     }
   }, [state.conversationId]);
 
-  useEffect(() => {
-    loadSessionMeta()
-      .then((meta) => {
-        if (meta?.lastConversationId && meta.lastConversationId !== state.conversationId) {
-          // Session meta indicates a prior conversation; draft loading handled by ChatInput via conversationId
-        }
-      })
-      .catch((err) => console.warn('[ChatScreen] loadSessionMeta failed:', err));
-  }, [state.conversationId]);
-
   const inConversation = state.messages.length > 0;
   const sessionStartedAt = inConversation ? state.messages[0].createdAt : undefined;
 

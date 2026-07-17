@@ -51,12 +51,13 @@ export default {
             800: '#155E75',
             900: '#164E63',
           },
-          glass: {
-            light: 'rgba(255, 255, 255, 0.7)',
-            medium: 'rgba(255, 255, 255, 0.5)',
-            dark: 'rgba(15, 10, 26, 0.7)',
-            border: 'rgba(255, 255, 255, 0.2)',
-          },
+           glass: {
+             highlight: 'var(--glass-highlight)',
+             light: 'var(--glass-light)',
+             medium: 'var(--glass-medium)',
+             dark: 'var(--glass-dark)',
+             border: 'var(--glass-border)',
+           },
         },
         background: {
           primary: 'var(--background-primary)',

@@ -23,6 +23,7 @@ import type { Streak } from '@/features/journey/models/Streak';
 import type { JourneyProgress } from '@/features/journey/types/JourneyProgress';
 import { EXERCISE_TYPE } from '@/features/journey/constants';
 import { DEFAULT_EXERCISES } from '@/features/journey/data/exercises';
+import { GUIDED_STEPS_CONFIG } from '@/features/journey/data/guidedSteps';
 import { DEFAULT_CATEGORIES } from '@/features/journey/data/categories';
 import { DEFAULT_PROGRAMS, DEFAULT_LESSONS } from '@/features/journey/data/programs';
 import { DEFAULT_RECOMMENDATIONS } from '@/features/journey/data/recommendations';
@@ -165,7 +166,9 @@ function computeDynamicProgramProgress(
     resumeTarget: nextExercise
       ? {
           exerciseId: nextExercise.id,
-          route: getDefaultRouteForExercise(nextExercise.type),
+          route: GUIDED_STEPS_CONFIG[nextExercise.id]
+            ? ROUTES.JOURNEY.EXERCISE
+            : getDefaultRouteForExercise(nextExercise.type),
         }
       : null,
     totalLessons,

@@ -20,7 +20,7 @@
 //   4. CTA scales to 0.97 on press (spring)
 
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown,
@@ -29,22 +29,19 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-  withSpring,
   cancelAnimation,
   Easing,
   useReducedMotion,
 } from 'react-native-reanimated';
-import Svg, { Defs, RadialGradient, Stop, Rect, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 
 import type { NarrativeMoment } from '@/features/home/services/HomeViewModel';
 import {
   getHeroGradient,
   buildStreakLabel,
-  getTimeOfDay,
 } from '@/features/home/utils/adaptiveContext';
 import { useTheme } from '@/hooks/useTheme';
-import { spacing, borderRadius } from '@/core/theme';
-import { HeroAura, getTimeOfDayKicker } from './HeroAura';
+import { spacing, borderRadius, typography } from '@/core/theme';
 import type { MoodRating } from '@/shared/types';
 import { getMoodEmotion } from '@/shared/types';
 import { EmotionAvatar } from '@/components/emotion/EmotionAvatar';
@@ -138,7 +135,7 @@ interface HeroCardProps {
   hasCheckedInToday: boolean;
   todayMoodRating?: MoodRating | null;
   intention?: string;
-  onCheckIn?: () => void;
+  checkInQuote?: string | null;
 }
 
 export function HeroCard({
@@ -150,20 +147,13 @@ export function HeroCard({
   hasCheckedInToday,
   todayMoodRating = null,
   intention,
-  onCheckIn,
+  checkInQuote = null,
 }: HeroCardProps) {
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
   const gradient = isDark ? getHeroGradient(moment) : LIGHT_GRADIENT;
 
-  // Defensive brand colors: never crash (colors.brand may be undefined in some
-  // theme configs) and never render white-on-white. Explicit purple + white.
-  const brandPrimary = colors?.brand?.primary ?? '#634EB8';
-  const brandBorder = colors?.brand?.border ?? 'rgba(99, 78, 184, 0.45)';
-  const onBrandText = colors?.text?.onBrand ?? '#FFFFFF';
   const label = buildStreakLabel(streak);
-  const timeOfDay = getTimeOfDay();
-  const kicker = getTimeOfDayKicker(timeOfDay);
 
   // Faint ambient glows in light mode so they don't read as stains.
   const glowScale = isDark ? 1 : 0.35;
@@ -211,7 +201,6 @@ export function HeroCard({
   });
 
   // Slate-based colors for editorial light mode, default tokens for dark mode
-  const kickerColor = isDark ? colors.text.secondary : '#475569';
   const titleColor = isDark ? colors.text.primary : '#0f172a'; // Deep slate
   const subtitleColor = isDark ? colors.text.secondary : '#334155'; // Mid slate
   const eyebrowColor = isDark ? colors.text.tertiary : '#64748b';
@@ -267,9 +256,7 @@ export function HeroCard({
           <FloatingParticles isDark={isDark} />
 
           {/* Time-of-day focal illustration, tucked into the top-right corner */}
-          <View style={styles.auraWrap} pointerEvents="none">
-            <HeroAura timeOfDay={timeOfDay} size={isDark ? 104 : 96} />
-          </View>
+          <View style={styles.auraWrap} pointerEvents="none" />
         </View>
 
         {/* Top inner highlight (glass sheen) */}
@@ -284,16 +271,7 @@ export function HeroCard({
             >
               <Text style={[styles.badgeText, { color: colors.text.secondary }]}>{label}</Text>
             </Animated.View>
-          ) : (
-            <Animated.Text
-              entering={FadeInDown.delay(80).duration(400)}
-              style={[styles.kicker, { color: colors.text.secondary }]}
-            >
-              {kicker}
-            </Animated.Text>
-          )}
-
-          {!label && <View style={styles.kickerSpacer} />}
+          ) : null}
 
           <Animated.Text
             entering={FadeInDown.delay(140).duration(500)}
@@ -313,27 +291,16 @@ export function HeroCard({
             {subline}
           </Animated.Text>
 
-          {onCheckIn && (
-            <View style={[styles.checkInSlot, { zIndex: 3 }]}>
-              <Pressable
-                onPress={onCheckIn}
-                accessibilityRole="button"
-                accessibilityLabel="Check in now"
-                style={({ pressed }) => [
-                  styles.checkInBtn,
-                  {
-                    backgroundColor: brandPrimary,
-                    borderColor: brandBorder,
-                  },
-                  pressed && styles.checkInBtnPressed,
-                ]}
-              >
-                <Text style={[styles.checkInText, { color: onBrandText }]}>
-                  Check in now
-                </Text>
-              </Pressable>
-            </View>
-          )}
+          {checkInQuote ? (
+            <Animated.Text
+              entering={FadeInDown.delay(220).duration(500)}
+              style={[styles.quoteLine, { color: colors.text.secondary }]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {checkInQuote}
+            </Animated.Text>
+          ) : null}
 
           {intention ? (
             <Animated.View
@@ -390,13 +357,12 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: CARD_RADIUS,
-    borderWidth: 0.5,
+    borderWidth: 1,
     overflow: 'hidden',
-    // Slightly stronger elevation
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 4,
   },
   gradientTint: {
     ...StyleSheet.absoluteFillObject,
@@ -427,12 +393,12 @@ const styles = StyleSheet.create({
     right: 0,
     height: 1,
     borderTopWidth: 1,
-    opacity: 0.2,
+    opacity: 0.15,
   },
   content: {
-    paddingVertical: 22,
-    paddingHorizontal: 22,
-    minHeight: 200,
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    minHeight: 168,
     justifyContent: 'center',
   },
   badge: {
@@ -447,30 +413,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  kickerRow: {
-    marginBottom: spacing.xs,
-  },
-  kicker: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  kickerSpacer: {
-    height: spacing.sm,
-  },
   headline: {
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 34,
-    letterSpacing: -0.7,
+    fontSize: 24,
+    fontWeight: '700',
+    lineHeight: 30,
+    letterSpacing: -0.4,
   },
   subline: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 14.5,
+    lineHeight: 21,
     fontWeight: '400',
+    marginTop: 6,
+    marginBottom: spacing.sm,
+  },
+  // ── Check-in Quote ────────────────────────────────────────────────────
+  quoteLine: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '500',
+    fontStyle: 'italic',
+    fontFamily: typography.fontFamily.sans,
     marginTop: 4,
     marginBottom: spacing.sm,
+    letterSpacing: -0.1,
   },
   // ── Intention ────────────────────────────────────────────────────────────
   intentionContainer: {
@@ -512,36 +477,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.2,
     textAlign: 'left',
-  },
-  // ── Check-in CTA (between greeting and intention) ──────────────────────
-  checkInSlot: {
-    marginTop: spacing.sm + 2,
-    alignSelf: 'flex-start',
-  },
-  checkInBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    opacity: 1,
-    backgroundColor: '#634EB8',
-    borderColor: 'rgba(99, 78, 184, 0.35)',
-    shadowColor: '#634EB8',
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  checkInBtnPressed: {
-    opacity: 0.9,
-  },
-  checkInText: {
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.2,
   },
   // ── Meta ─────────────────────────────────────────────────────────────────
   metaRow: {

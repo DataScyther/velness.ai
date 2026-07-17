@@ -12,137 +12,85 @@ interface CustomExerciseInput {
 }
 
 const CUSTOM_EXERCISES: Record<string, CustomExerciseInput> = {
-  // CBT - Understanding Thoughts
-  'understanding-thoughts-l1-ex1': {
+  // CBT Foundations - Lesson 1: Understanding Thoughts
+  // (Maps to the lesson-generated exercise id cbt-foundations-l1-ex1)
+  'cbt-foundations-l1-ex1': {
     type: EXERCISE_TYPE.JOURNALING,
     title: 'Thought Logging',
-    goal: 'Build awareness of your stream of thoughts by writing them down',
+    goal: 'Build awareness of your stream of thoughts by writing them down, then connect them to the situation and emotion',
     instructions: [
       'Sit comfortably and observe your thoughts without judgment.',
       'Write down the most prominent thought in your mind right now.',
-      'Observe how it feels to put this thought into words.'
+      'Recall the exact situation you were in when the thought occurred (who, what, where).',
+      'Name the emotion you felt and rate its intensity from 1-10.'
     ],
     completionCriteria: 'Save your observation to complete this step.'
   },
-  'understanding-thoughts-l1-ex2': {
+  // CBT Foundations - Lesson 2: Identify Distortions
+  'cbt-foundations-l2-ex1': {
     type: EXERCISE_TYPE.JOURNALING,
-    title: 'Trigger Mapping',
-    goal: 'Identify the situation or trigger that prompted your thought',
-    instructions: [
-      'Recall the exact situation you were in when the thought occurred.',
-      'Write down who was there, what was happening, and the environment.',
-      'State: "The trigger was..."'
-    ]
-  },
-  'understanding-thoughts-l1-ex3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Emotion Tracking',
-    goal: 'Identify and rate the emotions associated with your thoughts',
-    instructions: [
-      'List the specific emotions you felt (e.g. anxiety, sadness, anger).',
-      'Rate the intensity of each emotion on a scale of 1-10.',
-      'Locate where in your body you felt the emotion (e.g. chest, shoulders).'
-    ]
-  },
-  'understanding-thoughts-l2-ex1': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Automatic Thoughts',
-    goal: 'Identify rapid, automatic reactions to a trigger',
+    title: 'Automatic Thoughts & Evidence',
+    goal: 'Identify rapid, automatic reactions to a trigger and test them against the evidence',
     instructions: [
       'Describe a recent situation that caused a sudden shift in your mood.',
-      'Write down the very first automatic thought that came to mind.',
-      'Rate how strongly you believe this thought (0-100%).'
-    ]
-  },
-  'understanding-thoughts-l2-ex2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Evidence Testing',
-    goal: 'Examine the evidence for and against your automatic thought',
-    instructions: [
-      'Write down your automatic thought.',
+      'Write down the very first automatic thought that came to mind and rate how strongly you believe it (0-100%).',
       'List objective, factual evidence that supports this thought.',
       'List objective, factual evidence that contradicts this thought.'
-    ]
+    ],
+    completionCriteria: 'Save your automatic thought and evidence to complete this step.'
   },
-  'understanding-thoughts-l2-ex3': {
+  // CBT Foundations - Lesson 3: Challenge Thoughts
+  'cbt-foundations-l3-ex1': {
     type: EXERCISE_TYPE.JOURNALING,
-    title: 'Alternative Thinking',
-    goal: 'Develop a balanced, alternative perspective based on evidence',
-    instructions: [
-      'Review the evidence for and against your automatic thought.',
-      'Write a new, balanced thought that incorporates all the facts.',
-      'Re-rate your belief in the original thought and your emotional intensity.'
-    ]
-  },
-  'understanding-thoughts-l3-ex1': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Thinking Traps',
-    goal: 'Learn to recognize common cognitive distortions or thinking traps',
+    title: 'Thinking Traps & Balanced View',
+    goal: 'Recognize common cognitive distortions and develop a balanced, alternative perspective based on evidence',
     instructions: [
       'Review common traps: all-or-nothing thinking, catastrophizing, mind reading, emotional reasoning.',
-      'Write down a recent negative thought.',
-      'Identify which thinking trap(s) this thought represents.'
-    ]
-  },
-  'understanding-thoughts-l3-ex2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Pattern Recognition',
-    goal: 'Identify recurring thinking traps in your daily life',
-    instructions: [
-      'Look over your logged thoughts from the past few days.',
-      'Note which thinking traps appear most frequently.',
-      'Describe the situations where you are most likely to fall into these traps.'
-    ]
-  },
-  'understanding-thoughts-l3-ex3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Replacement Thinking',
-    goal: 'Practice replacing thinking traps with objective thoughts',
-    instructions: [
-      'Take a thought that fell into a thinking trap.',
+      'Write down a recent negative thought and identify which thinking trap(s) it represents.',
       'Rephrase it objectively, removing the trap\'s exaggeration.',
-      'Write down the revised, realistic thought.'
-    ]
+      'Write a new, balanced thought that incorporates all the facts and re-rate your belief in the original thought.'
+    ],
+    completionCriteria: 'Save your balanced reframe to complete this step.'
   },
-  'understanding-thoughts-l4-ex1': {
+  // CBT Foundations - Lesson 4: Replace Thoughts
+  'cbt-foundations-l4-ex1': {
     type: EXERCISE_TYPE.JOURNALING,
-    title: 'Perspective Shift',
-    goal: 'View a situation from a different angle to reduce distress',
+    title: 'Perspective Shift & Balanced Thinking',
+    goal: 'View a stressful situation from a different angle and develop a moderate, realistic thought',
     instructions: [
       'Describe a situation that is currently causing you stress.',
-      'Imagine how a close, supportive friend would view this situation.',
-      'Write down what they would say or how they would describe it.'
-    ]
+      'Imagine how a close, supportive friend would view this situation and write down what they would say.',
+      'Write down the extreme positive and extreme negative outcomes, then identify the most realistic balanced outcome in between.',
+      'Write a balanced thought summarizing this middle ground and rate how it changes your emotional intensity.'
+    ],
+    completionCriteria: 'Save your balanced thought to complete this step.'
   },
-  'understanding-thoughts-l4-ex2': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Balanced Thinking',
-    goal: 'Develop a moderate, realistic view of a stressful situation',
-    instructions: [
-      'Write down the extreme positive and extreme negative outcomes.',
-      'Identify the most realistic, balanced outcome in between these extremes.',
-      'Write a balanced thought summarizing this middle ground.'
-    ]
-  },
-  'understanding-thoughts-l4-ex3': {
-    type: EXERCISE_TYPE.JOURNALING,
-    title: 'Reality Testing',
-    goal: 'Test the actual likelihood of your worries coming true',
-    instructions: [
-      'Write down a worry or negative prediction.',
-      'Rate the likelihood of it happening (0-100%).',
-      'List actions you can take to cope if the worst-case scenario occurs.'
-    ]
-  },
-  'understanding-thoughts-l5-ex1': {
+  // CBT Foundations - Lesson 5: Daily Practice
+  'cbt-foundations-l5-ex1': {
     type: EXERCISE_TYPE.JOURNALING,
     title: 'Thought Mastery Plan',
-    goal: 'Establish a sustainable plan for daily thought awareness',
+    goal: 'Establish a sustainable plan for daily thought awareness and a grounding statement',
     instructions: [
       'Summarize the key thinking traps and triggers you identified in this program.',
       'Commit to a daily thought-checking routine (e.g. 5 minutes every evening).',
-      'Write a core grounding statement to remind you that thoughts are not facts.'
-    ]
+      'Write a core grounding statement to remind you that thoughts are not facts.',
+      'List one action you can take to cope if a worrying prediction starts to feel likely.'
+    ],
+    completionCriteria: 'Save your daily practice plan to complete this step.'
+  },
+
+  // CBT Foundations - Lesson 6: Reflection
+  'cbt-foundations-l6-ex1': {
+    type: EXERCISE_TYPE.JOURNALING,
+    title: 'Program Reflection',
+    goal: 'Consolidate your CBT learnings into a long-term self-care playbook and name the insight that helped you most',
+    instructions: [
+      'Summarize the most important insight or tool you learned about your mind during this CBT program.',
+      'Write one sentence about who you are becoming as you master your thought patterns.',
+      'Choose one insight to share with a friend or write down in a physical journal.',
+      'Commit to a daily check-in time to keep your cognitive skills sharp.'
+    ],
+    completionCriteria: 'Save your reflection to complete the program.'
   },
 
   // CBT - Challenging Negative Thinking

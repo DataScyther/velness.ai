@@ -13,7 +13,7 @@
  *   8. Mood check-in flow  (selector + reflection + submit)
  *   9. SyncStatusBanner    (offline / pending queue indicator)
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import * as Haptics from 'expo-haptics';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import Animated, {
   FadeInDown,
@@ -46,6 +47,8 @@ import { useAuth } from '@/shared/hooks/useAuth';
 import { useSaveMood } from '@/shared/hooks/useMood';
 import { moodRepository } from '@/repositories/MoodRepository';
 import type { Mood, MoodRating } from '@/shared/types';
+import { getMoodLabel, getMoodEmoji } from '@/shared/types';
+import { useCheckInPresence } from '@/shared/hooks/useCheckInPresence';
 import { SparkleMark } from '@/components/emotion/EmotionAvatar';
 import { SectionHeader } from '@/shared/components/SectionHeader';
 import { spacing, typography, borderRadius } from '@/core/theme';
@@ -58,6 +61,7 @@ import {
   HomeHeader,
 } from '../components';
 
+import { HomeSkeleton } from '../components/HomeSkeleton';
 import { CheckInPanel } from '../components/CheckInPanel';
 import { HeroCard } from '../components/HeroCard';
 import { QuickActionsBar } from '../components/QuickActionsBar';
@@ -79,11 +83,12 @@ const BG_ORB = SCREEN_W * 1.2;
 
 export function HomeScreen() {
   const { colors } = useTheme();
+  const { lastCheckIn, setLastCheckIn } = useCheckInPresence();
   const { user } = useAuth();
   const uid = user?.uid || null;
   const queryClient = useQueryClient();
 
-  const { data: home } = useHomeState();
+  const { data: home, isPending, isFetching } = useHomeState();
 
   const { data: journals = [] } = useQuery({
     queryKey: ['journals_list', uid],
@@ -101,9 +106,16 @@ export function HomeScreen() {
   // ── Ambient Background Motion ────────────────────────────────────────────────
   const ambientT = useSharedValue(0);
   const reduced = useReducedMotion();
+  // While the cold-start skeleton is up, keep the orbs parked at a static
+  // frame so the background loop never competes with the incoming content
+  // for frames. Resume the gentle drift once real data arrives.
   React.useEffect(() => {
     if (reduced) {
       ambientT.value = 0.5;
+      return;
+    }
+    if (isPending) {
+      ambientT.value = 0;
       return;
     }
     const ease = Easing.inOut(Easing.ease);
@@ -115,7 +127,7 @@ export function HomeScreen() {
       -1,
       false,
     );
-  }, [ambientT, reduced]);
+  }, [ambientT, reduced, isPending]);
 
   const bgOrbAStyle = useAnimatedStyle(() => {
     const tx = -SCREEN_W * 0.3 + ambientT.value * (SCREEN_W * 0.4);
@@ -137,10 +149,45 @@ export function HomeScreen() {
   const saveMoodMutation = useSaveMood();
   const [selectedMood, setSelectedMood] = useState<MoodRating | null>(null);
   const [showSelector, setShowSelector] = useState(false);
+  // Tracks whether the user dismissed the auto check-in prompt without
+  // checking in, so we don't re-pop it on every render/refetch.
+  const [dismissedAutoCheckIn, setDismissedAutoCheckIn] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [reflectionNote, setReflectionNote] = useState('');
   const [isSavingReflection, setIsSavingReflection] = useState(false);
+  const [reflectionSaved, setReflectionSaved] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Auto-check-in prompt: when a (new) user opens the app and hasn't checked
+  // in today, pop the mood check-in panel automatically between the quick
+  // actions and the reflection card. Opens once the home data resolves; a
+  // manual dismiss (without checking in) suppresses it for the session.
+  const autoPromptShownRef = useRef(false);
+  useEffect(() => {
+    if (autoPromptShownRef.current) return;
+    if (mood === undefined) return; // still loading
+    if (!mood?.today && !dismissedAutoCheckIn) {
+      autoPromptShownRef.current = true;
+      setShowSelector(true);
+    } else {
+      autoPromptShownRef.current = true;
+    }
+  }, [mood, dismissedAutoCheckIn]);
+
+  // Reflect an existing today check-in into shared presence so other screens
+  // show it immediately.
+  useEffect(() => {
+    if (mood?.today && !lastCheckIn) {
+      setLastCheckIn({
+        rating: mood.today.rating,
+        label: getMoodLabel(mood.today.rating),
+        emoji: getMoodEmoji(mood.today.rating),
+        timestamp: mood.today.timestamp.toString(),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mood?.today]);
+
 
   // Refs for the Quick-Action "Journal" target (the inline reflection composer).
   const scrollRef = useRef<ScrollView>(null);
@@ -172,6 +219,12 @@ export function HomeScreen() {
     };
     try {
       await saveMoodMutation.mutateAsync({ uid, entry });
+      setLastCheckIn({
+        rating: selectedMood,
+        label: getMoodLabel(selectedMood),
+        emoji: getMoodEmoji(selectedMood),
+        timestamp: new Date().toISOString(),
+      });
       setIsSuccess(true);
       setShowSelector(false);
       setReflectionNote('');
@@ -183,21 +236,27 @@ export function HomeScreen() {
   }, [selectedMood, reflectionNote, uid, saveMoodMutation, queryClient]);
 
   const handleSaveReflection = useCallback(async () => {
-    if (!reflectionNote.trim()) return;
+    const note = reflectionNote.trim();
+    if (!note || isSavingReflection) return;
     setIsSavingReflection(true);
+    setReflectionSaved(false);
     try {
       await journalService.create({
         title: `Reflection — ${new Date().toLocaleDateString()}`,
-        body: reflectionNote,
+        body: note,
       });
       setReflectionNote('');
+      setReflectionSaved(true);
       void queryClient.invalidateQueries({ queryKey: HOME_STATE_QUERY_KEY });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => setReflectionSaved(false), 2000);
     } catch (err) {
       console.error('[HomeScreen] Reflection save error:', err);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsSavingReflection(false);
     }
-  }, [reflectionNote, queryClient]);
+  }, [reflectionNote, isSavingReflection, queryClient]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -295,6 +354,12 @@ export function HomeScreen() {
         </Animated.View>
       </View>
 
+      {isPending ? (
+        // Cold start (no cached home state yet) — show a cohesive shimmer
+        // placeholder with the ambient motion behind it so the transition
+        // into the live UI feels continuous rather than a blank flash.
+        <HomeSkeleton />
+      ) : (
         <ScrollView
           ref={scrollRef}
           style={styles.scrollView}
@@ -361,7 +426,11 @@ export function HomeScreen() {
           moment={greeting?.moment ?? 'default'}
           hasCheckedInToday={!!mood?.today}
           intention={greeting?.intention ?? ''}
-          onCheckIn={handleCheckIn}
+          checkInQuote={
+            lastCheckIn
+              ? `“Feeling ${lastCheckIn.label} — checked in today.”`
+              : '“How are you feeling today?”'
+          }
         />
 
         {/* ── 3. Quick Actions ─────────────────────────────────────────────── */}
@@ -385,7 +454,10 @@ export function HomeScreen() {
           reflectionInputRef={reflectionInputRef}
           isSaving={saveMoodMutation.isPending}
           onSubmit={handleSubmitMood}
-          onDismiss={() => setShowSelector(false)}
+          onDismiss={() => {
+            setShowSelector(false);
+            setDismissedAutoCheckIn(true);
+          }}
         />
         {/* Success confirmation renders as a separate, stable node (never
            replaces the panel) so a save-tap can't unmount/mount a host view
@@ -399,7 +471,7 @@ export function HomeScreen() {
             ]}
           >
             <Text style={[styles.successText, { color: colors.success }]}>
-              ✓ Checked in! Great work today.
+              ✓ Checked in — {getMoodLabel(selectedMood as MoodRating)} work today.
             </Text>
           </Animated.View>
         )}
@@ -448,25 +520,49 @@ export function HomeScreen() {
                 <Pressable
                   onPress={() => void handleSaveReflection()}
                   disabled={isSavingReflection || !reflectionNote.trim()}
-                  style={({ pressed }) => [
-                    styles.submitButton,
-                    {
-                      backgroundColor: isSavingReflection
-                        ? `${colors.brand.primary}88`
-                        : colors.brand.primary,
-                      borderColor: colors.brand.border,
-                    },
-                    pressed && !isSavingReflection && reflectionNote.trim().length > 0 && styles.submitButtonPressed,
-                    isSavingReflection && styles.submitButtonDisabled,
-                    !reflectionNote.trim() && styles.submitButtonDisabled,
-                  ]}
+                  style={({ pressed }) => {
+                    const isDisabled = isSavingReflection || !reflectionNote.trim();
+                    return [
+                      styles.submitButton,
+                      {
+                        // Brand fill + onBrand text in the active state; a
+                        // clearly-visible muted surface fill + tertiary text
+                        // when disabled so the button never vanishes in light
+                        // theme (opacity-only fade made it invisible before).
+                        backgroundColor: isDisabled ? colors.surface.tertiary : colors.brand.primary,
+                        borderColor: isDisabled ? colors.border.subtle : colors.brand.border,
+                      },
+                      pressed && !isDisabled && styles.submitButtonPressed,
+                    ];
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel="Save reflection"
                 >
                   {isSavingReflection ? (
-                    <ActivityIndicator size="small" color={colors.brand.contrastText} />
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.text.onBrand}
+                    />
+                  ) : reflectionSaved ? (
+                    <Text
+                      style={[
+                        styles.submitButtonText,
+                        { color: colors.text.onBrand },
+                      ]}
+                    >
+                      Saved ✓
+                    </Text>
                   ) : (
-                    <Text style={[styles.submitButtonText, { color: colors.brand.contrastText }]}>
+                    <Text
+                      style={[
+                        styles.submitButtonText,
+                        {
+                          color: reflectionNote.trim()
+                            ? colors.text.onBrand
+                            : colors.text.tertiary,
+                        },
+                      ]}
+                    >
                       Save reflection
                     </Text>
                   )}
@@ -527,7 +623,8 @@ export function HomeScreen() {
             </View>
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -668,23 +765,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: 14,
     borderRadius: 16,
-    minHeight: 48,
+    minHeight: 50,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
     opacity: 1,
-    shadowColor: '#634EB8',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 4,
   },
   submitButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.92,
+    transform: [{ scale: 0.985 }],
   },
   submitButtonText: {
     fontSize: 15,

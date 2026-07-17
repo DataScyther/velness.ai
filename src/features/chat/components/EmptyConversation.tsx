@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp, useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 import { RefreshCw, ChevronRight } from 'lucide-react-native';
+import Svg, { Defs, LinearGradient, Stop, Rect, Path } from 'react-native-svg';
 import { BreathingSticker, type StickerKind } from './BreathingSticker';
 import { EmotionAvatar } from '@/components/emotion';
 import type { EmotionType } from '@/constants/emotions';
@@ -10,7 +11,6 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/core/store/useAppStore';
 import { useSessionContext } from '@/features/chat/hooks/useSessionContext';
 import { spacing, borderRadius } from '@/core/theme/tokens';
-import Svg, { Path } from 'react-native-svg';
 
 function getGreeting(name: string): string {
   const hour = new Date().getHours();
@@ -33,10 +33,7 @@ function formatRelativeDate(date: Date): string {
 }
 
 // ── Topic chip glyphs (react-icons path data, rendered via react-native-svg) ──
-// Work → MdWork (md), Relationships → PiHeartBreakFill (pi),
-// Studies → TbSchoolFilled (tb), Sleep → GiNightSleep (gi).
-type ChipGlyphChild =
-  | { tag: 'path'; d: string; fill?: 'none' };
+type ChipGlyphChild = { tag: 'path'; d: string; fill?: 'none' };
 
 interface ChipGlyph {
   viewBox: string;
@@ -71,10 +68,6 @@ const CHIP_GLYPHS = {
   },
 } satisfies Record<string, ChipGlyph>;
 
-// ── Breathing Space card stickers ──
-// Each template maps to a high-quality, colorful, sticker-style illustration
-// (rendered by BreathingSticker) so the card visually communicates what the
-// exercise is about — no skeleton/loading icon.
 const STICKER_KINDS: Record<string, StickerKind> = {
   'Breathing Space': 'breath',
   'Box Breathing': 'box',
@@ -100,16 +93,10 @@ const STICKER_KINDS: Record<string, StickerKind> = {
 
 type ChipGlyphName = keyof typeof CHIP_GLYPHS;
 
-// ── Breathing Space rotating templates ──
-// A large pool of wellness/breathing exercises. A fresh one is picked every
-// time the chat screen mounts (new user, refresh, or re-entering the tab),
-// so the Breathing Space card keeps surfacing new examples/templates.
 interface BreathingTemplate {
   title: string;
   subtitle: string;
-  // Prompt sent to the assistant when the user taps "Start".
   prompt: string;
-  // Accent color for the sticker + card tint.
   color: string;
 }
 
@@ -136,8 +123,6 @@ const BREATHING_TEMPLATES: BreathingTemplate[] = [
   { title: 'Confidence Boost', subtitle: 'Reconnect with something you do well', prompt: 'Help me rebuild a little confidence before a hard conversation.', color: '#FB923C' },
 ];
 
-// Pick a random index that differs from the previous one (when possible),
-// so consecutive refreshes always show a new template.
 function pickTemplateIndex(prev: number): number {
   if (BREATHING_TEMPLATES.length <= 1) return 0;
   let next = prev;
@@ -181,15 +166,13 @@ export const EmptyConversation = React.memo(function EmptyConversation({
   const user = useAppStore((state) => state.session.user);
   const sessionContext = useSessionContext();
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
-  // Rotating Breathing Space template — reseeded on every mount (new user,
-  // refresh, or re-entering the chat screen) so a fresh example appears.
   const [templateIndex, setTemplateIndex] = useState<number>(() => pickTemplateIndex(-1));
+
   useEffect(() => {
     setTemplateIndex((prev) => pickTemplateIndex(prev));
   }, []);
 
   const breathingTemplate = BREATHING_TEMPLATES[templateIndex];
-
 
   const userName = user?.name || 'NK';
   const currentMood = sessionContext?.mood || sessionContext?.previousSessionMood || 'Overwhelmed';
@@ -215,7 +198,6 @@ export const EmptyConversation = React.memo(function EmptyConversation({
     onResumeLastConversation?.();
   }, [onResumeLastConversation]);
 
-  // Topic chips for "What's been on your mind today?"
   const topicChips = useMemo<{ label: string; icon: ChipGlyphName; text: string }[]>(() => [
     { label: 'Work', icon: 'work', text: 'I want to reflect on my work day' },
     { label: 'Relationships', icon: 'relationship', text: 'I need to talk about relationships' },
@@ -223,30 +205,45 @@ export const EmptyConversation = React.memo(function EmptyConversation({
     { label: 'Sleep', icon: 'sleep', text: "I'm having trouble winding down for sleep" },
   ], []);
 
-  // Mood lookup map
   const moodMap = useMemo(() => ({
-    great: { emotion: 'great' as EmotionType, label: 'Great', color: '#10B981' },
-    calm: { emotion: 'calm' as EmotionType, label: 'Calm', color: '#3B82F6' },
-    sad: { emotion: 'notGood' as EmotionType, label: 'Sad', color: '#8B5CF6' },
-    frustrated: { emotion: 'overwhelmed' as EmotionType, label: 'Frustrated', color: '#EF4444' },
-    anxious: { emotion: 'overwhelmed' as EmotionType, label: 'Anxious', color: '#F59E0B' },
-    overwhelmed: { emotion: 'overwhelmed' as EmotionType, label: 'Overwhelmed', color: '#6D28D9' },
+    great: { emotion: 'great' as EmotionType, label: 'Great', color: '#10B981', gradient: ['#10B981', '#059669'] },
+    calm: { emotion: 'calm' as EmotionType, label: 'Calm', color: '#3B82F6', gradient: ['#3B82F6', '#2563EB'] },
+    sad: { emotion: 'notGood' as EmotionType, label: 'Sad', color: '#8B5CF6', gradient: ['#8B5CF6', '#7C3AED'] },
+    frustrated: { emotion: 'overwhelmed' as EmotionType, label: 'Frustrated', color: '#EF4444', gradient: ['#EF4444', '#DC2626'] },
+    anxious: { emotion: 'overwhelmed' as EmotionType, label: 'Anxious', color: '#F59E0B', gradient: ['#F59E0B', '#D97706'] },
+    overwhelmed: { emotion: 'overwhelmed' as EmotionType, label: 'Overwhelmed', color: '#6D28D9', gradient: ['#6D28D9', '#5B21B6'] },
   }), []);
 
   const currentMoodKey = currentMood?.toLowerCase() || 'overwhelmed';
-  const moodInfo = moodMap[currentMoodKey as keyof typeof moodMap] || { emotion: 'good' as EmotionType, label: currentMood, color: colors.brand.primary };
+  const moodInfo = moodMap[currentMoodKey as keyof typeof moodMap] || {
+    emotion: 'good' as EmotionType,
+    label: currentMood,
+    color: colors.brand.primary,
+    gradient: [colors.brand.primary, colors.brand.secondary]
+  };
 
   return (
     <View style={styles.container}>
-      {/* Flexible spacer — rebalances vertical distribution so the hero sits
-          lower / more balanced rather than crammed at the top with a head gap */}
       <View style={styles.heroSpacer} />
-      {/* Unified hero greeting + last check-in card */}
+
+      {/* Hero Greeting & Wellness Check-in — Airy, Refined, Premium Card Layout */}
       <Animated.View
         entering={FadeInUp.duration(450)}
         style={[styles.heroCard, { backgroundColor: colors.surface.primary, borderColor: colors.border.default }]}
       >
-        {/* Greeting section */}
+        {/* Soft, calming radial/linear background aura */}
+        <Svg style={StyleSheet.absoluteFillObject} width="100%" height="100%">
+          <Defs>
+            <LinearGradient id="heroCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0.02} />
+              <Stop offset="50%" stopColor={colors.brand.secondary} stopOpacity={0.008} />
+              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#heroCardGrad)" rx={borderRadius.xl} />
+        </Svg>
+
+        {/* Spacious, refined greeting text */}
         <View style={styles.heroCardHead}>
           <Text style={[styles.heroCardGreeting, { color: colors.text.primary }]}>
             {getGreeting(userName)}
@@ -256,43 +253,46 @@ export const EmptyConversation = React.memo(function EmptyConversation({
           </Text>
         </View>
 
-        <View style={[styles.heroCardDivider, { backgroundColor: colors.border.subtle }]} />
-
-        {/* Last check-in section */}
+        {/* Clean check-in status row — borderless, airy and soothing layout */}
         <View style={styles.heroCardCheckIn}>
           <View style={styles.heroCardCheckInHeader}>
             <View style={styles.heroCardCheckInHeaderLeft}>
-              <View style={[styles.heroCardCheckInDot, { backgroundColor: colors.brand.primary }]} />
-              <Text style={[styles.heroCardCheckInLabel, { color: colors.text.tertiary }]}>Your last check-in</Text>
+              <View style={[styles.statusIndicatorDot, { backgroundColor: moodInfo.color }]} />
+              <Text style={[styles.heroCardCheckInLabel, { color: colors.text.tertiary }]}>YOUR LAST CHECK-IN</Text>
             </View>
             {dateLabel && (
               <Text style={[styles.heroCardCheckInDate, { color: colors.text.tertiary }]}>{dateLabel}</Text>
             )}
           </View>
 
+          {/* Calming & elegant layout without overwhelming boxes or nested borders */}
           <View style={styles.heroCardCheckInBody}>
-            <View style={[styles.heroCardMoodAvatar, { backgroundColor: moodInfo.color + '1A' }]}>
-              <EmotionAvatar emotion={moodInfo.emotion} size={30} animated={false} showGlow={false} />
+            {/* Glowing background aura behind the emotion avatar */}
+            <View style={styles.avatarWrapper}>
+              <View style={[styles.avatarGlow, { backgroundColor: moodInfo.color, opacity: 0.12 }]} />
+              <EmotionAvatar emotion={moodInfo.emotion} size={36} animated={false} showGlow={false} />
             </View>
+
             <View style={styles.heroCardMoodText}>
-              <Text style={[styles.heroCardCheckInCaption, { color: colors.text.tertiary }]}>Feeling</Text>
-              <Text style={[styles.heroCardMoodValue, { color: moodInfo.color }]}>{moodInfo.label}</Text>
+              <Text style={[styles.heroCardMoodValue, { color: moodInfo.color }]}>
+                {moodInfo.label}
+              </Text>
+              {focus ? (
+                <Text style={[styles.heroCardFocusValue, { color: colors.text.secondary }]} numberOfLines={1}>
+                  Focusing on {focus.toLowerCase()}
+                </Text>
+              ) : (
+                <Text style={[styles.heroCardCheckInCaption, { color: colors.text.tertiary }]}>
+                  Logged recently
+                </Text>
+              )}
             </View>
           </View>
-
-          {focus && (
-            <View style={[styles.heroCardFocus, { borderTopColor: colors.border.subtle }]}>
-              <Text style={[styles.heroCardFocusLabel, { color: colors.text.tertiary }]}>Focus</Text>
-              <Text style={[styles.heroCardFocusValue, { color: colors.text.secondary }]} numberOfLines={1}>
-                {focus}
-              </Text>
-            </View>
-          )}
         </View>
       </Animated.View>
 
       {/* 3. What's been on your mind today? Chips Section */}
-      <Animated.View entering={FadeInUp.duration(450).delay(250)} style={styles.section}>
+      <Animated.View entering={FadeInUp.duration(450).delay(150)} style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>What's been on your mind today?</Text>
         <View style={styles.chipRow}>
           {topicChips.map((chip) => {
@@ -315,10 +315,25 @@ export const EmptyConversation = React.memo(function EmptyConversation({
                         : pressed
                           ? colors.brand.primary + '18'
                           : colors.surface.primary,
-                      borderColor: isSelected ? colors.brand.primary : colors.border.default,
+                      borderColor: isSelected
+                        ? colors.brand.primary
+                        : pressed
+                          ? colors.brand.border
+                          : colors.border.default,
                     }
                   ]}>
-                    <ChipGlyphIcon glyph={chip.icon} size={16} color={isSelected ? colors.brand.contrastText : colors.brand.primary} style={styles.chipIcon} />
+                    {isSelected && (
+                      <Svg style={StyleSheet.absoluteFillObject} width="100%" height="100%">
+                        <Defs>
+                          <LinearGradient id="chipSelectGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.15} />
+                            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
+                          </LinearGradient>
+                        </Defs>
+                        <Rect width="100%" height="100%" fill="url(#chipSelectGrad)" rx={100} />
+                      </Svg>
+                    )}
+                    <ChipGlyphIcon glyph={chip.icon} size={15} color={isSelected ? colors.brand.contrastText : colors.brand.primary} style={styles.chipIcon} />
                     <Text style={[styles.chipLabel, { color: isSelected ? colors.brand.contrastText : colors.text.primary }]}>{chip.label}</Text>
                   </View>
                 )}
@@ -328,9 +343,8 @@ export const EmptyConversation = React.memo(function EmptyConversation({
         </View>
       </Animated.View>
 
-      {/* 4. Shortcuts: Breathing & Resume last session (Upgraded to prominent full-width card widgets) */}
-      <Animated.View entering={FadeInUp.duration(450).delay(450)} style={styles.shortcutContainer}>
-        {/* Breathing Space card — rotates through templates on each mount/refresh */}
+      {/* 4. Shortcuts: Breathing & Resume last session — High-Quality Premium Cards */}
+      <Animated.View entering={FadeInUp.duration(450).delay(250)} style={styles.shortcutContainer}>
         <Pressable
           onPress={() => {
             try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
@@ -348,12 +362,26 @@ export const EmptyConversation = React.memo(function EmptyConversation({
                 borderColor: colors.border.default,
               }
             ]}>
+              {/* Premium Subtle Gradient overlay for the card background */}
+              <Svg style={StyleSheet.absoluteFillObject} width="100%" height="100%">
+                <Defs>
+                  <LinearGradient id="exerciseRecCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor={breathingTemplate.color} stopOpacity={0.03} />
+                    <Stop offset="100%" stopColor={breathingTemplate.color} stopOpacity={0.005} />
+                  </LinearGradient>
+                </Defs>
+                <Rect width="100%" height="100%" fill="url(#exerciseRecCardGrad)" rx={borderRadius.xl} />
+              </Svg>
+
               <View style={styles.breathingLeft}>
-                <BreathingSticker
-                  kind={STICKER_KINDS[breathingTemplate.title] ?? 'breath'}
-                  color={breathingTemplate.color}
-                  size={30}
-                />
+                {/* Visual sticker wrapped in a custom, glowing, translucent circle */}
+                <View style={[styles.stickerGlowWrapper, { backgroundColor: breathingTemplate.color + '18' }]}>
+                  <BreathingSticker
+                    kind={STICKER_KINDS[breathingTemplate.title] ?? 'breath'}
+                    color={breathingTemplate.color}
+                    size={30}
+                  />
+                </View>
                 <View style={styles.breathingMeta}>
                   <Text style={[styles.breathingTitle, { color: colors.text.primary }]}>{breathingTemplate.title}</Text>
                   <Text style={[styles.breathingSubtitle, { color: colors.text.secondary }]}>{breathingTemplate.subtitle}</Text>
@@ -366,11 +394,11 @@ export const EmptyConversation = React.memo(function EmptyConversation({
                     setTemplateIndex((prev) => pickTemplateIndex(prev));
                   }}
                   hitSlop={8}
-                  style={[styles.refreshPill, { borderColor: colors.border.default }]}
+                  style={[styles.refreshPill, { borderColor: colors.border.default, backgroundColor: colors.surface.secondary }]}
                   accessibilityRole="button"
                   accessibilityLabel="Show another exercise"
                 >
-                  <RefreshCw size={14} color={colors.text.secondary} />
+                  <RefreshCw size={12} color={colors.text.secondary} />
                 </Pressable>
                 <View style={[styles.startPill, { backgroundColor: colors.brand.primary }]}>
                   <Text style={[styles.startText, { color: colors.brand.contrastText }]}>Start</Text>
@@ -395,8 +423,8 @@ export const EmptyConversation = React.memo(function EmptyConversation({
                 }
               ]}>
                 <View style={styles.resumeLeft}>
-                  <View style={[styles.resumeIconCircle, { backgroundColor: colors.background.secondary }]}>
-                    <RefreshCw size={16} color={colors.brand.primary} />
+                  <View style={[styles.resumeIconCircle, { backgroundColor: colors.surface.secondary }]}>
+                    <RefreshCw size={15} color={colors.brand.primary} />
                   </View>
                   <View style={styles.resumeMeta}>
                     <Text style={[styles.resumeTitle, { color: colors.text.primary }]}>Resume Last Conversation</Text>
@@ -410,8 +438,6 @@ export const EmptyConversation = React.memo(function EmptyConversation({
         )}
       </Animated.View>
 
-      {/* Bottom spacer — smaller than the top spacer so the card block
-          sits higher (less Y-axis offset toward the bottom) */}
       <View style={styles.heroSpacerBottom} />
     </View>
   );
@@ -426,45 +452,44 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['6xl'],
   },
   heroSpacer: {
-    flex: 0.5,
+    flex: 0.4,
   },
   heroSpacerBottom: {
-    flex: 1.5,
+    flex: 1.4,
   },
   heroCard: {
     alignSelf: 'stretch',
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl,
     marginBottom: spacing.xl,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 3,
+    position: 'relative',
+    overflow: 'hidden',
   },
   heroCardHead: {
     marginBottom: spacing.lg,
   },
   heroCardGreeting: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
-    letterSpacing: -0.6,
-    marginBottom: spacing.xs,
+    letterSpacing: -0.5,
+    marginBottom: 4,
   },
   heroCardTagline: {
     fontSize: 14,
     fontWeight: '400',
     lineHeight: 20,
-  },
-  heroCardDivider: {
-    height: 1,
-    width: '100%',
-    marginBottom: spacing.lg,
+    letterSpacing: 0.1,
   },
   heroCardCheckIn: {
     width: '100%',
+    marginTop: spacing.sm,
   },
   heroCardCheckInHeader: {
     flexDirection: 'row',
@@ -476,33 +501,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  heroCardCheckInDot: {
+  statusIndicatorDot: {
     width: 6,
     height: 6,
-    borderRadius: borderRadius.full,
-    marginRight: spacing.xs,
+    borderRadius: 3,
+    marginRight: 8,
   },
   heroCardCheckInLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   heroCardCheckInDate: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
   heroCardCheckInBody: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  heroCardMoodAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
+  avatarWrapper: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    position: 'relative',
+  },
+  avatarGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 23,
+    transform: [{ scale: 1.15 }],
   },
   heroCardMoodText: {
     flex: 1,
@@ -510,35 +540,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroCardCheckInCaption: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    marginBottom: 2,
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
   },
   heroCardMoodValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: -0.2,
-  },
-  heroCardFocus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-  },
-  heroCardFocusLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    marginRight: spacing.sm,
   },
   heroCardFocusValue: {
     fontSize: 13,
     fontWeight: '500',
-    flex: 1,
+    marginTop: 2,
   },
   section: {
     marginBottom: spacing.xl,
@@ -546,8 +560,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     opacity: 0.85,
+    letterSpacing: -0.1,
   },
   chipRow: {
     flexDirection: 'row',
@@ -568,18 +583,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
-    shadowRadius: 1,
-    elevation: 1,
+    shadowRadius: 2,
+    elevation: 2,
     alignSelf: 'flex-start',
+    position: 'relative',
+    overflow: 'hidden',
   },
   chipIcon: {
-    marginRight: 8,
+    marginRight: 6,
   },
   chipLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   shortcutContainer: {
     width: '100%',
@@ -590,13 +608,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 1,
     borderRadius: borderRadius.xl,
-    padding: spacing.md + 2,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.md,
     width: '100%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowRadius: 6,
+    elevation: 2,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  stickerGlowWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   breathingLeft: {
     flexDirection: 'row',
@@ -614,23 +642,23 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   breathingSubtitle: {
-    fontSize: 11,
-    fontWeight: '400',
-    lineHeight: 14,
+    fontSize: 11.5,
+    fontWeight: '500',
+    lineHeight: 15,
   },
   breathingActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.sm - 2,
+    zIndex: 2,
   },
   refreshPill: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
   },
   startPill: {
     paddingHorizontal: spacing.md,
@@ -652,13 +680,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 1,
     borderRadius: borderRadius.xl,
-    padding: spacing.md + 2,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.md,
     width: '100%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   resumeLeft: {
     flexDirection: 'row',
@@ -667,9 +696,9 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   resumeIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm + 2,
@@ -683,10 +712,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   resumeSubtitle: {
-    fontSize: 11,
-    fontWeight: '400',
-    lineHeight: 14,
+    fontSize: 11.5,
+    fontWeight: '500',
+    lineHeight: 15,
   },
 });
-
-export default EmptyConversation;

@@ -6,5 +6,6 @@ export interface ConversationState {
   conversationId: string | null;
   messages: Message[];
   status: ConversationStatus;
+  isReflecting: boolean;
   error?: string;
 }

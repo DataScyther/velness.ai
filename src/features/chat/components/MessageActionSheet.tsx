@@ -3,6 +3,7 @@ import { View, Text, Pressable, Modal, StyleSheet, Platform, ActionSheetIOS } fr
 import { useTheme } from '@/hooks/useTheme';
 import { spacing, borderRadius } from '@/core/theme/tokens';
 import * as Haptics from 'expo-haptics';
+import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 export interface Action {
   label: string;
@@ -45,7 +46,7 @@ export function MessageActionSheet({ visible, onClose, actions }: MessageActionS
           currentOnClose();
           return;
         }
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
         currentActions[buttonIndex].onPress();
         currentOnClose();
       }
@@ -58,44 +59,75 @@ export function MessageActionSheet({ visible, onClose, actions }: MessageActionS
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
     >
-      <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={onClose}>
-        <Pressable
-          style={[styles.sheet, { backgroundColor: colors.surface.primary }]}
-          onPress={() => {}}
+      <View style={styles.modalContainer}>
+        {/* Backdrop animation */}
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(200)}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.overlay }]}
         >
-          {actions.map((action, index) => (
-            <Pressable
-              key={index}
-              style={({ pressed }) => [
-                styles.actionRow,
-                pressed && { backgroundColor: colors.surface.secondary },
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                action.onPress();
-                onClose();
-              }}
-              accessibilityRole="menuitem"
-            >
-              {action.icon && <View style={styles.iconContainer}>{action.icon}</View>}
-              <Text
-                style={[
-                  styles.actionLabel,
-                  { color: action.destructive ? colors.danger : colors.text.primary },
-                ]}
-              >
-                {action.label}
-              </Text>
-            </Pressable>
-          ))}
-          <View style={[styles.separator, { backgroundColor: colors.border.default }]} />
+          <Pressable style={styles.backdropPressable} onPress={onClose} />
+        </Animated.View>
+
+        {/* Sheet animation */}
+        <Animated.View
+          entering={SlideInDown.duration(250)}
+          exiting={SlideOutDown.duration(200)}
+          style={[styles.sheet, { backgroundColor: colors.surface.primary, borderTopColor: colors.border.default }]}
+        >
+          {/* Top handle pill for premium look */}
+          <View style={[styles.sheetHandle, { backgroundColor: colors.border.strong }]} />
+
+          <View style={styles.actionsContainer}>
+            {actions.map((action, index) => {
+              const isLastAction = index === actions.length - 1;
+              return (
+                <View key={index}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.actionRow,
+                      pressed && { backgroundColor: colors.surface.secondary },
+                    ]}
+                    onPress={() => {
+                      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                      action.onPress();
+                      onClose();
+                    }}
+                    accessibilityRole="menuitem"
+                  >
+                    {action.icon && (
+                      <View style={[styles.iconContainer, action.destructive && { tintColor: colors.danger }]}>
+                        {action.icon}
+                      </View>
+                    )}
+                    <Text
+                      style={[
+                        styles.actionLabel,
+                        { color: action.destructive ? colors.danger : colors.text.primary },
+                        action.destructive && { fontWeight: '600' },
+                      ]}
+                    >
+                      {action.label}
+                    </Text>
+                  </Pressable>
+                  {!isLastAction && (
+                    <View style={[styles.rowDivider, { backgroundColor: colors.border.subtle }]} />
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={[styles.cancelSeparator, { backgroundColor: colors.border.default }]} />
+
           <Pressable
             style={({ pressed }) => [
               styles.cancelRow,
-              pressed && { backgroundColor: colors.surface.secondary },
+              { backgroundColor: colors.surface.secondary },
+              pressed && { opacity: 0.8 },
             ]}
             onPress={onClose}
             accessibilityRole="menuitem"
@@ -103,52 +135,83 @@ export function MessageActionSheet({ visible, onClose, actions }: MessageActionS
           >
             <Text style={[styles.cancelLabel, { color: colors.text.primary }]}>Cancel</Text>
           </Pressable>
-        </Pressable>
-      </Pressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
   },
+  backdropPressable: {
+    flex: 1,
+    width: '100%',
+  },
   sheet: {
-    borderTopLeftRadius: borderRadius.glass,
-    borderTopRightRadius: borderRadius.glass,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
+    borderTopLeftRadius: borderRadius['glass-lg'] || 24,
+    borderTopRightRadius: borderRadius['glass-lg'] || 24,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'android' ? spacing.xl : spacing['2xl'],
     paddingHorizontal: spacing.lg,
+    borderTopWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4.5,
+    borderRadius: 2.5,
+    alignSelf: 'center',
+    marginBottom: 16,
+    opacity: 0.4,
+  },
+  actionsContainer: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.sm,
+    height: 52,
+    paddingHorizontal: spacing.md,
   },
   iconContainer: {
     marginRight: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 22,
   },
   actionLabel: {
-    fontSize: 16,
-    fontWeight: '400',
+    fontSize: 15.5,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
-  separator: {
+  rowDivider: {
     height: 1,
-    marginVertical: spacing.sm,
+    width: '100%',
+  },
+  cancelSeparator: {
+    height: 1,
+    marginVertical: 12,
   },
   cancelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 48,
-    borderRadius: borderRadius.sm,
+    height: 50,
+    borderRadius: borderRadius.lg,
+    marginTop: 4,
   },
   cancelLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15.5,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
 });
 

@@ -136,4 +136,25 @@ describe('MemoryManager', () => {
       expect(result[2].content).toBe('Hi');
     });
   });
+
+  describe('adaptive depth (crisis escalation)', () => {
+    it('defaults to standard mode', () => {
+      expect(manager.getRecommendedMode()).toBe('standard');
+    });
+
+    it('escalates to deep mode on crisis signals', () => {
+      manager.observeUserMessage('I want to die');
+      expect(manager.getRecommendedMode()).toBe('deep');
+    });
+
+    it('records non-neutral mood from a user message', () => {
+      manager.observeUserMessage('I feel so anxious about everything');
+      expect(manager.getSession().recentMood).toBe('anxious');
+    });
+
+    it('does not record neutral mood', () => {
+      manager.observeUserMessage('Tell me about breathing exercises');
+      expect(manager.getSession().recentMood).toBeNull();
+    });
+  });
 });

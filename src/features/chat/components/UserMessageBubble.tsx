@@ -3,19 +3,24 @@
  *
  * Right-aligned pill bubble for user messages.
  *
- * Grouping rules (iMessage-style):
- *  - Corner radius flattened on the top-right for grouped messages
- *    (messages consecutive within the same user turn)
- *  - Timestamp shown only on the last in the group
- *
- * Animation:
- *  - SlideInRight for send, routed through BaseMessageBubble
+ * Premium redesign:
+ *  - Gradient background (brand → brand secondary)
+ *  - Refined shadow with brand-tinted glow
+ *  - iMessage-style corner grouping with softer radius transitions
+ *  - Smooth scale animation on long press
+ *  - Better timestamp styling
  */
 
 import React, { useCallback, useState } from 'react';
 import { View, StyleSheet, Pressable, Share } from 'react-native';
 import * as ExpoClipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '@/hooks/useTheme';
 import { BaseMessageBubble } from './BaseMessageBubble';
 import { MessageContent } from './MessageContent';
@@ -46,6 +51,12 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const showTimestamp = !isGrouped || isLast;
 
+  const pressScale = useSharedValue(1);
+
+  const pressAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
   const handleCopy = useCallback(async () => {
     if (!message.content) return;
     try {
@@ -64,7 +75,10 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
   }, [message.content]);
 
   const handleLongPress = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    pressScale.value = withTiming(0.96, { duration: 80 }, () => {
+      pressScale.value = withTiming(1, { duration: 150 });
+    });
     setActionSheetVisible(true);
   }, []);
 
@@ -87,18 +101,31 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
           onLongPress={handleLongPress}
           accessibilityHint="Long press for more options"
         >
-          <View
-            style={[
-              styles.bubble,
-              radiusStyle,
-              {
-                backgroundColor: colors.brand.primary,
-                shadowColor: colors.brand.primary,
-              },
-            ]}
-          >
-            <MessageContent message={message} />
-          </View>
+          <Animated.View style={pressAnimStyle}>
+            <View
+              style={[
+                styles.bubble,
+                radiusStyle,
+                {
+                  backgroundColor: colors.brand.primary,
+                  shadowColor: colors.brand.primary,
+                },
+              ]}
+            >
+              {/* Gradient overlay for premium depth */}
+              <Svg style={[StyleSheet.absoluteFillObject, radiusStyle, { overflow: 'hidden' }]} width="100%" height="100%">
+                <Defs>
+                  <LinearGradient id="userBubbleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.12} />
+                    <Stop offset="50%" stopColor="#FFFFFF" stopOpacity={0.03} />
+                    <Stop offset="100%" stopColor="#000000" stopOpacity={0.08} />
+                  </LinearGradient>
+                </Defs>
+                <Rect width="100%" height="100%" fill="url(#userBubbleGrad)" />
+              </Svg>
+              <MessageContent message={message} />
+            </View>
+          </Animated.View>
         </Pressable>
 
         {showTimestamp && (
@@ -128,13 +155,15 @@ const styles = StyleSheet.create({
   bubble: {
     paddingHorizontal: chat.bubble.paddingHUser,
     paddingVertical: chat.bubble.paddingVUser,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 4,
+    overflow: 'hidden',
+    position: 'relative',
   },
   timestamp: {
-    marginTop: 4,
+    marginTop: 5,
     marginRight: 2,
   },
 });

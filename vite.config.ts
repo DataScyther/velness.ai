@@ -59,11 +59,12 @@ function apiDevPlugin(): Plugin {
               body: req.method !== 'GET' && req.method !== 'HEAD' ? bodyBuffer : undefined,
             });
 
-            // Dynamically import the handler (allows hot-reload to work)
-            const { default: handler } = await import(
-              /* @vite-ignore */
-              path.resolve(__dirname, './api/ai/chat.ts')
+            // Compile + load the edge handler through Vite's SSR pipeline so TS
+            // and extensionless/alias imports resolve like production (Vercel).
+            const mod = await server.ssrLoadModule(
+              path.resolve(__dirname, './api/ai/chat.ts'),
             );
+            const handler = mod.default;
 
             const webResponse: Response = await handler(webRequest);
 

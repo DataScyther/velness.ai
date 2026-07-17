@@ -25,6 +25,11 @@
     --border-default: #E2E8F0;
     --border-strong: #CBD5E1;
     --border-subtle: #EEF2F7;
+    --glass-highlight: rgba(15, 23, 42, 0.04);
+    --glass-light: rgba(255, 255, 255, 0.7);
+    --glass-medium: rgba(15, 23, 42, 0.06);
+    --glass-dark: rgba(15, 23, 42, 0.10);
+    --glass-border: rgba(15, 23, 42, 0.10);
     --brand-primary: #6C4CF1;
     --brand-secondary: #8B5CF6;
     --brand-contrastText: #FFFFFF;
@@ -58,6 +63,11 @@
     --border-default: rgba(255, 255, 255, 0.10);
     --border-strong: rgba(255, 255, 255, 0.18);
     --border-subtle: rgba(255, 255, 255, 0.05);
+    --glass-highlight: rgba(255, 255, 255, 0.10);
+    --glass-light: rgba(255, 255, 255, 0.7);
+    --glass-medium: rgba(255, 255, 255, 0.5);
+    --glass-dark: rgba(15, 10, 26, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.20);
     --brand-primary: #8B5CF6;
     --brand-secondary: #A78BFA;
     --brand-contrastText: #FFFFFF;

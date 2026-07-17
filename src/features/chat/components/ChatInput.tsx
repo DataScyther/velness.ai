@@ -3,7 +3,8 @@ import { View, TextInput, Text, StyleSheet, Pressable, Alert, type NativeSynthet
 import { Square, AudioLines, MicOff, X, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring, withTiming, FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring, withTiming, withRepeat, withDelay, FadeIn, FadeOut } from 'react-native-reanimated';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import {
   speechRecognitionAvailable,
   useSpeechRecognitionEvent,
@@ -22,6 +23,43 @@ const WARM_PLACEHOLDERS = [
   "Tell me how your day went...",
   "How can I support you today?",
 ] as const;
+
+/**
+ * Subtle "live presence" dot shown beside the Send button while the user is
+ * composing. It breathes gently so the composer feels alive and responsive.
+ */
+function LivePresenceDot() {
+  const { colors } = useTheme();
+  const pulse = useSharedValue(0.3);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 900 }),
+        withTiming(0.3, { duration: 900 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: pulse.value,
+    transform: [{ scale: 0.8 + pulse.value * 0.4 }],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.presenceDot,
+        { backgroundColor: colors.brand.primary },
+        animStyle,
+      ]}
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+    />
+  );
+}
 
 interface ChatInputProps {
   onSend: (text: string) => void;
@@ -117,7 +155,7 @@ export function ChatInput({
       { duration: 250 }
     );
     focusShadowOpacity.value = withTiming(
-      isFocused ? 0.12 : 0.04,
+      isFocused ? 0.14 : 0.04,
       { duration: 250 }
     );
   }, [isFocused, colors]);
@@ -344,23 +382,42 @@ export function ChatInput({
       style={[styles.outerContainer, outerStyle]}
     >
       {isListening ? (
-        // Voice Typing View
+        // Voice Typing View — Premium Redesign
         <Animated.View
           entering={FadeIn.duration(250)}
           exiting={FadeOut.duration(200)}
-          style={[styles.voiceContainer, { backgroundColor: colors.surface.primary, borderColor: colors.brand.primary }]}
+          style={[
+            styles.voiceContainer,
+            {
+              backgroundColor: colors.surface.primary,
+              borderColor: colors.brand.primary,
+            },
+          ]}
         >
+          {/* Brand gradient accent at left edge */}
+          <View style={styles.voiceAccent}>
+            <Svg width={4} height="100%">
+              <Defs>
+                <LinearGradient id="voiceAccentGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0.8} />
+                  <Stop offset="100%" stopColor={colors.brand.secondary} stopOpacity={0.8} />
+                </LinearGradient>
+              </Defs>
+              <Rect width={4} height="100%" rx={2} fill="url(#voiceAccentGrad)" />
+            </Svg>
+          </View>
+
           <View style={styles.waveformContainer}>
             <Animated.View style={[styles.waveBar, animatedBar1, { backgroundColor: colors.brand.primary }]} />
-            <Animated.View style={[styles.waveBar, animatedBar2, { backgroundColor: colors.brand.primary }]} />
+            <Animated.View style={[styles.waveBar, animatedBar2, { backgroundColor: colors.brand.secondary }]} />
             <Animated.View style={[styles.waveBar, animatedBar3, { backgroundColor: colors.brand.primary }]} />
-            <Animated.View style={[styles.waveBar, animatedBar4, { backgroundColor: colors.brand.primary }]} />
+            <Animated.View style={[styles.waveBar, animatedBar4, { backgroundColor: colors.brand.secondary }]} />
           </View>
 
           <Text
             style={[
               styles.transcriptionText,
-              { color: transcriptionText ? colors.text.primary : colors.text.secondary },
+              { color: transcriptionText ? colors.text.primary : colors.text.tertiary },
             ]}
             numberOfLines={2}
           >
@@ -370,11 +427,11 @@ export function ChatInput({
           <View style={styles.voiceActions}>
             <Pressable
               onPress={cancelVoiceTyping}
-              style={[styles.voiceActionBtn, styles.cancelBtn, { borderColor: colors.border.default }]}
+              style={[styles.voiceActionBtn, styles.cancelBtn, { borderColor: colors.border.default, backgroundColor: colors.surface.secondary }]}
               accessibilityLabel="Cancel voice typing"
               accessibilityRole="button"
             >
-              <X size={18} color={colors.text.secondary} />
+              <X size={16} color={colors.text.secondary} strokeWidth={2.5} />
             </Pressable>
             <Pressable
               onPress={transcriptionText.trim() ? acceptVoiceTyping : stopVoiceTyping}
@@ -391,15 +448,15 @@ export function ChatInput({
               accessibilityRole="button"
             >
               {transcriptionText.trim() ? (
-                <Check size={18} color={colors.brand.contrastText} />
+                <Check size={16} color={colors.brand.contrastText} strokeWidth={2.5} />
               ) : (
-                <Square size={14} color={colors.text.secondary} fill={colors.text.secondary} />
+                <Square size={12} color={colors.text.secondary} fill={colors.text.secondary} />
               )}
             </Pressable>
           </View>
         </Animated.View>
       ) : (
-        // Regular Text Composer Input View
+        // Regular Text Composer Input View — Premium Redesign
         <Animated.View
           style={[
             styles.inputWrapper,
@@ -417,7 +474,7 @@ export function ChatInput({
               inputHeight > 0 && { height: Math.min(inputHeight, 150) },
             ]}
             placeholder={placeholder}
-            placeholderTextColor={colors.text.secondary}
+            placeholderTextColor={colors.text.tertiary}
             value={inputText}
             onChangeText={setInputText}
             onContentSizeChange={handleContentSizeChange}
@@ -436,19 +493,22 @@ export function ChatInput({
               style={({ pressed }) => [
                 styles.micButton,
                 {
-                  backgroundColor: pressed ? colors.brand.primary + '18' : colors.surface.secondary,
+                  backgroundColor: pressed
+                    ? colors.brand.primary + '20'
+                    : colors.surface.secondary,
+                  borderColor: pressed ? colors.brand.primary + '30' : 'transparent',
                 },
               ]}
               accessibilityLabel="Voice typing"
               accessibilityRole="button"
             >
-              <AudioLines size={18} color={colors.brand.primary} />
+              <AudioLines size={17} color={colors.brand.primary} strokeWidth={2} />
             </Pressable>
           )}
 
           {disabled && !isStreaming && (
             <View style={[styles.micButton, { backgroundColor: colors.surface.secondary }]}>
-              <MicOff size={16} color={colors.text.secondary} />
+              <MicOff size={15} color={colors.text.secondary} />
             </View>
           )}
 
@@ -469,14 +529,17 @@ export function ChatInput({
                 accessibilityRole="button"
                 accessibilityLabel="Stop AI response"
               >
-                <Square size={14} color="#FFFFFF" fill="#FFFFFF" strokeWidth={0} />
+                <Square size={12} color="#FFFFFF" fill="#FFFFFF" strokeWidth={0} />
               </Pressable>
             </Animated.View>
           ) : (
-            <SendButton
-              onPress={handleSend}
-              disabled={inputText.trim() === ''}
-            />
+            <>
+              <SendButton
+                onPress={handleSend}
+                disabled={inputText.trim() === ''}
+              />
+              {inputText.trim().length > 0 && <LivePresenceDot />}
+            </>
           )}
         </Animated.View>
       )}
@@ -488,8 +551,8 @@ export function ChatInput({
             {
               color: inputText.length > 900
                 ? colors.danger
-                : colors.text.secondary,
-              opacity: inputText.length > 900 ? 1 : 0.6,
+                : colors.text.tertiary,
+              opacity: inputText.length > 900 ? 1 : 0.7,
             },
           ]}
         >
@@ -503,60 +566,80 @@ export function ChatInput({
 const styles = StyleSheet.create({
   outerContainer: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 10,
     backgroundColor: 'transparent',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 28,
+    borderRadius: 26,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    minHeight: 54,
+    minHeight: 52,
     borderWidth: 1.5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 5,
   },
   micButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: 6,
+    borderWidth: 1,
   },
   textInput: {
     flex: 1,
     fontSize: 15,
     fontWeight: '400',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 8,
     maxHeight: 150,
     textAlignVertical: 'top',
+    letterSpacing: 0.1,
   },
   abortButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  presenceDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    marginLeft: 4,
   },
   voiceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 28,
+    borderRadius: 26,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    minHeight: 54,
+    minHeight: 52,
     borderWidth: 1.5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 12,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  voiceAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 8,
+    bottom: 8,
   },
   waveformContainer: {
     flexDirection: 'row',
@@ -573,9 +656,10 @@ const styles = StyleSheet.create({
   transcriptionText: {
     flex: 1,
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 19,
     marginHorizontal: 12,
     fontWeight: '500',
+    letterSpacing: 0.1,
   },
   voiceActions: {
     flexDirection: 'row',
@@ -592,14 +676,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   acceptBtn: {
-    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   charCounter: {
     fontSize: 11,
-    fontWeight: '400',
+    fontWeight: '500',
     textAlign: 'right',
     marginTop: 4,
-    marginRight: 4,
+    marginRight: 6,
   },
 });
 

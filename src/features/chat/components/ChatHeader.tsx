@@ -1,11 +1,21 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, Platform } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  FadeIn,
+} from 'react-native-reanimated';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Avatar } from '@/shared/components/Avatar';
 import { useTheme } from '@/hooks/useTheme';
-import { spacing, borderRadius } from '@/core/theme/tokens';
+import { spacing, borderRadius, typography } from '@/core/theme/tokens';
 import { LAYOUT } from '@/shared/constants';
+import { useCheckInPresence } from '@/shared/hooks/useCheckInPresence';
 
 function formatSessionTime(date: Date): string {
   const now = new Date();
@@ -53,8 +63,8 @@ interface ChatHeaderProps {
   sessionStartedAt?: Date;
 }
 
-const BACK_BUTTON_SIZE = 40;
-const STATUS_DOT_SIZE = 8;
+const BACK_BUTTON_SIZE = 36;
+const STATUS_DOT_SIZE = 7;
 
 export function ChatHeader({
   showBackButton = false,
@@ -67,6 +77,7 @@ export function ChatHeader({
   sessionStartedAt,
 }: ChatHeaderProps) {
   const { colors } = useTheme();
+  const { lastCheckIn } = useCheckInPresence();
 
   // Pulse animation for the "Listening" status dot
   const scale = useSharedValue(1);
@@ -75,16 +86,16 @@ export function ChatHeader({
   useEffect(() => {
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.4, { duration: 1500 }),
-        withTiming(1.0, { duration: 1500 })
+        withTiming(1.5, { duration: 1800 }),
+        withTiming(1.0, { duration: 1800 })
       ),
       -1,
       true
     );
     opacity.value = withRepeat(
       withSequence(
-        withTiming(0.4, { duration: 1500 }),
-        withTiming(1.0, { duration: 1500 })
+        withTiming(0.35, { duration: 1800 }),
+        withTiming(1.0, { duration: 1800 })
       ),
       -1,
       true
@@ -102,74 +113,121 @@ export function ChatHeader({
     ? `Session started ${formatSessionTime(sessionStartedAt)}`
     : "Always here when you need it";
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.surface.primary, borderBottomWidth: 1, borderBottomColor: colors.border.default }]}>
-      <View style={styles.backSection}>
-        {showBackButton && inConversation ? (
-          <Pressable
-            onPress={onBackPress}
-            style={({ pressed }) => [
-              styles.backButton,
-              { backgroundColor: pressed ? colors.background.secondary : 'transparent' }
-            ]}
-            hitSlop={spacing.sm}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <ArrowLeft size={22} color={colors.text.primary} />
-          </Pressable>
-        ) : (
-          <View style={styles.backPlaceholder} />
-        )}
-      </View>
+  const handleBackPress = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    onBackPress?.();
+  };
 
-      <View style={styles.leftSection}>
-        {!inConversation && (
-          <Image
-            source={require('@/shared/assets/velness-logo.jpg')}
-            style={styles.logoImage}
-            resizeMode="cover"
-          />
-        )}
-        <View style={styles.titleContainer}>
-          <Text
-            style={[
-              styles.titleText,
-              { color: colors.text.primary },
-              !inConversation && styles.brandingTitle
-            ]}
-            numberOfLines={1}
-          >
-            {resolvedTitle}
-          </Text>
-          
-          <View style={styles.metaRow}>
-            <View style={styles.statusRow}>
-              <Animated.View style={[styles.statusDot, pulsatingStyle, { backgroundColor: colors.success }]} />
-              <Text style={[styles.statusText, { color: colors.text.secondary }]}>
-                {status}
-              </Text>
+  return (
+    <View style={styles.headerWrapper}>
+      <View style={[styles.container, { backgroundColor: colors.surface.primary }]}>
+        <View style={styles.backSection}>
+          {showBackButton && inConversation ? (
+            <Pressable
+              onPress={handleBackPress}
+              style={({ pressed }) => [
+                styles.backButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.brand.subtle
+                    : 'transparent',
+                },
+              ]}
+              hitSlop={spacing.sm}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+            >
+              <ArrowLeft size={20} color={colors.text.primary} strokeWidth={2.5} />
+            </Pressable>
+          ) : (
+            <View style={styles.backPlaceholder} />
+          )}
+        </View>
+
+        <View style={styles.leftSection}>
+          {!inConversation && (
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('@/shared/assets/velness-logo.jpg')}
+                style={styles.logoImage}
+                resizeMode="cover"
+              />
+              {/* Subtle ring around logo */}
+              <View style={[styles.logoRing, { borderColor: colors.brand.primary + '30' }]} />
             </View>
-            <Text style={[styles.dotDivider, { color: colors.text.secondary }]}>•</Text>
-            <Text style={[styles.subtitleText, { color: colors.text.secondary }]} numberOfLines={1}>
-              {resolvedSubtitle}
+          )}
+          <View style={styles.titleContainer}>
+            <Text
+              style={[
+                styles.titleText,
+                { color: colors.text.primary },
+                !inConversation && styles.brandingTitle,
+              ]}
+              numberOfLines={1}
+            >
+              {resolvedTitle}
             </Text>
+
+            <View style={styles.metaRow}>
+              <View style={styles.statusRow}>
+                {/* Outer glow ring */}
+                <View style={styles.statusDotOuter}>
+                  <Animated.View
+                    style={[
+                      styles.statusGlow,
+                      pulsatingStyle,
+                      { backgroundColor: colors.success + '30' },
+                    ]}
+                  />
+                  <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
+                </View>
+                <Text style={[styles.statusText, { color: colors.text.secondary }]}>
+                  {status}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
-      </View>
 
       <View style={styles.rightSection}>
+        {lastCheckIn ? (
+          <View style={[styles.checkInChip, { backgroundColor: colors.surface.secondary, borderColor: colors.border.default }]}>
+            <Text style={[styles.checkInChipText, { color: colors.text.primary }]}>
+              {lastCheckIn.emoji} {lastCheckIn.label}
+            </Text>
+          </View>
+        ) : null}
         <Avatar
           photoURL={avatarUrl ?? null}
           name={userName ?? null}
           size="sm"
         />
       </View>
+      </View>
+
+      {/* Gradient accent line */}
+      <View style={styles.accentLineContainer}>
+        <Svg width="100%" height={1.5} style={StyleSheet.absoluteFillObject}>
+          <Defs>
+            <LinearGradient id="headerAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0} />
+              <Stop offset="20%" stopColor={colors.brand.primary} stopOpacity={0.4} />
+              <Stop offset="50%" stopColor={colors.brand.secondary} stopOpacity={0.5} />
+              <Stop offset="80%" stopColor={colors.brand.primary} stopOpacity={0.4} />
+              <Stop offset="100%" stopColor={colors.brand.primary} stopOpacity={0} />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#headerAccent)" />
+        </Svg>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  headerWrapper: {
+    zIndex: 10,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -182,17 +240,31 @@ const styles = StyleSheet.create({
   backButton: {
     width: BACK_BUTTON_SIZE,
     height: BACK_BUTTON_SIZE,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backPlaceholder: {
-    width: 8,
+    width: 6,
   },
   leftSection: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+  },
+  logoContainer: {
+    position: 'relative',
+    marginRight: spacing.sm + 2,
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  logoRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 16,
+    borderWidth: 1.5,
   },
   titleContainer: {
     flexDirection: 'column',
@@ -211,42 +283,71 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    marginTop: 2,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  statusDotOuter: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 2,
+  },
+  statusGlow: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
   statusDot: {
     width: STATUS_DOT_SIZE,
     height: STATUS_DOT_SIZE,
     borderRadius: STATUS_DOT_SIZE / 2,
-    marginRight: 6,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-    letterSpacing: 0.1,
+    letterSpacing: 0.2,
   },
   dotDivider: {
-    marginHorizontal: 6,
-    fontSize: 10,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    marginHorizontal: 7,
   },
   subtitleText: {
-    fontSize: 12,
-    fontWeight: '400',
+    fontSize: 11.5,
+    fontWeight: '500',
     flexShrink: 1,
+    letterSpacing: 0.1,
   },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: spacing.md,
   },
-  logoImage: {
-    width: 28,
-    height: 28,
+  // ── Check-in presence chip ────────────────────────────────────────────
+  checkInChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
     marginRight: spacing.sm,
-    borderRadius: 14,
+  },
+  checkInChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: typography.fontFamily.sans,
+    letterSpacing: 0.2,
+  },
+  accentLineContainer: {
+    height: 1.5,
+    width: '100%',
   },
 });
 

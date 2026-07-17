@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   interpolateColor,
   FadeInDown,
+  useReducedMotion,
 } from 'react-native-reanimated';
 
 import { useTheme } from '@/hooks/useTheme';
@@ -33,16 +34,23 @@ export const MoodOption = React.memo(({
   const { colors } = useTheme();
   const PRIMARY = colors.brand.primary;
   const SELECTED_BG = `${PRIMARY}22`;
+  const reduced = useReducedMotion();
+
+  // Subtle, sophisticated resting scale when selected — a gentle lift, not a jump.
+  const SELECTED_SCALE = 1.06;
 
   useEffect(() => {
-    if (isSelected) {
-      scale.value = 1.2;
-      scale.value = withSpring(1.08, { damping: 10, stiffness: 200 });
+    const target = isSelected ? SELECTED_SCALE : 1;
+    // Critically-damped springs: ease to rest with no overshoot/wobble.
+    if (reduced) {
+      scale.value = target;
+      progress.value = isSelected ? 1 : 0;
     } else {
-      scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+      // No hard kick — animate smoothly from the current scale.
+      scale.value = withSpring(target, { damping: 18, stiffness: 220 });
+      progress.value = withSpring(isSelected ? 1 : 0, { damping: 22, stiffness: 220 });
     }
-    progress.value = withSpring(isSelected ? 1 : 0, { damping: 20, stiffness: 200 });
-  }, [isSelected]);
+  }, [isSelected, reduced, scale, progress]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -67,12 +75,16 @@ export const MoodOption = React.memo(({
   });
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.92, { damping: 8 });
-  }, [scale]);
+    // Gentle, controlled press — minimal travel, no bounce-back.
+    scale.value = reduced
+      ? scale.value
+      : withSpring(0.96, { damping: 16, stiffness: 220 });
+  }, [scale, reduced]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(isSelected ? 1.08 : 1, { damping: 10 });
-  }, [scale, isSelected]);
+    const target = isSelected ? SELECTED_SCALE : 1;
+    scale.value = reduced ? target : withSpring(target, { damping: 16, stiffness: 220 });
+  }, [scale, reduced, isSelected]);
 
   const handlePress = useCallback(() => {
     void triggerEmotionHaptic();
@@ -85,7 +97,7 @@ export const MoodOption = React.memo(({
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[styles.card, { borderColor: colors.border.default, backgroundColor: colors.surface.secondary }, animatedStyle]}
+        style={[styles.card, { borderColor: colors.border.subtle, backgroundColor: colors.surface.secondary }, animatedStyle]}
         accessibilityRole="button"
         accessibilityLabel={`Select mood: ${label}`}
         accessibilityState={{ selected: isSelected }}
@@ -109,8 +121,8 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     height: 76,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    borderRadius: 18,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

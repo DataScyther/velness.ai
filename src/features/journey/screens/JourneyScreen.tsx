@@ -15,7 +15,7 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, RefreshControl, Pressable } from 'react-native';
-import { Brain, Wind, Sparkles, Leaf, CheckCircle2, ChevronRight, Flame, Trophy, Play } from 'lucide-react-native';
+import { Brain, Wind, Sparkles, Leaf, CheckCircle2, ChevronRight, Flame, Trophy } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -48,7 +48,6 @@ export function JourneyScreen() {
   const {
     journey,
     userProgress,
-    recommendations,
     streak,
     weeklyProgress,
     exercisesCompleted,
@@ -56,7 +55,6 @@ export function JourneyScreen() {
     error,
     resumeJourney,
     refresh,
-    startExercise,
     programs,
     exercises,
   } = useJourney();
@@ -146,14 +144,6 @@ export function JourneyScreen() {
     router.push(path as any);
   }, []);
 
-  const handleStartRecommendation = useCallback(() => {
-    if (recommendations && recommendations.length > 0) {
-      startExercise(recommendations[0].exerciseId);
-    } else {
-      startExercise('box-breathing-l1');
-    }
-  }, [recommendations, startExercise]);
-
   if (isLoading) {
     return (
       <ScreenContainer>
@@ -175,8 +165,6 @@ export function JourneyScreen() {
     );
   }
 
-  const primaryRecommendation = recommendations && recommendations.length > 0 ? recommendations[0] : null;
-
   return (
     <ScreenContainer>
       <ScrollView
@@ -196,9 +184,9 @@ export function JourneyScreen() {
         {/* Header */}
         <JourneyHeader streak={streak} />
 
-        {/* ── Pillar 1: Continue Your Journey ─────────────────────────────── */}
+        {/* ── Recommended Today (migrated from Continue Your Journey) ─────── */}
         <View style={styles.sectionContainer}>
-          <JourneySectionHeader title="Continue your journey" />
+          <JourneySectionHeader title="Recommended today" />
           <Pressable onPress={handleContinue} style={styles.heroPressable}>
             <LinearGradient
               colors={isDark ? ['#312E81', '#1E1B4B'] : ['#F3E8FF', '#FAF5FF']}
@@ -244,61 +232,6 @@ export function JourneyScreen() {
               </View>
             </LinearGradient>
           </Pressable>
-        </View>
-
-        {/* ── Pillar 2: Recommended Today ────────────────────────────────── */}
-        <View style={styles.sectionContainer}>
-          <JourneySectionHeader title="Recommended today" />
-          {primaryRecommendation ? (
-            <Pressable onPress={handleStartRecommendation} style={styles.recPressable}>
-              <View
-                style={[
-                  styles.recCard,
-                  {
-                    backgroundColor: colors.surface.primary,
-                    borderColor: isDark ? colors.border.default : '#E5E7EB',
-                  },
-                ]}
-              >
-                <View style={styles.recContent}>
-                  <View style={[styles.recBadge, { backgroundColor: isDark ? 'rgba(249, 115, 22, 0.15)' : 'rgba(249, 115, 22, 0.08)' }]}>
-                    <Text style={styles.recBadgeText}>
-                      {primaryRecommendation.reason.toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text style={[styles.recTitle, { color: colors.text.primary }]}>
-                    {primaryRecommendation.title}
-                  </Text>
-                  <Text style={[styles.recDescription, { color: colors.text.secondary }]}>
-                    {primaryRecommendation.description}
-                  </Text>
-                </View>
-
-                <Pressable
-                  onPress={handleStartRecommendation}
-                  style={[styles.recPlayButton, { backgroundColor: isDark ? '#8B5CF6' : '#6C4CF1' }]}
-                >
-                  <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
-                </Pressable>
-              </View>
-            </Pressable>
-          ) : (
-            <View
-              style={[
-                styles.recCard,
-                {
-                  backgroundColor: colors.surface.primary,
-                  borderColor: isDark ? colors.border.default : '#E5E7EB',
-                  justifyContent: 'center',
-                  paddingVertical: spacing.xl,
-                },
-              ]}
-            >
-              <Text style={[styles.recDescription, { color: colors.text.secondary, textAlign: 'center' }]}>
-                Your recommendation is loading...
-              </Text>
-            </View>
-          )}
         </View>
 
         {/* ── Pillar 3: Explore Practices ─────────────────────────────────── */}
@@ -536,61 +469,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
-  },
-
-  // Pillar 2: Recommended Today
-  recPressable: {
-    marginTop: spacing.md,
-  },
-  recCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: borderRadius.xl,
-    borderWidth: 1,
-    padding: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  recContent: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  recBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  recBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#F97316',
-    letterSpacing: 0.5,
-  },
-  recTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    lineHeight: 22,
-    marginBottom: 4,
-  },
-  recDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  recPlayButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
   },
 
   // Pillar 3: Explore Practices

@@ -9,7 +9,11 @@
  *   - "Retry" tap target (calls retryLast)
  *   - "Dismiss" X button (calls clearError)
  *
- * No modals, no toasts — inline only.
+ * Premium redesign:
+ *   - Glassmorphic card with red/danger accent line
+ *   - Better icon badge
+ *   - Pill button with clean typography and press states
+ *   - Smooth shake animation on load
  */
 
 import React, { useEffect } from 'react';
@@ -18,6 +22,7 @@ import { AlertCircle, RotateCcw, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, useSharedValue, useAnimatedStyle, withSequence, withSpring } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
+import { borderRadius, spacing } from '@/core/theme/tokens';
 
 interface ErrorBubbleProps {
   message: string;
@@ -35,21 +40,21 @@ export function ErrorBubble({ message, onRetry, onDismiss }: ErrorBubbleProps) {
 
   useEffect(() => {
     translateX.value = withSequence(
-      withSpring(-4),
-      withSpring(4),
-      withSpring(-2),
-      withSpring(2),
-      withSpring(0)
+      withSpring(-6, { damping: 4, stiffness: 200 }),
+      withSpring(6, { damping: 4, stiffness: 200 }),
+      withSpring(-3, { damping: 4, stiffness: 200 }),
+      withSpring(3, { damping: 4, stiffness: 200 }),
+      withSpring(0, { damping: 4, stiffness: 200 })
     );
   }, []);
 
   const handleRetry = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
     onRetry();
   };
 
   const handleDismiss = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
     onDismiss();
   };
 
@@ -61,34 +66,41 @@ export function ErrorBubble({ message, onRetry, onDismiss }: ErrorBubbleProps) {
           shakeStyle,
           {
             backgroundColor: colors.surface.secondary,
-            borderLeftWidth: 3,
-            borderLeftColor: colors.danger,
+            borderColor: colors.danger + '20',
           },
         ]}
       >
+        {/* Accent line on left edge */}
+        <View style={[styles.accentLine, { backgroundColor: colors.danger }]} />
+
         {/* Icon + Message */}
         <View style={styles.topRow}>
-          <AlertCircle
-            size={15}
-            color={colors.danger}
-            strokeWidth={2}
-            style={styles.icon}
-          />
+          <View style={[styles.iconContainer, { backgroundColor: colors.dangerSubtle }]}>
+            <AlertCircle
+              size={15}
+              color={colors.danger}
+              strokeWidth={2.5}
+            />
+          </View>
           <Text
-            style={[styles.errorText, { color: colors.text.secondary }]}
-            numberOfLines={3}
+            style={[styles.errorText, { color: colors.text.primary }]}
+            numberOfLines={4}
           >
             {message}
           </Text>
         </View>
 
-        {/* Actions */}
+        {/* Actions Row */}
         <View style={styles.actionsRow}>
           <Pressable
             onPress={handleRetry}
             style={({ pressed }) => [
               styles.retryButton,
-              { backgroundColor: colors.danger, opacity: pressed ? 0.8 : 1 },
+              {
+                backgroundColor: colors.danger,
+                shadowColor: colors.danger,
+                opacity: pressed ? 0.9 : 1,
+              },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Retry message"
@@ -99,11 +111,17 @@ export function ErrorBubble({ message, onRetry, onDismiss }: ErrorBubbleProps) {
 
           <Pressable
             onPress={handleDismiss}
-            style={({ pressed }) => [styles.dismissButton, { opacity: pressed ? 0.6 : 1 }]}
+            style={({ pressed }) => [
+              styles.dismissButton,
+              {
+                backgroundColor: colors.surface.tertiary,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Dismiss error"
           >
-            <X size={14} color={colors.text.secondary} strokeWidth={2} />
+            <X size={13} color={colors.text.secondary} strokeWidth={2.5} />
           </Pressable>
         </View>
       </Animated.View>
@@ -113,27 +131,48 @@ export function ErrorBubble({ message, onRetry, onDismiss }: ErrorBubbleProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
+    marginVertical: 6,
+    paddingHorizontal: 4,
   },
   bubble: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: borderRadius.xl,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  accentLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   topRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  icon: {
-    marginRight: 8,
-    marginTop: 1,
+  iconContainer: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
     flexShrink: 0,
   },
   errorText: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     flex: 1,
+    fontWeight: '500',
   },
   actionsRow: {
     flexDirection: 'row',
@@ -143,18 +182,26 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: borderRadius.full,
+    gap: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   retryText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   dismissButton: {
-    padding: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
