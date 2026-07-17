@@ -8,6 +8,8 @@
 import type { AIProvider, AIResponse, AIStreamParams, AICompleteParams, AIMessage, StreamChunk } from './types';
 import { AIError } from './types';
 import { NvidiaProvider } from './providers/NvidiaProvider';
+import { EdgeRuntimeProvider } from './providers/EdgeRuntimeProvider';
+import { env } from '@/core/config/env';
 
 export { AIError };
 
@@ -15,7 +17,10 @@ let activeProvider: AIProvider | null = null;
 
 function getProvider(): AIProvider {
   if (!activeProvider) {
-    activeProvider = new NvidiaProvider();
+    // Route through the server-side AI Runtime by default. Fall back to the
+    // direct NVIDIA provider only when explicitly disabled (offline/dev).
+    const useEdge = env.useEdgeRuntime !== false;
+    activeProvider = useEdge ? new EdgeRuntimeProvider() : new NvidiaProvider();
   }
   return activeProvider;
 }

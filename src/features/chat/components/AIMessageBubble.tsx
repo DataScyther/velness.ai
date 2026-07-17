@@ -3,20 +3,14 @@
  *
  * Full-width card bubble for assistant messages.
  *
+ * Premium redesign:
+ *  - Glassmorphic card with subtle border and refined shadows
+ *  - Gradient avatar badge with improved brand presence
+ *  - Pill-style inline action buttons with better spacing
+ *  - Refined typography and spacing hierarchy
+ *  - Smooth micro-animations on interaction
+ *
  * Phase 6 — Velness-native Interaction Layer
- *
- * Instead of generic 👍/👎/Copy, uses:
- * - Save Reflection
- * - Continue Later
- * - Share Insight
- * - Ask Follow-up
- * - Regenerate
- * - Copy (in overflow menu)
- *
- * Grouping rules (iMessage-style):
- *  - Avatar shown only on the FIRST message in a group
- *  - Timestamp shown only on the LAST message in a group
- *  - Corner radius flattened on the shared edge for non-first grouped messages
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -25,7 +19,7 @@ import { BookmarkPlus, Clock, Share2, MessageCircle, RefreshCw, Clipboard, Thumb
 import * as ExpoClipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, FadeIn } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 import { BaseMessageBubble } from './BaseMessageBubble';
 import { MessageContent } from './MessageContent';
@@ -64,17 +58,22 @@ function IconActionButton({
   onPress,
   icon,
   accessibilityLabel,
+  isActive = false,
+  activeBg,
 }: {
   onPress: () => void;
   icon: React.ReactNode;
   accessibilityLabel: string;
+  isActive?: boolean;
+  activeBg?: string;
 }) {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const handlePress = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-    scale.value = withSpring(0.88, { damping: 10, stiffness: 300 }, () => {
+    scale.value = withSpring(0.85, { damping: 10, stiffness: 300 }, () => {
       scale.value = withSpring(1, { damping: 12, stiffness: 250 });
     });
     onPress();
@@ -84,7 +83,14 @@ function IconActionButton({
     <Animated.View style={animStyle}>
       <Pressable
         onPress={handlePress}
-        style={styles.actionBtn}
+        style={[
+          styles.actionBtn,
+          {
+            backgroundColor: isActive
+              ? (activeBg || colors.brand.subtle)
+              : 'transparent',
+          },
+        ]}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityHint="Double tap to activate"
@@ -275,7 +281,11 @@ export const AIMessageBubble = React.memo(function AIMessageBubble({
       role="assistant"
       containerStyle={[
         styles.container,
-        { backgroundColor: colors.surface.secondary, marginBottom },
+        {
+          backgroundColor: colors.surface.secondary,
+          borderColor: colors.border.subtle,
+          marginBottom,
+        },
         radiusStyle,
       ]}
     >
@@ -283,15 +293,15 @@ export const AIMessageBubble = React.memo(function AIMessageBubble({
       {showAvatar && (
         <View style={styles.headerRow}>
           <View style={styles.avatarContainer}>
-            <Svg width={28} height={28} style={StyleSheet.absoluteFillObject}>
+            <Svg width={30} height={30} style={StyleSheet.absoluteFillObject}>
               <Defs>
                 <LinearGradient id="rainbowGradAB" x1="0%" y1="0%" x2="100%" y2="100%">
                   <Stop offset="0%" stopColor="#E9D5FF" />
-                  <Stop offset="50%" stopColor="#C4B5FD" />
-                  <Stop offset="100%" stopColor="#A78BFA" />
+                  <Stop offset="40%" stopColor="#C4B5FD" />
+                  <Stop offset="100%" stopColor="#8B5CF6" />
                 </LinearGradient>
               </Defs>
-              <Rect width="100%" height="100%" rx={14} fill="url(#rainbowGradAB)" />
+              <Rect width="100%" height="100%" rx={15} fill="url(#rainbowGradAB)" />
             </Svg>
             <Svg width={14} height={14} viewBox="0 0 512 512">
               <Path d={FEATHER_PATH} fill="#FFFFFF" />
@@ -316,44 +326,56 @@ export const AIMessageBubble = React.memo(function AIMessageBubble({
         <MessageTimestamp date={message.createdAt} style={styles.timestampBelow} />
       )}
 
-      {/* Inline reaction + action buttons */}
+      {/* Premium inline action buttons — pill-style row */}
       {message.content ? (
-        <View style={styles.actionsRow}>
-          <IconActionButton
-            onPress={handleLike}
-            icon={<ThumbsUp size={18} color={feedback === 'like' ? colors.brand.primary : colors.text.secondary} />}
-            accessibilityLabel="Like this response"
-          />
-          <IconActionButton
-            onPress={handleDislike}
-            icon={<ThumbsDown size={18} color={feedback === 'dislike' ? colors.brand.primary : colors.text.secondary} />}
-            accessibilityLabel="Dislike this response"
-          />
-          <IconActionButton
-            onPress={handleCopy}
-            icon={<Copy size={18} color={colors.text.secondary} />}
-            accessibilityLabel="Copy response to clipboard"
-          />
-          <IconActionButton
-            onPress={() => setVoiceEnabled(!voiceEnabled)}
-            icon={voiceEnabled ? (
-              <AudioLines size={18} color={colors.brand.primary} />
-            ) : (
-              <AudioLines size={18} color={colors.text.secondary} />
-            )}
-            accessibilityLabel="Toggle voice responses"
-          />
-          {speechSynthesisAvailable && (
+        <View style={[styles.actionsRow, { borderTopColor: colors.border.subtle }]}>
+          <View style={styles.actionsGroup}>
             <IconActionButton
-              onPress={handleSpeakToggle}
-              icon={isSpeaking ? (
-                <VolumeX size={18} color={colors.brand.primary} />
-              ) : (
-                <Volume2 size={18} color={colors.text.secondary} />
-              )}
-              accessibilityLabel={isSpeaking ? 'Stop speaking this response' : 'Read this response aloud'}
+              onPress={handleLike}
+              isActive={feedback === 'like'}
+              icon={<ThumbsUp size={16} color={feedback === 'like' ? colors.brand.primary : colors.text.secondary} strokeWidth={feedback === 'like' ? 2.5 : 1.8} />}
+              accessibilityLabel="Like this response"
             />
-          )}
+            <IconActionButton
+              onPress={handleDislike}
+              isActive={feedback === 'dislike'}
+              icon={<ThumbsDown size={16} color={feedback === 'dislike' ? colors.danger : colors.text.secondary} strokeWidth={feedback === 'dislike' ? 2.5 : 1.8} />}
+              accessibilityLabel="Dislike this response"
+            />
+            <View style={[styles.actionDivider, { backgroundColor: colors.border.default }]} />
+            <IconActionButton
+              onPress={handleCopy}
+              icon={<Copy size={16} color={colors.text.secondary} strokeWidth={1.8} />}
+              accessibilityLabel="Copy response to clipboard"
+            />
+            <IconActionButton
+              onPress={() => setVoiceEnabled(!voiceEnabled)}
+              isActive={voiceEnabled}
+              icon={
+                <AudioLines
+                  size={16}
+                  color={voiceEnabled ? colors.brand.primary : colors.text.secondary}
+                  strokeWidth={voiceEnabled ? 2.5 : 1.8}
+                />
+              }
+              accessibilityLabel="Toggle voice responses"
+            />
+            {speechSynthesisAvailable && (
+              <>
+                <View style={[styles.actionDivider, { backgroundColor: colors.border.default }]} />
+                <IconActionButton
+                  onPress={handleSpeakToggle}
+                  isActive={isSpeaking}
+                  icon={isSpeaking ? (
+                    <VolumeX size={16} color={colors.brand.primary} strokeWidth={2.5} />
+                  ) : (
+                    <Volume2 size={16} color={colors.text.secondary} strokeWidth={1.8} />
+                  )}
+                  accessibilityLabel={isSpeaking ? 'Stop speaking this response' : 'Read this response aloud'}
+                />
+              </>
+            )}
+          </View>
         </View>
       ) : null}
 
@@ -362,6 +384,40 @@ export const AIMessageBubble = React.memo(function AIMessageBubble({
         onClose={() => setActionSheetVisible(false)}
         actions={actionSheetActions}
       />
+
+      {/* Sources — structured citations from the AI Runtime (Phase 6) */}
+      {message.metadata?.sources && message.metadata.sources.length > 0 && (
+        <View style={[styles.sourcesContainer, { borderTopColor: colors.border.subtle }]}>
+          <Text style={[styles.sourcesTitle, { color: colors.text.secondary }]}>
+            Sources
+          </Text>
+          {message.metadata.sources.map((s, i) => (
+            <Pressable
+              key={`${s.url}-${i}`}
+              onPress={() => {
+                try {
+                  if (s.url) {
+                    // openExternal omitted for brevity; deep-link via Linking
+                    const { Linking } = require('react-native');
+                    Linking.openURL(s.url);
+                  }
+                } catch {}
+              }}
+              style={styles.sourceRow}
+            >
+              <Text style={[styles.sourceTitle, { color: colors.text.primary }]} numberOfLines={1}>
+                {i + 1}. {s.title}
+              </Text>
+              {s.source ? (
+                <Text style={[styles.sourceMeta, { color: colors.text.secondary }]} numberOfLines={1}>
+                  {s.source}
+                  {s.publishedAt ? ` · ${s.publishedAt}` : ''}
+                </Text>
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
+      )}
     </BaseMessageBubble>
   );
 });
@@ -371,44 +427,80 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: chat.bubble.paddingHAI,
     paddingVertical: chat.bubble.paddingVAI,
+    borderWidth: 1,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    gap: 8,
+    marginBottom: 12,
+    gap: 9,
   },
   brandLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   avatarContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
   timestampBelow: {
-    marginTop: 8,
+    marginTop: 10,
   },
   actionsRow: {
     flexDirection: 'row',
-    marginTop: spacing.lg,
-    gap: spacing.xs,
-    flexWrap: 'wrap',
+    marginTop: spacing.md,
+    paddingTop: spacing.sm + 2,
+    borderTopWidth: 1,
+  },
+  actionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  actionDivider: {
+    width: 1,
+    height: 16,
+    marginHorizontal: 4,
+    borderRadius: 0.5,
   },
   actionBtn: {
-    width: 36,
-    height: 32,
+    width: 34,
+    height: 30,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sourcesContainer: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm + 2,
+    borderTopWidth: 1,
+  },
+  sourcesTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 8,
+  },
+  sourceRow: {
+    paddingVertical: 6,
+    gap: 2,
+  },
+  sourceTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  sourceMeta: {
+    fontSize: 11,
   },
 });

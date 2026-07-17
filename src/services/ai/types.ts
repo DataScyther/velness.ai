@@ -18,22 +18,20 @@ export interface StreamChunk {
   id: string;
   contentDelta: string;
   done?: boolean;
+  citations?: import('@/features/chat/types/Message').MessageSource[];
 }
+
+export type ChatMode = 'standard' | 'deep';
+
+import type { AIContext } from '@/services/memory/types';
 
 export interface AIStreamParams {
   text: string;
   uid: string;
   history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   signal?: AbortSignal;
-  memoryContext?: {
-    userName?: string;
-    preferredTone?: string;
-    timeOfDay?: string;
-    returningUser?: boolean;
-    previousMood?: string;
-    summary?: string;
-    goals?: string[];
-  };
+  mode?: ChatMode;
+  memoryContext?: AIContext;
 }
 
 export interface AICompleteParams {
@@ -41,15 +39,8 @@ export interface AICompleteParams {
   uid: string;
   history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   signal?: AbortSignal;
-  memoryContext?: {
-    userName?: string;
-    preferredTone?: string;
-    timeOfDay?: string;
-    returningUser?: boolean;
-    previousMood?: string;
-    summary?: string;
-    goals?: string[];
-  };
+  mode?: ChatMode;
+  memoryContext?: AIContext;
 }
 
 export interface AIProvider {

@@ -17,10 +17,17 @@ export type MessageType =
 
 export type MessageStatus = 'sending' | 'streaming' | 'complete' | 'failed';
 
+export interface MessageSource {
+  title: string;
+  url: string;
+  source?: string;
+  publishedAt?: string;
+}
+
 export interface MessageMetadata {
   reasoning?: string;
   errorMessage?: string;
-  sources?: { title: string; url: string }[];
+  sources?: MessageSource[];
   mood?: string;
 }
 

@@ -111,6 +111,21 @@ export const env = {
   appName: 'Velness',
   appVersion: '1.0.0',
   isDev: __DEV__,
+
+  /**
+   * When true (default), chat routes through the server-side AI Runtime
+   * (api/ai/chat.ts) so LLM + search keys stay server-only. Set
+   * VITE_USE_EDGE_RUNTIME=false to call NVIDIA directly (offline/dev only).
+   */
+  useEdgeRuntime: (() => {
+    const raw = pick(
+      extra.VITE_USE_EDGE_RUNTIME as string | undefined,
+      process.env.VITE_USE_EDGE_RUNTIME,
+      process.env.EXPO_PUBLIC_USE_EDGE_RUNTIME,
+    );
+    if (raw === '') return true;
+    return raw === 'true' || raw === '1';
+  })(),
 } as const;
 
 export type Env = typeof env;

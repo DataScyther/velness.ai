@@ -3,6 +3,7 @@ import { AIError } from '../types';
 import { env } from '@/core/config/env';
 import { buildContextualPrompt } from '@/prompts/mentalWellnessPrompt';
 import { PerfTracker } from '@/utils/chat-performance';
+import { buildNvidiaPayload } from './payload';
 import { Platform } from 'react-native';
 
 // ── Shared SSE line parser (no closure issues) ────────────────────────
@@ -48,17 +49,6 @@ function buildSystemMessage(memoryContext?: AIStreamParams['memoryContext']): { 
   };
 }
 
-function buildRequestPayload(messages: Array<{ role: string; content: string }>, stream: boolean): string {
-  return JSON.stringify({
-    model: env.nvidiaModel || 'nvidia/nemotron-3-ultra-550b-a55b',
-    messages,
-    temperature: 0.9,
-    top_p: 0.97,
-    max_tokens: 4096,
-    stream,
-  });
-}
-
 function buildHeaders(apiKey: string): Record<string, string> {
   return {
     'Content-Type': 'application/json',
@@ -90,7 +80,12 @@ export class NvidiaProvider implements AIProvider {
       { role: 'user', content: params.text },
     ];
 
-    const requestBody = buildRequestPayload(messages, true);
+    const requestBody = buildNvidiaPayload({
+      model: env.nvidiaModel || 'nvidia/nemotron-3-ultra-550b-a55b',
+      messages,
+      stream: true,
+      mode: params.mode,
+    });
     const headers = buildHeaders(apiKey);
     perf.mark('request_start');
 
@@ -267,7 +262,12 @@ export class NvidiaProvider implements AIProvider {
       { role: 'user', content: params.text },
     ];
 
-    const requestBody = buildRequestPayload(messages, false);
+    const requestBody = buildNvidiaPayload({
+      model: env.nvidiaModel || 'nvidia/nemotron-3-ultra-550b-a55b',
+      messages,
+      stream: false,
+      mode: params.mode,
+    });
     const headers = buildHeaders(apiKey);
 
     let res: Response;

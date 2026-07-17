@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { generateResponse } from '@/services/ai';
+import { generateResponse, streamChat } from '@/services/ai';
 import { AIError } from '@/services/ai/types';
+import type { ChatMode } from '@/services/ai/types';
 import { PerfTracker } from '@/utils/chat-performance';
 import { MemoryManager } from '@/services/memory';
 import type { ContextEngineInput } from '@/services/memory/types';
@@ -86,8 +87,9 @@ export interface UseChatStreamOptions {
 export interface UseChatStreamReturn {
   messages: Message[];
   isStreaming: boolean;
+  isReflecting: boolean;
   refreshing: boolean;
-  sendMessage: (text: string) => Promise<void>;
+  sendMessage: (text: string, mode?: ChatMode) => Promise<void>;
   retryLast: () => Promise<void>;
   clearError: (id: string) => void;
   abort: () => void;
@@ -103,6 +105,7 @@ export interface UseChatStreamReturn {
 export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): UseChatStreamReturn {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isReflecting, setIsReflecting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isRestored, setIsRestored] = useState(false);
@@ -118,6 +121,7 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
   const abortRef = useRef<AbortController | null>(null);
   const lastUserTextRef = useRef<string>('');
   const lastUserMessageIdRef = useRef<string>('');
+  const lastModeRef = useRef<ChatMode>('standard');
 
   const conversationIdRef = useRef<string | null>(null);
   const memoryManagerRef = useRef<MemoryManager | null>(null);
@@ -194,8 +198,65 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
     }
   }, [uid]);
 
+  const runStream = useCallback(
+    async (
+      text: string,
+      history: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+      controller: AbortController,
+      mode: ChatMode,
+    ): Promise<string> => {
+      const assistantId = generateId();
+      const assistantMessage: Message = {
+        id: assistantId,
+        role: 'assistant',
+        type: 'markdown',
+        content: '',
+        createdAt: new Date(),
+        status: 'streaming',
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      let accumulated = '';
+      let sources:
+        | import('@/features/chat/types/Message').MessageSource[]
+        | undefined;
+      for await (const chunk of streamChat({
+        text,
+        uid: uid!,
+        history,
+        signal: controller.signal,
+        mode,
+        memoryContext: memoryManagerRef.current?.buildContext(),
+      })) {
+        if (chunk.citations && chunk.citations.length) sources = chunk.citations;
+        if (chunk.done) break;
+        if (!chunk.contentDelta) continue;
+        if (accumulated.length === 0) setIsReflecting(false);
+        accumulated += chunk.contentDelta;
+        const snapshot = accumulated;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: snapshot, status: 'streaming' } : m,
+          ),
+        );
+      }
+
+      const finalContent =
+        accumulated || "I'm sorry, I wasn't able to generate a response. Please try again.";
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, content: finalContent, status: 'complete', metadata: sources ? { sources } : m.metadata }
+            : m,
+        ),
+      );
+      return finalContent;
+    },
+    [uid],
+  );
+
   const executeStream = useCallback(
-    async (text: string, historyContext: Message[]) => {
+    async (text: string, historyContext: Message[], mode: ChatMode = 'standard') => {
       if (!uid) {
         const errorMsg: Message = {
           id: generateId(),
@@ -210,6 +271,8 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
         return;
       }
 
+      memoryManagerRef.current?.observeUserMessage(text);
+
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -219,9 +282,14 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
       }, 60_000);
 
       const history = buildHistory(historyContext, memoryManagerRef.current);
+      const resolvedMode: ChatMode =
+        mode === 'deep' || memoryManagerRef.current?.getRecommendedMode() === 'deep'
+          ? 'deep'
+          : 'standard';
 
       setIsStreaming(true);
-      console.log('[Chat] executeStream — sending NON-STREAMING request via generateResponse');
+      setIsReflecting(true);
+      console.log(`[Chat] executeStream — streaming request (mode=${resolvedMode})`);
 
       // Fail-safe: force isStreaming off after 90s
       const stuckTimer = setTimeout(() => {
@@ -232,28 +300,9 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
       }, 90_000);
 
       try {
-        const response = await generateResponse({
-          text,
-          uid,
-          history,
-          signal: controller.signal,
-          memoryContext: memoryManagerRef.current?.buildContext(),
-        });
+        await runStream(text, history, controller, resolvedMode);
         clearTimeout(stuckTimer);
-
-        const content = response.content || "I'm sorry, I wasn't able to generate a response. Please try again.";
-
-        const assistantMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          type: 'markdown',
-          content,
-          createdAt: new Date(),
-          status: 'complete',
-        };
-
-        setMessages((prev) => [...prev, assistantMessage]);
- } catch (error) {
+  } catch (error) {
   if (error instanceof Error && error.name === 'AbortError') {
     const cancelledMsg: Message = {
       id: generateId(),
@@ -272,24 +321,8 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
     console.warn('[Chat] AI service temporarily unavailable, retrying...', error.details);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     try {
-      const retryResponse = await generateResponse({
-        text,
-        uid,
-        history,
-        signal: controller.signal,
-        memoryContext: memoryManagerRef.current?.buildContext(),
-      });
+      await runStream(text, history, controller, resolvedMode);
       clearTimeout(stuckTimer);
-      const retryContent = retryResponse.content || "I'm sorry, I wasn't able to generate a response. Please try again.";
-      const retryMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        type: 'markdown',
-        content: retryContent,
-        createdAt: new Date(),
-        status: 'complete',
-      };
-      setMessages((prev) => [...prev, retryMessage]);
       return;
     } catch (retryError) {
       console.error('[Chat] AI retry failed — status:', retryError instanceof AIError ? retryError.statusCode : 'n/a', 'body:', retryError instanceof AIError ? retryError.details : retryError);
@@ -317,6 +350,7 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
         clearTimeout(stuckTimer);
         clearTimeout(timeoutId);
         setIsStreaming(false);
+        setIsReflecting(false);
         abortRef.current = null;
       }
 
@@ -380,9 +414,12 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
 
       const historyContext = messagesRef.current;
 
+      const mode: ChatMode = memoryManagerRef.current?.getRecommendedMode() ?? 'standard';
+      lastModeRef.current = mode;
+
       setMessages((prev) => [...prev, userMessage]);
 
-      await executeStream(trimmed, historyContext);
+      await executeStream(trimmed, historyContext, mode);
     },
     [executeStream]
   );
@@ -414,7 +451,7 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
     const historyContext = lastUserIdx >= 0 ? cleanMessages.slice(0, lastUserIdx) : [];
 
     try {
-      await executeStream(lastUserTextRef.current, historyContext);
+      await executeStream(lastUserTextRef.current, historyContext, lastModeRef.current);
     } finally {
       retryingRef.current = false;
     }
@@ -505,7 +542,7 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
       (m) => !(m.status === 'failed' && m.role === 'assistant')
     );
 
-    await executeStream(lastUserText, cleanHistory);
+    await executeStream(lastUserText, cleanHistory, lastModeRef.current);
   }, [executeStream]);
 
   const resumeLastConversation = useCallback(async () => {
@@ -515,6 +552,7 @@ export function useChatStream({ uid, contextEngine }: UseChatStreamOptions): Use
   return {
     messages,
     isStreaming,
+    isReflecting,
     refreshing,
     conversationId,
     sendMessage,
