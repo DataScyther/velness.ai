@@ -98,6 +98,14 @@ export interface StreamChunk {
   citations?: Citation[];
 }
 
+/** Minimal gateway contract the orchestrator depends on (DI-friendly). */
+export interface ModelGatewayLike {
+  streamCompletion(
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+    mode?: ChatMode,
+  ): AsyncGenerator<StreamChunk>;
+}
+
 /** Feature flags — gate capabilities independently without code changes. */
 export interface FeatureFlags {
   ENABLE_KNOWLEDGE: boolean;

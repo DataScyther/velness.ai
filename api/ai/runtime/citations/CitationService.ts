@@ -15,7 +15,9 @@ export class CitationService {
     const byUrl = new Map<string, Citation>();
     for (const r of results) {
       for (const c of r.sources) {
-        if (!c.url) continue;
+        // Skip citations without a usable http(s) link so the UI never
+        // renders a broken source. Graceful degradation over crashing.
+        if (!/^https?:\/\//i.test(c.url)) continue;
         const existing = byUrl.get(c.url);
         if (!existing || c.confidence > existing.confidence) {
           byUrl.set(c.url, c);

@@ -23,6 +23,7 @@ import {
   type RequestTrace,
   type ChatHistoryMessage,
   type MemoryContext,
+  type ModelGatewayLike,
 } from './types';
 import { ModelGateway } from './ModelGateway';
 import { buildSystemPrompt } from './PromptAssembler';
@@ -36,11 +37,11 @@ import { getFeatureFlags, Timer, logTrace } from './config';
 export interface OrchestratorDeps {
   registry: ToolRegistry;
   cache?: CacheManager;
-  gateway?: ModelGateway;
+  gateway?: ModelGatewayLike;
 }
 
 export class AIOrchestrator {
-  private gateway: ModelGateway;
+  private gateway: ModelGatewayLike;
   private cache: CacheManager;
   private classifier: IntentClassifier;
   private router: ToolRouter;
