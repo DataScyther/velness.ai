@@ -3,6 +3,8 @@
  *
  * Parses the Google News RSS search feed into structured headlines. RSS is
  * XML; we do a minimal, dependency-free tag extraction. No prompt building.
+ * One bounded retry protects against transient RSS/network blips so a single
+ * failed fetch doesn't silently drop all citations.
  */
 
 import type { Citation } from '../../types';
@@ -44,9 +46,20 @@ export class GoogleNewsRssProvider {
     const q = query.trim();
     if (!q) return [];
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
-    const res = await fetch(url, { headers: { Accept: 'application/rss+xml, application/xml, text/xml' } });
-    if (!res.ok) return [];
-    const xml = await res.text().catch(() => '');
+
+    let xml = '';
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(url, {
+          headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
+        });
+        if (!res.ok) continue;
+        xml = await res.text().catch(() => '');
+        if (xml) break;
+      } catch {
+        // transient failure — retry once
+      }
+    }
     if (!xml) return [];
 
     const items = xml.split(/<item>/i).slice(1);

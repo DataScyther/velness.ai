@@ -9,6 +9,7 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@hookform/resolvers": "^3.9.1",
+    "@pinecone-database/pinecone": "^8.0.0",
     "@react-icons/all-files": "^4.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.110.1",
@@ -62,6 +63,7 @@
     "jsdom": "^29.1.1",
     "patch-package": "^8.0.1",
     "postcss": "^8.4.49",
+    "tsx": "^4.23.1",
     "typescript": "^5.7.3",
     "vite": "^6.4.1",
     "vitest": "^4.1.9"
@@ -80,7 +82,8 @@
     "test": "vitest run",
     "test:integration": "vitest run --config backend/integration-tests/vitest.config.ts",
     "firebase:sync-env": "node scripts/sync-firebase-env.mjs",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "rag:ingest": "tsx scripts/rag-ingest.mjs"
   },
   "allowScripts": {
     "@firebase/util@1.12.1": true,

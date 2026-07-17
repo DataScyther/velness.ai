@@ -30,8 +30,10 @@ function buildNvidiaPayload({
     messages,
     temperature: isDeep ? 0.5 : 0.6,
     top_p: 0.95,
-    max_tokens: isDeep ? 16384 : 4096,
-    reasoning_budget: isDeep ? 16384 : 4096,
+    // Standard mode is a concise wellness chat; cap tokens so tail latency
+    // stays bounded. Deep mode keeps the larger budget for long-form output.
+    max_tokens: isDeep ? 16384 : 1200,
+    reasoning_budget: isDeep ? 16384 : 1200,
     chat_template_kwargs: { enable_thinking: true },
     stream,
   });

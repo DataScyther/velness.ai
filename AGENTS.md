@@ -58,3 +58,19 @@ service-role key (`SUPABASE_PROD_SERVICE_ROLE_KEY`) lives only in the gitignored
   web mocks so the RN app builds in the browser. Don't remove these.
 - Root `.repro.*` files are a one-off debugging harness for an
   `isAnimated` recursion bug, not part of the normal test suite. Ignore them.
+
+## Vector store (Pinecone)
+Per the Phase 4.0 Architecture Review (approved 2026-07-17), **Pinecone** is the
+canonical vector database for RAG/semantic retrieval; **Supabase remains
+transactional-only** (auth, users, journals, moods, progress, preferences,
+analytics). The backend freeze (above) still applies to Supabase — Pinecone is
+outside Supabase, so adopting it needs no Supabase migration.
+- Pinecone SDK: `@pinecone-database/pinecone` (server-side only, used by the edge
+  function, never the RN client bundle).
+- RAG wiring: `api/ai/runtime/rag/` — `VectorStore` (vendor-neutral interface) →
+  `PineconeVectorStore` → `PineconeRetrievalTool` → `AIOrchestrator` (under
+  `ENABLE_RAG`, **off by default**). The runtime depends only on the `RetrievalTool`
+  contract, not on Pinecone directly.
+- Secrets: `PINECONE_API_KEY` is **server-only** (never `VITE_*`, never committed).
+  Embeddings come from NVIDIA (`NVIDIA_API_KEY` / `VITE_NVIDIA_BASE_URL`). Add
+  `PINECONE_INDEX` / `PINECONE_CLOUD` / `PINECONE_REGION` as needed.

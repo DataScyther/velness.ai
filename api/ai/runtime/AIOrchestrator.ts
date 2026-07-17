@@ -33,11 +33,14 @@ import { ToolRegistry } from './tools/Tool';
 import { ContextBuilder } from './ContextBuilder';
 import { CacheManager } from './cache/CacheManager';
 import { getFeatureFlags, Timer, logTrace } from './config';
+import type { RetrievalTool } from './rag/RetrievalTool';
 
 export interface OrchestratorDeps {
   registry: ToolRegistry;
   cache?: CacheManager;
   gateway?: ModelGatewayLike;
+  /** Optional RAG retriever (Phase 4.1). Wired only when ENABLE_RAG is on. */
+  retrievalTool?: RetrievalTool;
 }
 
 export class AIOrchestrator {
@@ -46,11 +49,13 @@ export class AIOrchestrator {
   private classifier: IntentClassifier;
   private router: ToolRouter;
   private contextBuilder: ContextBuilder;
+  private retrievalTool?: RetrievalTool;
 
   constructor(deps: OrchestratorDeps) {
     this.gateway = deps.gateway ?? new ModelGateway();
     this.cache = deps.cache ?? new CacheManager();
     this.contextBuilder = new ContextBuilder();
+    this.retrievalTool = deps.retrievalTool;
     const flags = getFeatureFlags();
     this.router = new ToolRouter(deps.registry, flags);
     this.classifier = new IntentClassifier({
@@ -110,10 +115,16 @@ export class AIOrchestrator {
     );
     const providerMs = providerTimer.stop();
 
+    // Phase 4.1: optional internal-knowledge retrieval (RAG). Only runs when
+    // ENABLE_RAG is on and a retrieval tool is wired; degrades to [] otherwise.
+    const ragChunks = flags.ENABLE_RAG && this.retrievalTool
+      ? await this.retrievalTool.retrieve(req.text).catch(() => [])
+      : [];
+
     const citations = flags.ENABLE_CITATIONS
       ? this.contextBuilder.citations(results)
       : [];
-    const contextBlock = this.contextBuilder.buildContextBlock(results);
+    const contextBlock = this.contextBuilder.buildContextBlock(results, ragChunks);
 
     const system = buildSystemPrompt(req.memoryContext);
     const augmentedSystem = contextBlock

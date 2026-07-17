@@ -1,11 +1,12 @@
 /**
- * Velness — AI Runtime: RAG Retrieval interface (Phase 4 stub)
+ * Velness — AI Runtime: RAG Retrieval interface (Phase 4.1)
  *
  * Defines the contract for internal knowledge retrieval (CBT guides,
  * meditation, journal/mood logs, journey lessons, clinical references).
- * Implementation is deferred until the backend freeze lifts (pgvector +
- * embeddings + Supabase RPC). NotImplementedRetrievalTool returns [] so the
- * orchestrator compiles and runs today with zero schema changes.
+ * The canonical implementation (PineconeRetrievalTool) sits behind a
+ * VectorStore so the runtime never depends on a specific vector DB.
+ * NotImplementedRetrievalTool returns [] so the orchestrator compiles and runs
+ * with RAG disabled (default) and zero external dependencies.
  */
 
 import { Capability, type Citation } from '../types';

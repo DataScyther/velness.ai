@@ -40,6 +40,8 @@
 export async function runScenario({ baseUrl, scenario, requestId }) {
   const reqId = requestId ?? crypto.randomUUID();
   const uid = scenario.uid ?? `guest-${crypto.randomUUID()}`;
+  // Hard ceiling so a hung upstream fails fast instead of hanging the run.
+  const SCENARIO_TIMEOUT_MS = Number(process.env.SMOKE_SCENARIO_TIMEOUT_MS || 90000);
 
   const body = {
     text: scenario.text,
@@ -61,14 +63,36 @@ export async function runScenario({ baseUrl, scenario, requestId }) {
   const capabilities = [];
   const toolsUsed = [];
 
-  const res = await fetch(`${baseUrl}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-uid': uid,
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SCENARIO_TIMEOUT_MS);
+
+  let res;
+  try {
+    res = await fetch(`${baseUrl}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-uid': uid,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    clearTimeout(timeout);
+    totalMs = Date.now() - start;
+    return {
+      name: scenario.name,
+      firstTokenMs: -1,
+      totalMs,
+      streamClosedCleanly: false,
+      citationsPresent: false,
+      capabilities,
+      toolsUsed,
+      requestId: reqId,
+      error: `request aborted/timed out after ${SCENARIO_TIMEOUT_MS}ms: ${e.message}`,
+      content: '',
+    };
+  }
 
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => '');
@@ -131,6 +155,7 @@ export async function runScenario({ baseUrl, scenario, requestId }) {
     }
   }
 
+  clearTimeout(timeout);
   if (totalMs < 0) totalMs = Date.now() - start;
 
   return {
