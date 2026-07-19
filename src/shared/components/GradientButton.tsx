@@ -35,7 +35,6 @@ export interface GradientButtonProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const SPRING_SCALE = { damping: 15, stiffness: 400, mass: 0.6 };
 const SPRING_OPACITY = { damping: 15, stiffness: 200 };
 
 export const GradientButton = React.memo(({
@@ -53,7 +52,6 @@ export const GradientButton = React.memo(({
   const { colors: themeColors } = useTheme();
   const colors = propColors || [themeColors.brand.primary, themeColors.brand.secondary];
 
-  const scale = useSharedValue(1);
   const svOpacity = useSharedValue(1);
   const svShadowOpacity = useSharedValue(0.35);
   const svShadowRadius = useSharedValue(18);
@@ -63,23 +61,32 @@ export const GradientButton = React.memo(({
   useEffect(() => {
     svOpacity.value = withSpring(disabled ? 0.5 : 1.0, SPRING_OPACITY);
     if (!visible) {
-      svShadowOpacity.value = withTiming(0, { duration: 0 });
-      svShadowRadius.value = withTiming(0, { duration: 0 });
-      svShadowHeight.value = withTiming(0, { duration: 0 });
-      svElevation.value = withTiming(0, { duration: 0 });
+      // Instant shadow removal when hidden to prevent smudge artifacts
+      svShadowOpacity.value = 0;
+      svShadowRadius.value = 0;
+      svShadowHeight.value = 0;
+      svElevation.value = 0;
     } else {
       const shadowOn = !(disabled || loading);
-      svShadowOpacity.value = withSpring(shadowOn ? 0.35 : 0, SPRING_OPACITY);
-      svShadowRadius.value = withSpring(shadowOn ? 18 : 0, SPRING_OPACITY);
-      svShadowHeight.value = withSpring(shadowOn ? 8 : 0, SPRING_OPACITY);
-      svElevation.value = withSpring(shadowOn ? 8 : 0, SPRING_OPACITY);
+      if (shadowOn) {
+        // Smooth shadow appearance when visible and enabled
+        svShadowOpacity.value = withSpring(0.35, SPRING_OPACITY);
+        svShadowRadius.value = withSpring(18, SPRING_OPACITY);
+        svShadowHeight.value = withSpring(8, SPRING_OPACITY);
+        svElevation.value = withSpring(8, SPRING_OPACITY);
+      } else {
+        // Instant shadow removal when disabled to prevent smudge
+        svShadowOpacity.value = 0;
+        svShadowRadius.value = 0;
+        svShadowHeight.value = 0;
+        svElevation.value = 0;
+      }
     }
   }, [disabled, loading, visible]);
 
   const animatedStyle = useAnimatedStyle(() => {
     'worklet';
     return {
-      transform: [{ scale: scale.value }],
       opacity: svOpacity.value,
       shadowOpacity: svShadowOpacity.value,
       shadowRadius: svShadowRadius.value,
@@ -90,27 +97,6 @@ export const GradientButton = React.memo(({
       elevation: svElevation.value,
     };
   });
-
-  const handlePressIn = useCallback(() => {
-    if (!disabled && !loading) {
-      const cfg = { damping: 15 };
-      scale.value = withSpring(0.95, SPRING_SCALE);
-      svShadowOpacity.value = withSpring(0.12, cfg);
-      svShadowRadius.value = withSpring(6, cfg);
-      svShadowHeight.value = withSpring(2, cfg);
-      svElevation.value = withSpring(2, cfg);
-    }
-  }, [disabled, loading]);
-
-  const handlePressOut = useCallback(() => {
-    const cfg = { damping: 15 };
-    scale.value = withSpring(1.0, SPRING_SCALE);
-    if (disabled || loading || !visible) return;
-    svShadowOpacity.value = withSpring(0.35, cfg);
-    svShadowRadius.value = withSpring(18, cfg);
-    svShadowHeight.value = withSpring(8, cfg);
-    svElevation.value = withSpring(8, cfg);
-  }, [disabled, loading, visible]);
 
   const handlePress = useCallback(async () => {
     if (disabled || loading) return;
@@ -137,7 +123,11 @@ export const GradientButton = React.memo(({
   // Size specific styles
   const btnHeight = size === 'sm' ? 40 : size === 'md' ? 48 : 56;
   const btnRadius = size === 'sm' ? 12 : size === 'md' ? 16 : 20;
-  const fontSize = size === 'sm' ? 12 : size === 'md' ? 14 : 16;
+  const fontSize = size === 'sm'
+    ? typography.fontSize.label
+    : size === 'md'
+      ? typography.fontSize['body-sm']
+      : typography.fontSize.body;
   const iconLeftOffset = size === 'sm' ? 14 : size === 'md' ? 18 : 22;
 
   const activeShadowStyle = !disabled && !loading ? { shadowColor: themeColors.brand.primary } : {};
@@ -146,8 +136,6 @@ export const GradientButton = React.memo(({
   return (
     <AnimatedPressable
       onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
       disabled={disabled || loading}
       style={[
         styles.button,
