@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useTheme } from '@/hooks/useTheme';
+import { typography } from '@/core/theme';
 import { generateIntelligenceCode, type IntelligenceCode } from '../utils/intelligenceCodes';
 
 const DOT_SIZE = 8;
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: typography.fontFamily.mono,
   },
   description: {
     fontSize: 13,

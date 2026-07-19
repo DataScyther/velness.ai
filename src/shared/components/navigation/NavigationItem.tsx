@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { TabName, useNavigationContext } from './NavigationContext';
 import IconWrapper from './IconWrapper';
 import Badge from './Badge';
+import { typography } from '@/core/theme';
 
 interface NavigationItemProps {
   name: TabName;
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   label: {
-    fontSize: 10,
+    fontSize: typography.fontSize.label,
     fontWeight: '600',
     letterSpacing: -0.1,
   },

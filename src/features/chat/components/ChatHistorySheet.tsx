@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'android' ? spacing.xl : spacing['2xl'],
     paddingHorizontal: spacing.lg,
     borderTopWidth: 1.5,
-    shadowColor: '#000',
+    shadowColor: '#8A5FC7',
     shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.08,
     shadowRadius: 16,

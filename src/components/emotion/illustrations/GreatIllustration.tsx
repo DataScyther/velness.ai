@@ -1,5 +1,6 @@
 import React from 'react';
 import Svg, { Circle, Ellipse, Path, Defs, LinearGradient, RadialGradient, Stop } from 'react-native-svg';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Props {
   size?: number;
@@ -7,17 +8,18 @@ interface Props {
 }
 
 export function GreatIllustration({ size = 100, showGlow = true }: Props) {
+  const { colors } = useTheme();
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100">
       <Defs>
         <RadialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#F6C453" stopOpacity={0.85} />
-          <Stop offset="30%" stopColor="#F6C453" stopOpacity={0.3} />
-          <Stop offset="100%" stopColor="#F6C453" stopOpacity={0} />
+          <Stop offset="0%" stopColor={colors.mood.great} stopOpacity={0.85} />
+          <Stop offset="30%" stopColor={colors.mood.great} stopOpacity={0.3} />
+          <Stop offset="100%" stopColor={colors.mood.great} stopOpacity={0} />
         </RadialGradient>
         <LinearGradient id="orbGrad" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0%" stopColor="#F6C453" />
-          <Stop offset="100%" stopColor="#F59E57" />
+          <Stop offset="0%" stopColor={colors.mood.great} />
+          <Stop offset="100%" stopColor={colors.mood.reflective} />
         </LinearGradient>
       </Defs>
       {showGlow && <Circle cx="50" cy="50" r="48" fill="url(#glowGrad)" opacity={0.85} />}

@@ -130,7 +130,7 @@ module.exports = {
     splash: {
       image: './src/shared/assets/splash.png',
       resizeMode: 'cover',
-      backgroundColor: '#0F0A1A',
+      backgroundColor: '#1A1327',
     },
     ios: {
       supportsTablet: true,
@@ -149,7 +149,7 @@ module.exports = {
       softwareKeyboardLayoutMode: 'resize',
       adaptiveIcon: {
         foregroundImage: './src/shared/assets/adaptive-icon.png',
-        backgroundColor: '#0F0A1A',
+        backgroundColor: '#1A1327',
       },
       package: APP_ENV === 'production' ? androidPackage : `${androidPackage}.${APP_ENV}`,
     },
