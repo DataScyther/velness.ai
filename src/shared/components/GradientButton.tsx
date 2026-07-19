@@ -76,17 +76,20 @@ export const GradientButton = React.memo(({
     }
   }, [disabled, loading, visible]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: svOpacity.value,
-    shadowOpacity: svShadowOpacity.value,
-    shadowRadius: svShadowRadius.value,
-    shadowOffset: {
-      width: 0,
-      height: svShadowHeight.value,
-    },
-    elevation: svElevation.value,
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ scale: scale.value }],
+      opacity: svOpacity.value,
+      shadowOpacity: svShadowOpacity.value,
+      shadowRadius: svShadowRadius.value,
+      shadowOffset: {
+        width: 0,
+        height: svShadowHeight.value,
+      },
+      elevation: svElevation.value,
+    };
+  });
 
   const handlePressIn = useCallback(() => {
     if (!disabled && !loading) {

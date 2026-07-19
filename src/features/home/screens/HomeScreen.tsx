@@ -78,6 +78,7 @@ import {
   useHomeState,
   HOME_STATE_QUERY_KEY,
 } from '@/features/home/hooks/useHomeState';
+import { useSaveButtonAnimation } from '@/features/home/hooks/useSaveButtonAnimation';
 import { journalService } from '../../../../backend/services/JournalService';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -206,18 +207,28 @@ export function HomeScreen() {
   // (see CheckInPanel.tsx). When hidden it is fully transparent (opacity 0) so
   // its shadow cannot bleed onto the canvas as a smudge.
   const SAVE_BTN_SPRING = { damping: 28, stiffness: 220, mass: 0.9, overshootClamping: true };
-  const saveBtnVis = useSharedValue(0);
   const hasComposedText = reflectionNote.trim().length > 0;
   const saveBtnVisible = hasComposedText || reflectionSaved;
-  useEffect(() => {
-    saveBtnVis.value = withSpring(saveBtnVisible ? 1 : 0, SAVE_BTN_SPRING);
-  }, [saveBtnVisible, reflectionSaved]);
+  
+  // Use custom hook to manage button animation with debouncing
+  const saveBtnVis = useSaveButtonAnimation(saveBtnVisible, { springConfig: SAVE_BTN_SPRING });
 
-  const saveBtnStyle = useAnimatedStyle(() => ({
-    opacity: saveBtnVis.value,
-    transform: [{ translateY: interpolate(saveBtnVis.value, [0, 1], [8, 0]) }],
-    pointerEvents: saveBtnVisible ? 'auto' : 'none',
-  }));
+  const saveBtnStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      opacity: saveBtnVis.value,
+      transform: [{ translateY: interpolate(saveBtnVis.value, [0, 1], [8, 0]) }],
+      pointerEvents: saveBtnVis.value > 0.1 ? 'auto' : 'none',
+      // Ensure shadow is completely eliminated when button is hidden
+      shadowOpacity: saveBtnVis.value * 0.35,
+      shadowRadius: saveBtnVis.value * 18,
+      shadowOffset: {
+        width: 0,
+        height: saveBtnVis.value * 8,
+      },
+      elevation: saveBtnVis.value * 8,
+    };
+  });
 
   // ── Sync ─────────────────────────────────────────────────────────────────────
   useSyncRefresh();

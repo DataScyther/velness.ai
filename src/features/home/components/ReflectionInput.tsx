@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { typography, spacing, borderRadius, colors as oldColors } from '@/core/theme';
@@ -32,14 +32,27 @@ export const ReflectionInput = React.memo(({
   const [inputHeight, setInputHeight] = useState(40);
   const { colors } = useTheme();
 
-  // Animate character counter opacity
+  // Animate character counter opacity with debouncing
   const counterOpacity = useSharedValue(value.length > 0 ? 1 : 0.4);
+  const prevHasTextRef = useRef(value.length > 0);
+  
   useEffect(() => {
-    counterOpacity.value = withTiming(value.length > 0 ? 1 : 0.4, { duration: 200 });
+    const hasText = value.length > 0;
+    const prevHasText = prevHasTextRef.current;
+    prevHasTextRef.current = hasText;
+    
+    // Only animate if the text presence state actually changed
+    if (prevHasText !== hasText) {
+      counterOpacity.value = withTiming(hasText ? 1 : 0.4, { duration: 200 });
+    }
   }, [value.length > 0]);
-  const counterStyle = useAnimatedStyle(() => ({
-    opacity: counterOpacity.value,
-  }));
+  
+  const counterStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      opacity: counterOpacity.value,
+    };
+  });
 
   return (
     <View style={styles.container}>

@@ -2,11 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { GradientButton } from '@/shared/components/GradientButton';
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
-  withSpring,
-  withTiming,
-  useReducedMotion,
 } from 'react-native-reanimated';
 import { typography, spacing, borderRadius } from '@/core/theme';
 import { useTheme } from '@/hooks/useTheme';
@@ -16,6 +12,7 @@ import { ReflectionInput } from './ReflectionInput';
 import { EmotionAvatar } from '@/components/emotion/EmotionAvatar';
 import { MOOD_MAP, getMoodEmotion } from '@/shared/types';
 import type { MoodRating } from '@/shared/types';
+import { usePanelAnimation } from '../hooks/usePanelAnimation';
 
 interface CheckInPanelProps {
   visible: boolean;
@@ -48,15 +45,12 @@ export function CheckInPanel({
   onDismiss,
 }: CheckInPanelProps) {
   const { colors } = useTheme();
-  const reduced = useReducedMotion();
 
-  const progress = useSharedValue(visible ? 1 : 0);
-
-  React.useEffect(() => {
-    progress.value = reduced
-      ? withTiming(visible ? 1 : 0, { duration: 220 })
-      : withSpring(visible ? 1 : 0, SPRING_CONFIG);
-  }, [visible, reduced, progress]);
+  // Use custom hook to manage panel animation with debouncing
+  const progress = usePanelAnimation(visible, { 
+    springConfig: SPRING_CONFIG,
+    timingConfig: { duration: 220 }
+  });
 
   const [collapsed, setCollapsed] = useState(!visible);
 
@@ -74,10 +68,19 @@ export function CheckInPanel({
   // "__internalInstanceHandle of null" crash and the reanimated transform
   // layout-animation warning.
   const innerStyle = useAnimatedStyle(() => {
-    const translate = reduced ? 0 : interpolateSafe(progress.value, 12, 0);
+    'worklet';
+    const translate = interpolateSafe(progress.value, 12, 0);
     return {
       opacity: progress.value,
       transform: [{ translateY: translate }],
+      // Scale shadow with opacity to prevent bleeding when hidden
+      shadowOpacity: progress.value * 0.22,
+      shadowRadius: progress.value * 14,
+      shadowOffset: {
+        width: 0,
+        height: progress.value * 6,
+      },
+      elevation: progress.value * 5,
     };
   });
 
@@ -173,13 +176,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: spacing.md,
     gap: spacing.sm,
-    // Precise, refined lift: a tight, low-opacity shadow (not a wide blur) so
-    // the rounded corners stay crisp and polished rather than soft/uneven.
+    // Shadow is now animated dynamically in innerStyle to prevent bleeding
+    // when the panel is hidden. Static shadow removed to avoid artifacts.
     shadowColor: '#05030C',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 5,
   },
   confirmBox: {
     marginTop: spacing.xs,
