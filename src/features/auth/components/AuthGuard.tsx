@@ -50,9 +50,9 @@ export function AuthGuard({
       return <LoadingComponent />;
     }
     return (
-      <View className="flex-1 bg-surface-dark items-center justify-center">
-        <LoadingSpinner size={48} color="#8B5CF6" />
-        <Text className="text-white/60 text-body-sm mt-4">
+      <View className="flex-1 bg-background-primary items-center justify-center">
+        <LoadingSpinner size={48} />
+        <Text className="text-text-secondary text-body-sm mt-4">
           Loading...
         </Text>
       </View>

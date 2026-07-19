@@ -11,7 +11,7 @@ interface SendButtonProps {
 }
 
 export function SendButton({ onPress, disabled = false, visible = true }: SendButtonProps) {
-  const { isDark } = useTheme();
+  const { isDark, colors } = useTheme();
 
   const handlePress = () => {
     if (disabled) return;
@@ -19,12 +19,12 @@ export function SendButton({ onPress, disabled = false, visible = true }: SendBu
     onPress();
   };
 
-  // Strict, hardcoded brand purple so the send button is ALWAYS clearly visible
-  // and can never drift to white/invisible on either theme. The icon stays white
-  // for contrast on the purple fill.
-  const SEND_BG_LIGHT = '#634EB8';
-  const SEND_BG_DARK = '#7E60CD';
-  const SEND_ICON = '#FFFFFF';
+  // Brand-locked fill so the send button is ALWAYS clearly visible and can never
+  // drift to white/invisible on either theme. The icon uses onPrimary for
+  // guaranteed contrast on the brand fill.
+  const SEND_BG_LIGHT = colors.brand.primaryDeep;
+  const SEND_BG_DARK = colors.brand.primary;
+  const SEND_ICON = colors.brand.onPrimary;
 
   const backgroundColor = isDark ? SEND_BG_DARK : SEND_BG_LIGHT;
 

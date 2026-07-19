@@ -24,7 +24,7 @@ export function NavigationContainer({
       ? 'rgba(255, 255, 255, 0.14)'
       : 'rgba(15, 23, 42, 0.12)';
 
-  const shadowColor = theme === 'dark' ? '#000000' : '#334155';
+  const shadowColor = '#8A5FC7';
   const shadowOpacity = theme === 'dark' ? 0.24 : 0.16;
   const bottomPosition = Math.max(LAYOUT.TAB_BAR_MARGIN, insets.bottom);
 

@@ -122,13 +122,13 @@ export const EmptyConversation = React.memo(function EmptyConversation({
   ], []);
 
   const moodMap = useMemo(() => ({
-    great: { emotion: 'great' as EmotionType, label: 'Great', color: '#10B981', gradient: ['#10B981', '#059669'] },
-    calm: { emotion: 'calm' as EmotionType, label: 'Calm', color: '#3B82F6', gradient: ['#3B82F6', '#2563EB'] },
-    sad: { emotion: 'notGood' as EmotionType, label: 'Sad', color: '#8B5CF6', gradient: ['#8B5CF6', '#7C3AED'] },
-    frustrated: { emotion: 'overwhelmed' as EmotionType, label: 'Frustrated', color: '#EF4444', gradient: ['#EF4444', '#DC2626'] },
-    anxious: { emotion: 'overwhelmed' as EmotionType, label: 'Anxious', color: '#F59E0B', gradient: ['#F59E0B', '#D97706'] },
-    overwhelmed: { emotion: 'overwhelmed' as EmotionType, label: 'Overwhelmed', color: '#6D28D9', gradient: ['#6D28D9', '#5B21B6'] },
-  }), []);
+    great: { emotion: 'great' as EmotionType, label: 'Great', color: colors.mood.great, gradient: [colors.mood.great, colors.mood.good] },
+    calm: { emotion: 'calm' as EmotionType, label: 'Calm', color: colors.mood.calm, gradient: [colors.mood.calm, colors.mood.sad] },
+    sad: { emotion: 'notGood' as EmotionType, label: 'Sad', color: colors.mood.sad, gradient: [colors.mood.sad, colors.mood.reflective] },
+    frustrated: { emotion: 'overwhelmed' as EmotionType, label: 'Frustrated', color: colors.mood.overwhelmed, gradient: [colors.mood.overwhelmed, colors.mood.notGood] },
+    anxious: { emotion: 'overwhelmed' as EmotionType, label: 'Anxious', color: colors.mood.anxious, gradient: [colors.mood.anxious, colors.mood.overwhelmed] },
+    overwhelmed: { emotion: 'overwhelmed' as EmotionType, label: 'Overwhelmed', color: colors.mood.overwhelmed, gradient: [colors.mood.overwhelmed, colors.mood.reflective] },
+  }), [colors]);
 
   const currentMoodKey = currentMood?.toLowerCase() || 'overwhelmed';
   const moodInfo = moodMap[currentMoodKey as keyof typeof moodMap] || {

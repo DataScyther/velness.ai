@@ -298,7 +298,7 @@ export const AIMessageBubble = React.memo(function AIMessageBubble({
                 <LinearGradient id="rainbowGradAB" x1="0%" y1="0%" x2="100%" y2="100%">
                   <Stop offset="0%" stopColor="#E9D5FF" />
                   <Stop offset="40%" stopColor="#C4B5FD" />
-                  <Stop offset="100%" stopColor="#8B5CF6" />
+                  <Stop offset="100%" stopColor={colors.brand.primary} />
                 </LinearGradient>
               </Defs>
               <Rect width="100%" height="100%" rx={15} fill="url(#rainbowGradAB)" />
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    shadowColor: '#8B5CF6',
+    shadowColor: '#8A5FC7',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,

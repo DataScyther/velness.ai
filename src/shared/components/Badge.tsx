@@ -13,13 +13,13 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-velness-glass-highlight',
-        success: 'bg-green-500/20',
-        warning: 'bg-yellow-500/20',
-        error: 'bg-red-500/20',
-        info: 'bg-blue-500/20',
-        purple: 'bg-velness-purple-600/20',
-        cyan: 'bg-velness-cyan-600/20',
+        default: 'bg-brand-subtle',
+        success: 'bg-successSubtle',
+        warning: 'bg-warningSubtle',
+        error: 'bg-dangerSubtle',
+        info: 'bg-infoSubtle',
+        purple: 'bg-brand-subtle',
+        cyan: 'bg-infoSubtle',
       },
     },
     defaultVariants: {
@@ -31,13 +31,13 @@ const badgeVariants = cva(
 const textVariants = cva('text-caption font-medium', {
   variants: {
     variant: {
-      default: 'text-white/60',
-      success: 'text-green-400',
-      warning: 'text-yellow-400',
-      error: 'text-red-400',
-      info: 'text-blue-400',
-      purple: 'text-velness-purple-400',
-      cyan: 'text-velness-cyan-400',
+      default: 'text-text-secondary',
+      success: 'text-successText',
+      warning: 'text-warningText',
+      error: 'text-dangerText',
+      info: 'text-infoText',
+      purple: 'text-brand-primaryDeep',
+      cyan: 'text-infoText',
     },
   },
   defaultVariants: {

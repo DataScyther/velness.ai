@@ -4,9 +4,9 @@
  * Rendered using react-native-svg RadialGradients to achieve smooth,
  * high-fidelity blur glows without heavy image assets or performance drops.
  * Features:
- *   - Solid dark baseline (#0B0B12)
- *   - Soft floating purple radial glow
- *   - Soft floating cyan radial glow
+ *   - Themed baseline (colors.background.primary)
+ *   - Soft floating brand-primary radial glow
+ *   - Soft floating brand-secondary radial glow
  *   - Subtly animated positions, scale, and opacity using Reanimated at 60 FPS
  */
 
@@ -23,11 +23,9 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
+import { useTheme } from '@/hooks/useTheme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// Premium baseline background color
-const BACKGROUND_COLOR = '#0B0B12';
 
 // Large gradient dimensions to facilitate soft, edge-free feathering
 const PURPLE_ORB_SIZE = SCREEN_WIDTH * 1.4;
@@ -39,6 +37,7 @@ interface AuroraBackgroundProps {
 }
 
 export function AuroraBackground({ intensity = 1 }: AuroraBackgroundProps) {
+  const { colors } = useTheme();
   // ── Animation Controllers ──────────────────────────────────────────────
   const animationProgress = useSharedValue(0);
   const reduced = useReducedMotion();
@@ -105,9 +104,9 @@ export function AuroraBackground({ intensity = 1 }: AuroraBackgroundProps) {
   });
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View style={[styles.container, { backgroundColor: colors.background.primary }]} pointerEvents="none">
       {/* Background layer */}
-      <View style={styles.absoluteBackground} />
+      <View style={[styles.absoluteBackground, { backgroundColor: colors.background.primary }]} />
 
       {/* Floating Purple Orb */}
       <Animated.View style={[styles.purpleContainer, purpleOrbStyle]}>
@@ -120,10 +119,10 @@ export function AuroraBackground({ intensity = 1 }: AuroraBackgroundProps) {
               rx="50%"
               ry="50%"
             >
-              <Stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.22} />
-              <Stop offset="30%" stopColor="#8B5CF6" stopOpacity={0.12} />
-              <Stop offset="70%" stopColor="#7C3AED" stopOpacity={0.04} />
-              <Stop offset="100%" stopColor={BACKGROUND_COLOR} stopOpacity={0} />
+              <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0.22} />
+              <Stop offset="30%" stopColor={colors.brand.primary} stopOpacity={0.12} />
+              <Stop offset="70%" stopColor={colors.brand.primaryDeep} stopOpacity={0.04} />
+              <Stop offset="100%" stopColor={colors.background.primary} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Rect width="100%" height="100%" fill="url(#purpleGlow)" />
@@ -141,10 +140,10 @@ export function AuroraBackground({ intensity = 1 }: AuroraBackgroundProps) {
               rx="50%"
               ry="50%"
             >
-              <Stop offset="0%" stopColor="#06B6D4" stopOpacity={0.18} />
-              <Stop offset="25%" stopColor="#06B6D4" stopOpacity={0.10} />
-              <Stop offset="65%" stopColor="#0891B2" stopOpacity={0.03} />
-              <Stop offset="100%" stopColor={BACKGROUND_COLOR} stopOpacity={0} />
+              <Stop offset="0%" stopColor={colors.brand.secondary} stopOpacity={0.18} />
+              <Stop offset="25%" stopColor={colors.brand.secondary} stopOpacity={0.10} />
+              <Stop offset="65%" stopColor={colors.brand.tertiary} stopOpacity={0.03} />
+              <Stop offset="100%" stopColor={colors.background.primary} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Rect width="100%" height="100%" fill="url(#cyanGlow)" />
@@ -157,12 +156,10 @@ export function AuroraBackground({ intensity = 1 }: AuroraBackgroundProps) {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: BACKGROUND_COLOR,
     overflow: 'hidden',
   },
   absoluteBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: BACKGROUND_COLOR,
   },
   purpleContainer: {
     position: 'absolute',

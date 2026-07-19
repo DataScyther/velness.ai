@@ -8,6 +8,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTheme } from '@/hooks/useTheme';
 
 interface DailyQuoteProps {
   /** Optional dynamic quote text. If omitted, falls back to a curated collection */
@@ -23,6 +24,7 @@ const DEFAULT_QUOTES = [
 ];
 
 export function DailyQuote({ quote }: DailyQuoteProps) {
+  const { colors } = useTheme();
   // Memoize fallback selection so it doesn't change on standard renders
   const activeQuote = useMemo(() => {
     if (quote) return quote;
@@ -38,10 +40,10 @@ export function DailyQuote({ quote }: DailyQuoteProps) {
       accessibilityRole="text"
       accessibilityLabel={`Daily reflection: ${activeQuote}`}
     >
-      <View style={styles.accentBar} />
+      <View style={[styles.accentBar, { backgroundColor: colors.brand.primary }]} />
       <Text
         style={styles.quoteText}
-        className="text-white/60 font-sans"
+        className="text-text-secondary font-sans"
         allowFontScaling={true}
       >
         "{activeQuote}"
@@ -61,7 +63,6 @@ const styles = StyleSheet.create({
   accentBar: {
     width: 3,
     height: '70%',
-    backgroundColor: '#8B5CF6', // Purple-500 accent highlight
     borderRadius: 2,
     marginRight: 10,
     opacity: 0.8,

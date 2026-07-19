@@ -13,6 +13,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import { useTheme } from '@/hooks/useTheme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -30,11 +31,14 @@ export function ProgressRing({
   progress,
   size = 80,
   strokeWidth = 6,
-  color = '#8B5CF6',
-  trackColor = 'rgba(255,255,255,0.08)',
+  color,
+  trackColor,
   showPercentage = true,
   className = '',
 }: ProgressRingProps) {
+  const { colors } = useTheme();
+  const ringColor = color ?? colors.brand.primary;
+  const ringTrack = trackColor ?? colors.border.subtle;
   const animatedProgress = useSharedValue(0);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -59,7 +63,7 @@ export function ProgressRing({
           cx={center}
           cy={center}
           r={radius}
-          stroke={trackColor}
+          stroke={ringTrack}
           strokeWidth={strokeWidth}
           fill="transparent"
         />
@@ -68,7 +72,7 @@ export function ProgressRing({
           cx={center}
           cy={center}
           r={radius}
-          stroke={color}
+          stroke={ringColor}
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={circumference}
@@ -81,7 +85,7 @@ export function ProgressRing({
       {showPercentage && (
         <View className="absolute">
           <Text
-            className="text-white font-bold"
+            className="text-text-primary font-bold"
             style={{ fontSize: size * 0.25 }}
           >
             {Math.round(progress)}%

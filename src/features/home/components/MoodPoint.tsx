@@ -10,13 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
 
-const LEVEL_COLORS: Record<number, string> = {
-  1: '#FF2E5F', // Glowing Rose
-  2: '#FFAE00', // Neon Amber
-  3: '#7E8E9F', // Slate Blue/Gray
-  4: '#8B5CF6', // Vivid Purple
-  5: '#00E699', // Bright Teal/Emerald
-};
+
 
 interface MoodPointProps {
   cx: number;
@@ -79,7 +73,7 @@ export const MoodPoint = React.memo(({ cx, cy, moodLevel, isToday }: MoodPointPr
     opacity: 0.38 * (1 - ((pulse2.value + 0.5) % 1)),
   }));
 
-  const activeColor = moodLevel !== null ? LEVEL_COLORS[moodLevel] : colors.brand.primary;
+  const activeColor = moodLevel !== null ? colors.moodScale[moodLevel as 1 | 2 | 3 | 4 | 5] : colors.brand.primary;
 
   if (isToday) {
     return (
@@ -139,7 +133,7 @@ export const MoodPoint = React.memo(({ cx, cy, moodLevel, isToday }: MoodPointPr
   }
 
   if (moodLevel !== null) {
-    const pointColor = LEVEL_COLORS[moodLevel] || LEVEL_COLORS[3];
+    const pointColor = colors.moodScale[moodLevel as 1 | 2 | 3 | 4 | 5] || colors.moodScale[3];
     return (
       <G>
         {/* Soft radial glow shadow */}

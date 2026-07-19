@@ -70,7 +70,7 @@ export function TextField({
     onBlur?.(e);
   };
 
-  const placeholderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.4)' : '#6B7280';
+  const placeholderColor = colors.text.muted;
 
   return (
     <View className={`mb-4 ${containerClassName}`}>

@@ -161,7 +161,7 @@ export function ChatHistorySheet({ visible, onClose, uid }: ChatHistorySheetProp
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(200)}
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.overlay }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.overlay.medium }]}
         >
           <Pressable style={styles.backdropPressable} onPress={handleClose} />
         </Animated.View>

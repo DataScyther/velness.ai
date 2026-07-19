@@ -1,128 +1,126 @@
 /**
- * Velness — Light Theme Tokens
+ * Velness — Light Theme Tokens (PRIMARY THEME)
  *
- * This file is the SINGLE SOURCE OF TRUTH for the light theme.
- * `global.css` and the runtime CSS-variable injection in ThemeProvider
- * both derive from these values, so Tailwind classes and inline
- * `useTheme().colors` usage can never drift apart.
- *
- * Contrast is tuned for WCAG AA on every text/surface pairing.
+ * Lavender companion aesthetic. Background wash #f6f3ff, brand #cd9cf2.
+ * `primary` (#a878e0) is used for fills; `primaryDeep` (#8a5fc7) is used
+ * wherever brand color sits under text/icon on a light surface (AA-safe).
+ * `#cd9cf2` is reserved for decorative gradients only.
+ * Contrast tuned for WCAG AA on every text/surface pairing.
  */
 
 export interface ThemeTokens {
-  /** App / screen backgrounds */
-  background: {
-    primary: string;
-    secondary: string;
-    tertiary: string;
-  };
-  /** Cards, sheets, elevated containers */
-  surface: {
-    primary: string;
-    secondary: string;
-    tertiary: string;
-  };
-  /** All text colors */
-  text: {
-    primary: string;
-    secondary: string;
-    tertiary: string;
-    disabled: string;
-    /** Text drawn on top of a brand/colored fill */
-    onBrand: string;
-    /** Text drawn on top of a dark overlay (e.g. scrims) */
-    inverse: string;
-  };
-  /** Border / divider weights */
-  border: {
-    default: string;
-    strong: string;
-    subtle: string;
-  };
-  /** Glass / translucent surface tints — MUST adapt to theme (see dark.ts).
-   *  In light mode these are subtle neutral/dark tints so glass fills read as
-   *  refined surfaces instead of white squares on a light background. */
-  glass: {
-    highlight: string;
-    light: string;
-    medium: string;
-    dark: string;
-    border: string;
-  };
-  /** Brand ramp */
+  background: { primary: string; secondary: string; tertiary: string; elevated: string };
+  surface: { primary: string; secondary: string; tertiary: string; card: string; elevated: string };
+  text: { primary: string; secondary: string; tertiary: string; inverse: string; disabled: string; muted: string };
+  border: { subtle: string; default: string; strong: string; focus: string };
+  glass: { highlight: string; light: string; medium: string; strong: string; tint: string; border: string };
   brand: {
-    primary: string;
+    primary: string;        // decorative / gradient fill
+    primaryDeep: string;    // icons + text on light surfaces
     secondary: string;
+    tertiary: string;
+    onPrimary: string;       // text drawn on brand fills
+    /** Backward-compatible alias for onPrimary (used by many components). */
     contrastText: string;
-    /** Tinted fill behind brand icons / chips */
-    subtle: string;
-    /** Border tint for brand outlines */
-    border: string;
+    subtle: string;          // tinted fill behind brand chips
+    border: string;          // brand outline tint
   };
-  /** Translucent scrim used for modals / overlays */
-  overlay: string;
-  /** Status colors */
-  success: string;
-  warning: string;
-  danger: string;
-  /** Soft background tints for status surfaces */
-  successSubtle: string;
-  warningSubtle: string;
-  dangerSubtle: string;
-  /** Status text on subtle tints */
-  successText: string;
-  warningText: string;
-  dangerText: string;
+  overlay: { light: string; medium: string; strong: string; backdrop: string };
+  success: string; warning: string; danger: string; info: string;
+  successSubtle: string; warningSubtle: string; dangerSubtle: string; infoSubtle: string;
+  successText: string; warningText: string; dangerText: string; infoText: string;
+  mood: {
+    calm: string; good: string; great: string; notGood: string; overwhelmed: string;
+    happy: string; sad: string; anxious: string; grateful: string; reflective: string; energized: string;
+  };
+  moodScale: {
+    1: string; 2: string; 3: string; 4: string; 5: string;
+  };
 }
 
 export const lightTheme: ThemeTokens = {
   background: {
-    primary: '#F7F8FC',
-    secondary: '#EEF1F7',
-    tertiary: '#E4E8F0',
+    primary: '#F6F3FF',
+    secondary: '#EFEAFB',
+    tertiary: '#E4DCF6',
+    elevated: '#FFFFFF',
   },
   surface: {
     primary: '#FFFFFF',
-    secondary: '#F4F6FB',
-    tertiary: '#EAEEF6',
+    secondary: '#F7F3FE',
+    tertiary: '#F0EAFB',
+    card: '#FBF9FF',
+    elevated: '#FFFFFF',
   },
   text: {
-    primary: '#0F172A',
-    secondary: '#475569',
-    tertiary: '#64748B',
-    disabled: '#94A3B8',
-    onBrand: '#FFFFFF',
-    inverse: '#F8FAFC',
+    primary: '#2A1B47',
+    secondary: '#4A3A6B',
+    tertiary: '#6E5F8E',
+    inverse: '#F6F3FF',
+    disabled: '#9A8CB4',
+    muted: '#8A7CA8',
   },
   border: {
-    default: '#E2E8F0',
-    strong: '#CBD5E1',
-    subtle: '#EEF2F7',
+    subtle: '#ECE6F7',
+    default: '#DDD3EF',
+    strong: '#C7B9E4',
+    focus: '#A878E0',
   },
-  // Light-theme glass tints: subtle neutral/dark so fills blend on light
-  // surfaces instead of appearing as white squares.
   glass: {
-    highlight: 'rgba(15, 23, 42, 0.04)',
-    light: 'rgba(255, 255, 255, 0.7)',
-    medium: 'rgba(15, 23, 42, 0.06)',
-    dark: 'rgba(15, 23, 42, 0.10)',
-    border: 'rgba(15, 23, 42, 0.10)',
+    highlight: 'rgba(255, 255, 255, 0.65)',
+    light: 'rgba(255, 255, 255, 0.72)',
+    medium: 'rgba(246, 243, 255, 0.55)',
+    strong: 'rgba(246, 243, 255, 0.80)',
+    tint: 'rgba(205, 156, 242, 0.10)',
+    border: 'rgba(205, 156, 242, 0.35)',
   },
   brand: {
-    primary: '#634EB8',
-    secondary: '#8063D6',
+    primary: '#A878E0',
+    primaryDeep: '#8A5FC7',
+    secondary: '#C9A8F0',
+    tertiary: '#E3D2F7',
+    onPrimary: '#FFFFFF',
+    /** Backward-compatible alias for onPrimary (used by many components). */
     contrastText: '#FFFFFF',
-    subtle: 'rgba(99, 78, 184, 0.10)',
-    border: 'rgba(99, 78, 184, 0.35)',
+    subtle: 'rgba(168, 120, 224, 0.12)',
+    border: 'rgba(168, 120, 224, 0.40)',
   },
-  overlay: 'rgba(15, 23, 42, 0.45)',
-  success: '#16A34A',
-  warning: '#D97706',
-  danger: '#DC2626',
-  successSubtle: 'rgba(22, 163, 74, 0.12)',
-  warningSubtle: 'rgba(217, 119, 6, 0.12)',
-  dangerSubtle: 'rgba(220, 38, 38, 0.12)',
-  successText: '#15803D',
-  warningText: '#B45309',
-  dangerText: '#B91C1C',
+  overlay: {
+    light: 'rgba(42, 27, 71, 0.25)',
+    medium: 'rgba(42, 27, 71, 0.45)',
+    strong: 'rgba(42, 27, 71, 0.62)',
+    backdrop: 'rgba(246, 243, 255, 0.60)',
+  },
+  success: '#1F8A4D',
+  warning: '#9A6512',
+  danger: '#C12A4B',
+  info: '#1F6FB0',
+  successSubtle: 'rgba(31, 138, 77, 0.12)',
+  warningSubtle: 'rgba(154, 101, 18, 0.12)',
+  dangerSubtle: 'rgba(193, 42, 75, 0.12)',
+  infoSubtle: 'rgba(31, 111, 176, 0.12)',
+  successText: '#166B3A',
+  warningText: '#7A4E0C',
+  dangerText: '#9B1F3C',
+  infoText: '#155A93',
+  mood: {
+    calm: '#5BA3C9',
+    good: '#4FAE8B',
+    great: '#9A78D0',
+    notGood: '#D98A5B',
+    overwhelmed: '#C76B8E',
+    happy: '#E0A93B',
+    sad: '#6B8FD6',
+    anxious: '#C98AB0',
+    grateful: '#7FB98A',
+    reflective: '#8A7BD0',
+    energized: '#D98C5B',
+  },
+  moodScale: {
+    1: '#C76B8E',
+    2: '#D98A5B',
+    3: '#7E8E9F',
+    4: '#9A78D0',
+    5: '#4FAE8B',
+  },
 };

@@ -14,6 +14,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { View } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 interface LoadingSpinnerProps {
   size?: number;
@@ -25,10 +26,12 @@ interface LoadingSpinnerProps {
 
 export function LoadingSpinner({
   size = 32,
-  color = '#8B5CF6',
+  color,
   strokeWidth = 3,
   className = '',
 }: LoadingSpinnerProps) {
+  const { colors } = useTheme();
+  const spinnerColor = color ?? colors.brand.primary;
   const rotation = useSharedValue(0);
 
   useEffect(() => {
@@ -48,8 +51,8 @@ export function LoadingSpinner({
     height: size,
     borderRadius: size / 2,
     borderWidth: strokeWidth,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-    borderTopColor: color,
+    borderColor: colors.brand.subtle,
+    borderTopColor: spinnerColor,
   }));
 
   return (

@@ -8,7 +8,7 @@
 
 import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeIn, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { chat, spacing, borderRadius as radius } from '@/core/theme/tokens';
@@ -20,7 +20,7 @@ interface ReflectionCardProps {
   actionLabel?: string;
 }
 
-const ACCENT = chat.blocks.reflection; // #8B5CF6
+const ACCENT = chat.blocks.reflection; // lavender reflection accent (#9A78D0)
 
 export const ReflectionCard = React.memo(function ReflectionCard({
   title = "Today's Reflection",
@@ -28,14 +28,8 @@ export const ReflectionCard = React.memo(function ReflectionCard({
   actionLabel = 'Save Reflection',
 }: ReflectionCardProps) {
   const { colors } = useTheme();
-  const btnScale = useSharedValue(1);
-  const btnStyle = useAnimatedStyle(() => ({ transform: [{ scale: btnScale.value }] }));
-
   const handlePress = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-    btnScale.value = withSpring(0.94, { damping: 10, stiffness: 300 }, () => {
-      btnScale.value = withSpring(1, { damping: 12, stiffness: 250 });
-    });
   }, []);
 
   return (
@@ -64,14 +58,12 @@ export const ReflectionCard = React.memo(function ReflectionCard({
 
         <View style={[styles.divider, { backgroundColor: `${ACCENT}20` }]} />
 
-        <Animated.View style={btnStyle}>
-          <Pressable
-            onPress={handlePress}
-            style={[styles.actionButton, { backgroundColor: ACCENT }]}
-          >
-            <Text style={styles.actionLabel}>{actionLabel}</Text>
-          </Pressable>
-        </Animated.View>
+        <Pressable
+          onPress={handlePress}
+          style={[styles.actionButton, { backgroundColor: ACCENT }]}
+        >
+          <Text style={styles.actionLabel}>{actionLabel}</Text>
+        </Pressable>
       </View>
     </Animated.View>
   );

@@ -67,7 +67,7 @@ export function MessageActionSheet({ visible, onClose, actions }: MessageActionS
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(200)}
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.overlay }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.overlay.medium }]}
         >
           <Pressable style={styles.backdropPressable} onPress={onClose} />
         </Animated.View>

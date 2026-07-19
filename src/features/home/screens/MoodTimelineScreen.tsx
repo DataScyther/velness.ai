@@ -367,7 +367,7 @@ export function MoodTimelineScreen() {
           text: 'Your mood lifts after meditation sessions.',
           why: `Slower breathing down-regulates your nervous system, lowering stress before it builds. On meditation days your average mood is ${medAvg.toFixed(1)} vs ${nonMedAvg.toFixed(1)} otherwise.`,
           icon: Sparkles,
-          color: '#8B5CF6',
+          color: colors.brand.primary,
         });
       }
     }

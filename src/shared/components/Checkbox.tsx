@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 interface CheckboxProps {
   checked: boolean;
@@ -10,6 +11,7 @@ interface CheckboxProps {
 }
 
 export function Checkbox({ checked, onPress, label, error }: CheckboxProps) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -22,7 +24,7 @@ export function Checkbox({ checked, onPress, label, error }: CheckboxProps) {
             : 'bg-surface-primary border-border-default'
         }`}
       >
-        {checked && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
+        {checked && <Check size={12} color={colors.brand.onPrimary} strokeWidth={3} />}
       </View>
       <View className="flex-1">
         {label && (

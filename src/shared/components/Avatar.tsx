@@ -10,6 +10,7 @@ import { View, Text, Image } from 'react-native';
 import { User } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { useTheme } from '@/hooks/useTheme';
 
 const avatarVariants = cva('items-center justify-center rounded-full', {
   variants: {
@@ -53,6 +54,7 @@ interface AvatarProps extends VariantProps<typeof avatarVariants> {
 }
 
 export function Avatar({ photoURL, name, size, className = '' }: AvatarProps) {
+  const { colors } = useTheme();
   const initials = React.useMemo(() => {
     if (!name) return '?';
     return name
@@ -84,7 +86,8 @@ export function Avatar({ photoURL, name, size, className = '' }: AvatarProps) {
     return (
       <Animated.View
         entering={FadeIn.duration(300)}
-        className={`${avatarVariants({ size })} bg-[#6B7280]/40 ${className}`}
+        className={`${avatarVariants({ size })} ${className}`}
+        style={{ backgroundColor: colors.text.disabled }}
       >
         <Text className={`${textVariants({ size })}`}>{initials}</Text>
       </Animated.View>
@@ -96,7 +99,7 @@ export function Avatar({ photoURL, name, size, className = '' }: AvatarProps) {
       entering={FadeIn.duration(300)}
       className={`${avatarVariants({ size })} bg-velness-glass-highlight ${className}`}
     >
-      <User size={iconSize} color="rgba(255,255,255,0.5)" />
+      <User size={iconSize} color={colors.text.muted} />
     </Animated.View>
   );
 }

@@ -42,31 +42,26 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 20, fontWeight: '600', marginBottom: 8, color: '#FFF' }}>
+        <View className="flex-1 justify-center items-center p-6 bg-background-primary">
+          <Text className="text-text-primary text-body-lg font-semibold mb-2">
             Something went wrong
           </Text>
-          <Text style={{ fontSize: 14, color: '#888', textAlign: 'center', marginBottom: 12 }}>
+          <Text className="text-text-secondary text-body-sm text-center mb-3">
             {this.state.error?.message ?? 'An unexpected error occurred'}
           </Text>
-          <View style={{ maxHeight: 200, width: '100%', marginBottom: 24 }}>
+          <View className="max-h-48 w-full mb-6">
             <Text
               selectable
-              style={{ fontSize: 11, color: '#bbb', textAlign: 'left', lineHeight: 16 }}
+              className="text-text-tertiary text-caption text-left"
             >
               {this.state.error?.stack ?? 'No stack available.'}
             </Text>
           </View>
           <TouchableOpacity
             onPress={this.handleReset}
-            style={{
-              backgroundColor: '#6C5CE7',
-              paddingHorizontal: 24,
-              paddingVertical: 12,
-              borderRadius: 8,
-            }}
+            className="bg-brand-primary px-6 py-3 rounded-lg"
           >
-            <Text style={{ color: '#FFF', fontWeight: '600' }}>Try Again</Text>
+            <Text className="text-brand-onPrimary font-semibold">Try Again</Text>
           </TouchableOpacity>
         </View>
       );

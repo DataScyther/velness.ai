@@ -25,7 +25,7 @@ function parseInsightContent(content: string) {
   return { title, insight };
 }
 
-const ACCENT = chat.blocks.insight; // #A78BFA
+const ACCENT = chat.blocks.insight; // lavender insight accent (#B99BE8)
 
 export const DailyInsightCard = React.memo(function DailyInsightCard({
   title: propTitle,

@@ -89,8 +89,8 @@ export const MoodTimeline = React.memo(({ points, svgWidth, svgHeight }: MoodTim
           <Stop offset="1" stopColor={colors.text.tertiary} stopOpacity={0.02} />
         </LinearGradient>
         <LinearGradient id="lineGradCompact" x1="0%" y1="0%" x2="100%" y2="0%">
-          <Stop offset="0%" stopColor="#06B6D4" />
-          <Stop offset="100%" stopColor="#06B6D4" />
+          <Stop offset="0%" stopColor={colors.brand.secondary} />
+          <Stop offset="100%" stopColor={colors.brand.secondary} />
         </LinearGradient>
       </Defs>
 
