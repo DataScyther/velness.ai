@@ -11,7 +11,6 @@
 import type { Database } from '../database.types';
 
 import { authService } from './AuthService';
-import { journeyService } from './JourneyService';
 import { moodService } from './MoodService';
 import { sessionService } from './SessionService';
 import { profileService } from './ProfileService';
@@ -39,7 +38,6 @@ export {
 
 // ── Domain services (singletons) ─────────────────────────────────────────────
 export {
-  journeyService,
   moodService,
   sessionService,
   profileService,
@@ -58,7 +56,6 @@ export {
 
 // Row types surfaced by the service boundary (sourced from each service file).
 export type {
-  JourneyRow,
   MoodRow,
   MoodLevel,
   SessionRow,
@@ -79,8 +76,6 @@ export type {
 // Re-export the input/patch types the callers need, sourced from the
 // repositories so services remain the only boundary feature code imports.
 export type {
-  JourneyInput,
-  JourneyPatch,
   MoodInput,
   MoodPatch,
   SessionInput,
@@ -116,10 +111,9 @@ export type ExerciseType = Database['public']['Enums']['exercise_type'];
 export type MissionStatus = Database['public']['Enums']['mission_status'];
 
 // ── Convenience namespace ────────────────────────────────────────────────────
-/** Bundles every service singleton for convenient `services.journey.list()` style imports. */
+/** Bundles every service singleton for convenient `services.mood.list()` style imports. */
 export const services = {
   auth: authService,
-  journey: journeyService,
   mood: moodService,
   session: sessionService,
   profile: profileService,

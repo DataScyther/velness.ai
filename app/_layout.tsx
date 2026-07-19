@@ -70,15 +70,6 @@ export default function RootLayout() {
             <Stack.Screen name="auth/email-verification" options={{ animation: 'fade' }} />
             <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
             <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-            <Stack.Screen name="journey/placeholder" options={{ animation: 'fade' }} />
-            <Stack.Screen name="journey/library" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="journey/category/[categoryId]" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="journey/program/[programId]" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="journey/program/[programId]/lesson/[lessonId]" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="journey/exercise/[exerciseId]" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="journey/session/[sessionId]" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="journey/completion" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="journey/progress" options={{ animation: 'slide_from_right' }} />
         </Stack>
         <ToastContainer />
       </VelnessProvider>

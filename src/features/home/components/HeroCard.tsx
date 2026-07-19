@@ -5,7 +5,6 @@
 // Component tree:
 //   HeroCard
 //   ├── GreetingBadge        (time-of-day emoji kicker, top-left)
-//   ├── AmbientAnimation     (HeroAura sun/moon, top-right corner)
 //   ├── FloatingParticles    (3 tiny dots drifting slowly)
 //   ├── GreetingTitle         (personalized "Good Night, NK")
 //   ├── GreetingSubtitle      (contextual subline)
@@ -15,8 +14,7 @@
 //
 // Animations (only four):
 //   1. Content fades in on mount (staggered FadeInDown)
-//   2. Sun/moon rotates continuously (HeroAura's built-in)
-//   3. Particles drift slowly (translate loops)
+//   2. Particles drift slowly (translate loops)
 //   4. CTA scales to 0.97 on press (spring)
 
 import React, { useEffect } from 'react';
@@ -73,18 +71,20 @@ interface ParticleConfig {
   radius: number;
   duration: number;
   opacity: number;
-  color: string;
+  tone: 'primary' | 'secondary' | 'tertiary';
 }
 
 const PARTICLES: ParticleConfig[] = [
-  { x: SCREEN_W * 0.65, y: 30, dx: 18, dy: -12, radius: 2.5, duration: 22000, opacity: 0.25, color: '#8B5CF6' },
-  { x: SCREEN_W * 0.50, y: 55, dx: -14, dy: 10, radius: 2.0, duration: 26000, opacity: 0.18, color: '#06B6D4' },
-  { x: SCREEN_W * 0.72, y: 70, dx: 12, dy: -16, radius: 1.8, duration: 30000, opacity: 0.22, color: '#A78BFA' },
+  { x: SCREEN_W * 0.65, y: 30, dx: 18, dy: -12, radius: 2.5, duration: 22000, opacity: 0.25, tone: 'primary' },
+  { x: SCREEN_W * 0.50, y: 55, dx: -14, dy: 10, radius: 2.0, duration: 26000, opacity: 0.18, tone: 'secondary' },
+  { x: SCREEN_W * 0.72, y: 70, dx: 12, dy: -16, radius: 1.8, duration: 30000, opacity: 0.22, tone: 'tertiary' },
 ];
 
 function Particle({ config, isDark }: { config: ParticleConfig; isDark: boolean }) {
+  const { colors } = useTheme();
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
+  const particleColor = colors.brand[config.tone];
 
   useEffect(() => {
     if (reduced) return;
@@ -107,7 +107,7 @@ function Particle({ config, isDark }: { config: ParticleConfig; isDark: boolean 
     width: config.radius * 2,
     height: config.radius * 2,
     borderRadius: config.radius,
-    backgroundColor: config.color,
+    backgroundColor: particleColor,
     opacity: config.opacity * (isDark ? 1 : 0.5),
   }));
 
@@ -231,9 +231,9 @@ export function HeroCard({
             <Svg width={ORB} height={ORB}>
               <Defs>
                 <RadialGradient id="heroPurple" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.14} />
-                  <Stop offset="35%" stopColor="#7C3AED" stopOpacity={0.06} />
-                  <Stop offset="100%" stopColor="#7C3AED" stopOpacity={0} />
+                  <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0.14} />
+                  <Stop offset="35%" stopColor={colors.brand.primaryDeep} stopOpacity={0.06} />
+                  <Stop offset="100%" stopColor={colors.brand.primaryDeep} stopOpacity={0} />
                 </RadialGradient>
               </Defs>
               <Rect width="100%" height="100%" fill="url(#heroPurple)" />
@@ -244,9 +244,9 @@ export function HeroCard({
             <Svg width={ORB} height={ORB}>
               <Defs>
                 <RadialGradient id="heroCyan" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0%" stopColor="#06B6D4" stopOpacity={0.10} />
-                  <Stop offset="30%" stopColor="#0891B2" stopOpacity={0.04} />
-                  <Stop offset="100%" stopColor="#0891B2" stopOpacity={0} />
+                  <Stop offset="0%" stopColor={colors.brand.secondary} stopOpacity={0.10} />
+                  <Stop offset="30%" stopColor={colors.brand.tertiary} stopOpacity={0.04} />
+                  <Stop offset="100%" stopColor={colors.brand.tertiary} stopOpacity={0} />
                 </RadialGradient>
               </Defs>
               <Rect width="100%" height="100%" fill="url(#heroCyan)" />
@@ -254,9 +254,6 @@ export function HeroCard({
           </Animated.View>
 
           <FloatingParticles isDark={isDark} />
-
-          {/* Time-of-day focal illustration, tucked into the top-right corner */}
-          <View style={styles.auraWrap} pointerEvents="none" />
         </View>
 
         {/* Top inner highlight (glass sheen) */}
@@ -380,11 +377,6 @@ const styles = StyleSheet.create({
     height: ORB,
     top: -ORB * 0.22,
     right: -ORB * 0.24,
-  },
-  auraWrap: {
-    position: 'absolute',
-    top: -8,
-    right: 2,
   },
   sheen: {
     position: 'absolute',

@@ -36,9 +36,15 @@ export function usePanelAnimation(
 
     // Only animate if the visibility state actually changed
     if (prevVisible !== isVisible) {
-      progress.value = reduced
-        ? withTiming(isVisible ? 1 : 0, timingConfig)
-        : withSpring(isVisible ? 1 : 0, springConfig);
+      if (isVisible) {
+        // Smooth spring animation for appearance
+        progress.value = reduced
+          ? withTiming(1, timingConfig)
+          : withSpring(1, springConfig);
+      } else {
+        // Fast timing for hiding to prevent shadow smudge artifacts
+        progress.value = withTiming(0, { duration: 150 });
+      }
     }
   }, [isVisible, progress, reduced, springConfig, timingConfig]);
 

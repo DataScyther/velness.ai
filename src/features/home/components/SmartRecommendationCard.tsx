@@ -7,10 +7,6 @@ import React, { useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   FadeInDown,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { ArrowRight } from 'lucide-react-native';
@@ -38,19 +34,6 @@ export function SmartRecommendationCard({
   onTry,
 }: SmartRecommendationCardProps) {
   const { colors } = useTheme();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = useCallback(() => {
-    scale.value = withTiming(0.98, { duration: 160, easing: Easing.out(Easing.quad) });
-  }, [scale]);
-
-  const handlePressOut = useCallback(() => {
-    scale.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) });
-  }, [scale]);
 
   const handleTry = useCallback(() => {
     if (onTry) {
@@ -90,12 +73,9 @@ export function SmartRecommendationCard({
   return (
     <Animated.View
       entering={FadeInDown.duration(400)}
-      style={animatedStyle}
     >
       <Pressable
         onPress={handleTry}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
         style={[
           styles.card,
           {

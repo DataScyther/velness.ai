@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { useSharedValue, withSpring } from 'react-native-reanimated';
+import { useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 interface UseSaveButtonAnimationOptions {
   springConfig?: {
@@ -31,7 +31,13 @@ export function useSaveButtonAnimation(
 
     // Only animate if the visibility state actually changed
     if (prevVisible !== isVisible) {
-      visibility.value = withSpring(isVisible ? 1 : 0, springConfig);
+      if (isVisible) {
+        // Smooth spring animation for appearance
+        visibility.value = withSpring(1, springConfig);
+      } else {
+        // Fast timing for hiding to prevent shadow smudge artifacts
+        visibility.value = withTiming(0, { duration: 150 });
+      }
     }
   }, [isVisible, visibility, springConfig]);
 

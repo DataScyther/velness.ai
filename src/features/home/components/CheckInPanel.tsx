@@ -70,17 +70,18 @@ export function CheckInPanel({
   const innerStyle = useAnimatedStyle(() => {
     'worklet';
     const translate = interpolateSafe(progress.value, 12, 0);
+    // Instant shadow removal when panel is hidden to prevent smudge artifacts
+    const hasShadow = progress.value > 0.5;
     return {
       opacity: progress.value,
       transform: [{ translateY: translate }],
-      // Scale shadow with opacity to prevent bleeding when hidden
-      shadowOpacity: progress.value * 0.22,
-      shadowRadius: progress.value * 14,
+      shadowOpacity: hasShadow ? 0.22 : 0,
+      shadowRadius: hasShadow ? 14 : 0,
       shadowOffset: {
         width: 0,
-        height: progress.value * 6,
+        height: hasShadow ? 6 : 0,
       },
-      elevation: progress.value * 5,
+      elevation: hasShadow ? 5 : 0,
     };
   });
 

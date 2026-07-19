@@ -9,8 +9,7 @@ import React from 'react';
 import { View, Pressable, StyleSheet, type ViewProps } from 'react-native';
 import Animated, {
   useAnimatedStyle,
-  withSpring,
-  type WithSpringConfig,
+  useSharedValue,
 } from 'react-native-reanimated';
 import { shadows } from '@/core/theme';
 import { useTheme } from '@/hooks/useTheme';
@@ -30,12 +29,6 @@ const intensityStyles = {
   medium: 'bg-white/90 dark:bg-surface-primary/60',
   dark: 'bg-surface-primary dark:bg-surface-secondary/80',
 } as const;
-
-const springConfig: WithSpringConfig = {
-  damping: 20,
-  stiffness: 300,
-  mass: 0.5,
-};
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -65,14 +58,8 @@ export function GlassCard({
     [onLayout]
   );
 
-  const animatedStyle = useAnimatedStyle(() => {
-    if (!onPress) return {};
-    return {
-      transform: [
-        { scale: withSpring(1, springConfig) },
-      ],
-    };
-  });
+  // Pressable variant uses onPress directly with no scale/spring jiggle.
+  const animatedStyle = useAnimatedStyle(() => ({}));
 
   // Extract border radius from className to match SVG path exactly
   let rx = 24;

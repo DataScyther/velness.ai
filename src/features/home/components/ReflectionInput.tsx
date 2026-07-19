@@ -43,7 +43,8 @@ export const ReflectionInput = React.memo(({
     
     // Only animate if the text presence state actually changed
     if (prevHasText !== hasText) {
-      counterOpacity.value = withTiming(hasText ? 1 : 0.4, { duration: 200 });
+      // Use fast timing for instant response
+      counterOpacity.value = withTiming(hasText ? 1 : 0.4, { duration: 100 });
     }
   }, [value.length > 0]);
   

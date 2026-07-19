@@ -23,9 +23,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="journey"
+        name="reflection"
         options={{
-          title: 'Journey',
+          title: 'Reflection',
         }}
       />
       <Tabs.Screen

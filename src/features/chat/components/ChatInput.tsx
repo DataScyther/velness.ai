@@ -3,7 +3,7 @@ import { View, TextInput, Text, StyleSheet, Pressable, type NativeSyntheticEvent
 import { Square } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { SendButton } from './SendButton';
 import { saveDraft, loadDraft, clearDraft } from '../persistence/draftStorage';
 import type { SharedValue } from 'react-native-reanimated';
@@ -45,7 +45,6 @@ export function ChatInput({
   const inputRef = useRef<TextInput>(null);
   const { colors } = useTheme();
 
-  const inputScale = useSharedValue(1);
   const focusBorderColor = useSharedValue(colors.border.default);
   const focusShadowOpacity = useSharedValue(0.04);
 
@@ -67,7 +66,6 @@ export function ChatInput({
   const animatedWrapperStyle = useAnimatedStyle(() => ({
     borderColor: focusBorderColor.value,
     shadowOpacity: focusShadowOpacity.value,
-    transform: [{ scale: inputScale.value }],
   }));
 
   // --- Auto focus when streaming stops ---
@@ -86,11 +84,6 @@ export function ChatInput({
     if (!trimmed) return;
 
     setInputText(trimmed);
-
-    inputScale.value = withSequence(
-      withSpring(1.02, { damping: 12, stiffness: 300 }),
-      withSpring(1, { damping: 12, stiffness: 300 })
-    );
 
     const timer = setTimeout(() => {
       onSend(trimmed);
@@ -146,10 +139,6 @@ export function ChatInput({
     const text = inputText.trim();
     if (!text) return;
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-    inputScale.value = withSequence(
-      withTiming(0.96, { duration: 80 }),
-      withTiming(1, { duration: 100 })
-    );
     onSend(text);
     if (conversationId) {
       clearDraft(conversationId);

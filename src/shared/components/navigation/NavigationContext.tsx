@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import type { ThemeTokens } from '@/theme';
 
-export type TabName = 'home' | 'chat' | 'journey' | 'profile';
+export type TabName = 'home' | 'chat' | 'reflection' | 'profile';
 
 export interface NavigationContextType {
   activeTab: TabName;

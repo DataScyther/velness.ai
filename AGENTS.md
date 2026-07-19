@@ -1,76 +1,312 @@
-# AGENTS.md
+# ============================================================================
+# ARCHITECTURE INVARIANTS (DO NOT VIOLATE)
+# ============================================================================
 
-Compact guidance for working in the Velness repo. Trust the build config and
-scripts over `README.md` — the README is stale (it still claims React 18,
-Firebase-first, Netlify deploy, and `npm run deploy:netlify`, none of which
-match the current setup).
+These rules define the permanent architecture of Velness. Any change requires
+an Architecture Review before implementation.
 
-## Stack (verified from package.json / configs)
-- Expo 54 + React Native 0.81 + React 19. Web build via **Vite 6** (React Native
-  Web + NativeWind/Tailwind). Mobile via `expo run:android` / `expo run:ios`.
-- **Supabase** is the real backend (auth, Postgres, storage, realtime). Firebase
-  config still exists in `app.config.js` (`EXPO_PUBLIC_FIREBASE_*`) but falls back
-  to `VITE_*`; do not treat Firebase as the primary store.
-- AI chat served by a **Vercel edge function** at `api/ai/chat.ts` (`runtime: 'edge'`,
-  Web `Request`/`Response` API).
+## AI Runtime
 
-## Commands
-- Install: `npm install`
-- Web dev: `npm run dev` (Vite, port 5173)
-- Expo dev: `npm run dev:expo` (or `npm run web:expo`)
-- Web build / preview: `npm run build`, `npm run preview`
-- Mobile: `npm run android`, `npm run ios`
-- **Unit tests:** `npm run test` → `vitest run` (config `vitest.config.ts`,
-  includes `src/**/*.test.ts`, node env, `@` → `src`).
-- **Integration tests:** `npm run test:integration` → runs `backend/integration-tests/`
-  against the **LIVE production Supabase project**. Do not run casually; it creates
-  and deletes throwaway anonymous users. Requires `.env.development`.
-- Supabase auth setup: `npm run setup:auth` (requires `SUPABASE_ACCESS_TOKEN`).
-- Android toolchain: `npm run setup:android`.
+- AIOrchestrator is the ONLY entry point for every AI request.
+- PromptAssembler is the ONLY component allowed to construct prompts.
+- Providers NEVER construct prompts.
+- ContextBuilder is the ONLY component allowed to merge Memory, RAG, Live
+  Search, and Conversation History.
+- ModelGateway is the ONLY component allowed to communicate with the LLM.
+- Client screens NEVER call LLM providers directly.
 
-## Architecture boundaries
-- `src/` is the shared RN-Web app; import it via the `@/*` alias (also `backend/*`).
-- `backend/` is a TypeScript module consumed by the UI. Import via `backend/services`.
-  Only `backend/repositories/*` (and `baseRepository`) may import `@supabase/supabase-js`
-  or the supabase client. UI/features must **never** import supabase directly.
-  Auth goes through `AuthService` → `AuthRepository` (see `backend/services/README.md`).
-- `api/ai/chat.ts` is the only edge function; in dev, `vite.config.ts` mounts it at
-  `/api/ai/chat` via a middleware plugin, and proxies `/api/nvidia` to NVIDIA.
-- `supabase/migrations/` are symlinks to `backend/{schema,rls,storage,realtime}/*.sql`.
-  The DB schema is the single source of truth; apply via `supabase db push`.
+## Tool System
 
-## Backend is FROZEN
-Per `backend/FREEZE.md`: do **not** alter the schema or RLS without a new migration
-plus a freeze re-review. Supabase project `whjdjxtbyoojrwvbearg` (Tokyo). The
-service-role key (`SUPABASE_PROD_SERVICE_ROLE_KEY`) lives only in the gitignored
-`.env` and is never bundled.
+- ToolRouter routes by CAPABILITY, never by provider.
+- Providers are interchangeable implementations.
+- Register new providers through ToolRegistry.
+- Never hardcode provider names inside ToolRouter.
 
-## Environment / config quirks
-- Env is loaded by `APP_ENV` (`development`|`staging`|`production`) in `app.config.js`:
-  it merges `.env`, then `.env.<app_env>`, then `.env.local`. Client-exposed vars use
-  `EXPO_PUBLIC_*`/`VITE_*` (anon key only); the service-role key is server-only.
-- `api/ai/chat.ts` and the Vite dev plugin read env through Vite's `loadEnv`; the
-  edge function has no `import.meta`/Node `process.env` assumptions.
-- Node >= 20 required (`package.json` `engines`), despite the README saying 18+.
-- `tsconfig.json`: `strict: false`, `noUnusedLocals/Parameters: false`. Don't
-  "fix" these expecting strictness.
-- `vite.config.ts` aliases `react-native`, `expo-router`, `expo-clipboard` to
-  web mocks so the RN app builds in the browser. Don't remove these.
-- Root `.repro.*` files are a one-off debugging harness for an
-  `isAnimated` recursion bug, not part of the normal test suite. Ignore them.
+## RAG
 
-## Vector store (Pinecone)
-Per the Phase 4.0 Architecture Review (approved 2026-07-17), **Pinecone** is the
-canonical vector database for RAG/semantic retrieval; **Supabase remains
-transactional-only** (auth, users, journals, moods, progress, preferences,
-analytics). The backend freeze (above) still applies to Supabase — Pinecone is
-outside Supabase, so adopting it needs no Supabase migration.
-- Pinecone SDK: `@pinecone-database/pinecone` (server-side only, used by the edge
-  function, never the RN client bundle).
-- RAG wiring: `api/ai/runtime/rag/` — `VectorStore` (vendor-neutral interface) →
-  `PineconeVectorStore` → `PineconeRetrievalTool` → `AIOrchestrator` (under
-  `ENABLE_RAG`, **off by default**). The runtime depends only on the `RetrievalTool`
-  contract, not on Pinecone directly.
-- Secrets: `PINECONE_API_KEY` is **server-only** (never `VITE_*`, never committed).
-  Embeddings come from NVIDIA (`NVIDIA_API_KEY` / `VITE_NVIDIA_BASE_URL`). Add
-  `PINECONE_INDEX` / `PINECONE_CLOUD` / `PINECONE_REGION` as needed.
+- Runtime depends ONLY on RetrievalTool.
+- RetrievalTool abstracts the vector database.
+- Pinecone implementation is replaceable.
+- AI Runtime must never know which vector database is being used.
+
+## Memory
+
+- Memory retrieval always goes through MemoryService.
+- Memory extraction is separated from retrieval.
+- Reflection engine never writes directly into runtime context.
+- Long-term memory is independent of RAG.
+
+## Client
+
+- Screens remain 100% presentational.
+- Screens never import repositories.
+- Screens never contain business logic.
+- Business logic belongs inside hooks/services/workflows.
+
+## Backend
+
+- Supabase stores transactional data only.
+- Pinecone stores vector data only.
+- Never store embeddings inside Supabase.
+
+## Security
+
+- Secrets NEVER enter src/.
+- Never expose API keys through VITE_* variables.
+- AI providers remain server-side only.
+
+
+# ============================================================================
+# ENGINEERING PHILOSOPHY
+# ============================================================================
+
+The project follows several permanent engineering principles.
+
+1. Build the smallest working vertical slice.
+2. Validate before expanding.
+3. Interfaces before implementations.
+4. Prefer composition over inheritance.
+5. One Sprint → One Objective.
+6. One Objective → One Verification.
+7. One Verification → One Commit.
+8. Never redesign stable architecture without review.
+9. Runtime orchestration owns intelligence.
+10. Optimize after correctness.
+
+
+
+# ============================================================================
+# AI REQUEST LIFECYCLE
+# ============================================================================
+
+Every AI request MUST follow this execution pipeline.
+
+User
+    │
+    ▼
+Edge Runtime
+    │
+    ▼
+AIOrchestrator
+    │
+    ▼
+IntentClassifier
+    │
+    ▼
+ToolRouter
+    │
+    ▼
+Capabilities
+    │
+    ├──────────────┐
+    ▼              ▼
+Memory        Live Search
+    │              │
+    └──────┬───────┘
+           ▼
+      RetrievalTool
+           │
+           ▼
+      Pinecone RAG
+           │
+           ▼
+     ContextBuilder
+           │
+           ▼
+    PromptAssembler
+           │
+           ▼
+     ModelGateway
+           │
+           ▼
+ Streaming Response
+
+Nothing may bypass this pipeline.
+
+
+
+# ============================================================================
+# AI REQUEST LIFECYCLE
+# ============================================================================
+
+Every AI request MUST follow this execution pipeline.
+
+User
+    │
+    ▼
+Edge Runtime
+    │
+    ▼
+AIOrchestrator
+    │
+    ▼
+IntentClassifier
+    │
+    ▼
+ToolRouter
+    │
+    ▼
+Capabilities
+    │
+    ├──────────────┐
+    ▼              ▼
+Memory        Live Search
+    │              │
+    └──────┬───────┘
+           ▼
+      RetrievalTool
+           │
+           ▼
+      Pinecone RAG
+           │
+           ▼
+     ContextBuilder
+           │
+           ▼
+    PromptAssembler
+           │
+           ▼
+     ModelGateway
+           │
+           ▼
+ Streaming Response
+
+Nothing may bypass this pipeline.
+
+
+# ============================================================================
+# CAPABILITY REGISTRY
+# ============================================================================
+
+The runtime routes by capability, not provider.
+
+Current capabilities:
+
+- GENERAL
+- MEMORY
+- KNOWLEDGE
+- NEWS
+- WEATHER
+- MEDICAL
+- PROFILE
+- JOURNEY
+- RAG
+
+Provider selection is delegated to ToolRegistry.
+
+Example:
+
+KNOWLEDGE
+
+↓
+
+Exa
+Wikipedia
+
+NEWS
+
+↓
+
+Google News
+Exa News
+
+WEATHER
+
+↓
+
+Open-Meteo
+
+Never reference providers directly outside ToolRegistry.
+
+# ============================================================================
+# NON-GOALS
+# ============================================================================
+
+The following architectural decisions are intentionally avoided.
+
+- Client-side AI orchestration.
+- Direct provider calls from UI.
+- Prompt construction inside providers.
+- Business logic inside screens.
+- Pinecone access from React Native.
+- Supabase vector storage.
+- Runtime components directly depending on Pinecone SDK.
+- Feature-specific implementations leaking into AI Runtime.
+
+
+# ============================================================================
+# EXTENDING THE AI RUNTIME
+# ============================================================================
+
+Adding a new provider:
+
+1. Implement Provider.
+2. Register Provider inside ToolRegistry.
+3. Map capability.
+4. Add unit tests.
+5. Add integration tests.
+6. Add feature flag.
+7. Verify runtime trace.
+8. Verify citations.
+
+Adding a new capability:
+
+1. Define capability enum.
+2. Implement Tool.
+3. Register Tool.
+4. Update IntentClassifier.
+5. Add PromptAssembler support.
+6. Add ContextBuilder support.
+7. Add tests.
+8. Verify runtime.
+
+Never modify AIOrchestrator unless introducing a new pipeline stage.
+
+# ============================================================================
+# MAJOR ARCHITECTURE DECISIONS
+# ============================================================================
+
+The following decisions are considered permanent unless superseded by an
+Architecture Review.
+
+✓ Firebase removed → Supabase adopted.
+
+✓ Client-side AI removed → Edge AI Runtime adopted.
+
+✓ Provider routing removed → Capability routing adopted.
+
+✓ Direct LLM calls removed → AIOrchestrator introduced.
+
+✓ pgvector replaced → Pinecone adopted as canonical vector database.
+
+✓ Runtime depends on RetrievalTool abstraction.
+
+✓ Memory separated from RAG.
+
+✓ Screens remain presentational.
+
+✓ Runtime architecture is considered stable (AI Platform v1.0).
+
+
+# ============================================================================
+# AI PLATFORM STATUS
+# ============================================================================
+
+Velness AI Platform
+
+Status:
+Production Ready
+
+Architecture:
+Frozen (v1.0)
+
+Future changes should focus on:
+
+- Bug fixes
+- Performance improvements
+- Better prompts
+- Better retrieval quality
+- Additional providers
+- Better wellness content
+
+Avoid large architectural redesigns without an explicit Architecture Review.

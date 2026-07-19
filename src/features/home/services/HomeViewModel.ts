@@ -9,19 +9,14 @@
 //    so HomeScreen is 100% presentational.
 
 import { moodService } from '../../../../backend/services/MoodService';
-import { journeyService } from '../../../../backend/services/JourneyService';
 import { recommendationService } from '../../../../backend/services/RecommendationService';
 import { analyticsService } from '../../../../backend/services/AnalyticsService';
 import { profileService } from '../../../../backend/services/ProfileService';
 
 import type { MoodRow } from '../../../../backend/services/MoodService';
-import type { JourneyRow } from '../../../../backend/services/JourneyService';
 import type { RecommendationRow } from '../../../../backend/services/RecommendationService';
 import type { AnalyticsRow } from '../../../../backend/services/AnalyticsService';
 import type { ProfileRow } from '../../../../backend/services/ProfileService';
-
-import type { JourneyProgress } from '@/features/journey/types/JourneyProgress';
-import { journeyRepository } from '@/repositories/JourneyRepository';
 
 import type { Mood, MoodRating } from '@/shared/types';
 import { getTimeOfDay } from '@/features/home/utils/adaptiveContext';
@@ -191,9 +186,6 @@ export type HomeScreenData = {
   todayMood: Mood | null;
   moodEntries: Mood[];
 
-  // Journey
-  journey: JourneyProgress | null;
-
   // Data
   recommendations: RecommendationRow[];
   recentEvents: AnalyticsRow[];
@@ -321,14 +313,13 @@ function buildAdaptiveContent(
   moment: NarrativeMoment,
   firstName: string | null,
   streak: number,
-  journeyTitle: string | null,
   hasCheckedInToday: boolean,
 ): AdaptiveContent {
   const name = firstName ?? 'there';
 
   // Dynamic CTA based on user state
   const dynamicCta = hasCheckedInToday
-    ? (journeyTitle ? `Continue ${journeyTitle}` : 'Continue')
+    ? 'Continue'
     : 'Complete Today\'s Check-in';
 
   const MAP: Record<NarrativeMoment, AdaptiveContent> = {
@@ -339,9 +330,7 @@ function buildAdaptiveContent(
     },
     afternoon_active: {
       headline: `Hey, ${name}`,
-      subline: journeyTitle
-        ? `Continue: ${journeyTitle}`
-        : "Let's keep the momentum going.",
+      subline: "Let's keep the momentum going.",
       ctaLabel: dynamicCta,
     },
     evening_wind_down: {
@@ -386,11 +375,6 @@ class HomeViewModel {
         profileService.getCurrent(),
       ]);
 
-    // Compute journey in parallel with (not after) the main queries above.
-    const journey = profile?.id
-      ? await journeyRepository.computeUserProgress(profile.id)
-      : null;
-
     const moodEntries = moodRows
       .map(moodRowToMood)
       .sort(
@@ -425,7 +409,6 @@ class HomeViewModel {
       narrativeMoment,
       firstName,
       streak,
-      journey?.title ?? null,
       hasCheckedInToday,
     );
 
@@ -445,12 +428,11 @@ class HomeViewModel {
       subline: smart.subline,
     };
 
-    // Build recommendation reason from journey context
-    const recommendationReason = journey
-      ? `Because you've been studying ${journey.title}`
-      : recommendations.length > 0
-      ? 'Based on your recent activity'
-      : null;
+    // Build recommendation reason from recent activity
+    const recommendationReason =
+      recommendations.length > 0
+        ? 'Based on your recent activity'
+        : null;
 
     const timeOfDay = getTimeOfDay();
     const intention = getDailyIntention(timeOfDay);
@@ -465,7 +447,6 @@ class HomeViewModel {
       intention,
       todayMood: getTodayMood(moodEntries),
       moodEntries,
-      journey,
       recommendations,
       recentEvents,
       profile,

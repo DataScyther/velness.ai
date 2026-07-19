@@ -3,14 +3,11 @@ import { Platform } from 'react-native';
 import { QueryClient } from '@tanstack/react-query';
 import { storageService } from '@/services/storage';
 import { moodRepository } from '@/repositories/MoodRepository';
-import { journeyRepository } from '@/repositories/JourneyRepository';
 import { profileRepository } from '@/repositories/ProfileRepository';
 import { NotAuthenticatedError } from '../../../backend/repositories/baseRepository';
 import { useAppStore } from './useAppStore';
 import { logger } from '@/services/logging';
 import type { Mood } from '@/shared/types';
-import type { Recommendation } from '@/features/journey/models/Recommendation';
-import type { Streak } from '@/features/journey/models/Streak';
 
 const STORAGE_KEY = 'sync_queue';
 const MAX_RETRIES = 5;
@@ -65,26 +62,6 @@ function isAlreadySynced(item: SyncQueueItem, queryClient: QueryClient): boolean
       const cached = queryClient.getQueryData<any[]>(['moods', uid]);
       if (!cached) return false;
       return cached.some((m: any) => m.id === entry.id);
-    }
-
-    if (item.type === 'save_exercise_progress') {
-      const { uid, exerciseId, streak } = item.payload;
-      if (!uid || !exerciseId) return false;
-      const cached = queryClient.getQueryData<any>(['exercises', uid]);
-      if (!cached) return false;
-      const existing = cached[exerciseId];
-      return existing?.completed === true && existing?.streak >= streak;
-    }
-
-    if (item.type === 'complete_lesson') {
-      const { uid, lessonId } = item.payload;
-      if (!uid || !lessonId) return false;
-      const cached = queryClient.getQueryData<any>(['journey', 'user-progress', uid]);
-      if (!cached?.programProgress) return false;
-      for (const prog of Object.values(cached.programProgress) as any[]) {
-        if (prog.completedLessonIds?.includes(lessonId)) return true;
-      }
-      return false;
     }
 
     if (item.type === 'update_profile') {
@@ -174,30 +151,6 @@ export const useSyncStore = create<SyncState>((set, get) => ({
           if (old.some((m) => m.id === entry.id)) return old;
           return [...old, entry];
         });
-        queryClient.invalidateQueries({ queryKey: ['journey', 'recommendations', uid] });
-        queryClient.invalidateQueries({ queryKey: ['personalization', uid] });
-      }
-    } else if (type === 'save_exercise_progress' || type === 'complete_lesson') {
-      const { uid, exerciseId, exercises, streak } = payload;
-      if (uid) {
-        const updates: Record<string, any> = {};
-        if (exerciseId) {
-          updates[exerciseId] = { completed: true, streak: streak ?? 1 };
-          await journeyRepository.persistLocal(uid, {
-            [exerciseId]: { completed: true, streak: streak ?? 1, lastCompletedAt: new Date() },
-          });
-        }
-        if (exercises && Array.isArray(exercises)) {
-          for (const ex of exercises) {
-            updates[ex.exerciseId] = { completed: true, streak: ex.streak ?? 1 };
-          }
-          await journeyRepository.persistLocal(uid, Object.fromEntries(
-            exercises.map((ex: any) => [ex.exerciseId, { completed: true, streak: ex.streak ?? 1, lastCompletedAt: new Date() }])
-          ));
-        }
-        queryClient.setQueryData(['exercises', uid], (old: Record<string, any> = {}) => {
-          return { ...old, ...updates };
-        });
       }
     } else if (type === 'update_profile') {
       const { uid, updates } = payload;
@@ -207,15 +160,6 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         if (currentUser && currentUser.uid === uid) {
           userStore.setUser({ ...currentUser, ...updates });
         }
-      }
-    } else if (type === 'save_recommendation') {
-      const { uid, recommendation } = payload;
-      if (uid && recommendation) {
-        queryClient.setQueryData(['journey', 'recommendations', uid], (old: any[] = []) => {
-          const exists = old.some((r) => r.id === recommendation.id);
-          if (exists) return old.map((r) => r.id === recommendation.id ? recommendation : r);
-          return [...old, recommendation];
-        });
       }
     }
 
@@ -267,33 +211,12 @@ export const useSyncStore = create<SyncState>((set, get) => ({
           const { uid, entry } = item.payload as { uid: string; entry: Mood };
           await moodRepository.syncToCloud(uid, entry);
           queryClient.invalidateQueries({ queryKey: ['moods', uid] });
-          queryClient.invalidateQueries({ queryKey: ['journey', 'recommendations', uid] });
-          queryClient.invalidateQueries({ queryKey: ['personalization', uid] });
-        } else if (item.type === 'save_exercise_progress') {
-          const { uid, exerciseId, streak } = item.payload;
-          await journeyRepository.saveProgress(uid, exerciseId, streak);
-          queryClient.invalidateQueries({ queryKey: ['exercises', uid] });
-        } else if (item.type === 'complete_lesson') {
-          const { uid, programId, lessonId, exercises } = item.payload;
-          const exerciseIds = (exercises ?? []).map((ex: any) => ex.exerciseId);
-          await journeyRepository.completeLessonAtomic(uid, programId, lessonId, exerciseIds);
-          queryClient.invalidateQueries({ queryKey: ['journey', 'exercises', uid] });
-          queryClient.invalidateQueries({ queryKey: ['journey', 'user-progress', uid] });
-          queryClient.invalidateQueries({ queryKey: ['journey', 'legacy', uid] });
         } else if (item.type === 'update_profile') {
           const { uid, updates } = item.payload;
           const currentProfile = useAppStore.getState().session.user;
           if (currentProfile) {
             await profileRepository.updateProfile(uid, updates, currentProfile);
           }
-        } else if (item.type === 'save_recommendation') {
-          const { uid, recommendation } = item.payload as { uid: string; recommendation: Recommendation };
-          await journeyRepository.saveRecommendation(uid, recommendation);
-          queryClient.invalidateQueries({ queryKey: ['journey', 'recommendations', uid] });
-        } else if (item.type === 'save_streak') {
-          const { uid, streak } = item.payload as { uid: string; streak: Streak };
-          await journeyRepository.saveStreak(uid, streak);
-          queryClient.invalidateQueries({ queryKey: ['journey', 'streak', uid] });
         }
 
         logger.info('sync', 'Processed', { type: item.type, id: item.id });

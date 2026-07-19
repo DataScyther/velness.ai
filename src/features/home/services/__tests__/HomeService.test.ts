@@ -16,16 +16,6 @@ const baseFixture: HomeScreenData = {
   intention: 'Stay present.',
   todayMood: null,
   moodEntries: [],
-  journey: {
-    programId: 'prog-1',
-    title: 'Calm Foundations',
-    currentLesson: 1,
-    totalLessons: 5,
-    completionPercent: 20,
-    lastActivity: new Date(),
-    resumeTarget: { exerciseId: 'ex-1', route: '/journey/exercise/ex-1' },
-    status: 'active',
-  },
   recommendations: [
     {
       id: 'rec-1',
@@ -142,11 +132,10 @@ describe('HomeService.fetchHomeState', () => {
     expect(state.greeting.firstName).toBe('Alex');
     expect(state.greeting.moment).toBe('morning_fresh');
     expect(state.todaysMission?.title).toBe('Morning Breathing');
-    expect(state.journey?.title).toBe('Calm Foundations');
     expect(state.reflection.reflectedToday).toBe(false);
     expect(state.mood.streak).toBe(3);
     expect(state.mood.dayCount).toBe(12);
-    expect(state.recommendation.primary?.id).toBe('rec_journey_progress');
+    expect(state.recommendation.primary?.id).toBe('rec_default_breathe');
     expect(state.progress.completedLessons).toBe(1);
     expect(state.progress.completedExercises).toBe(1);
     expect(state.notifications.unreadCount).toBe(1);
@@ -161,7 +150,6 @@ describe('HomeService.fetchHomeState', () => {
     expect(state.todaysMission).toBeNull();
     // Everything else is still present.
     expect(state.greeting.text).toBe('Good morning, Alex');
-    expect(state.journey).not.toBeNull();
     expect(state.notifications.unreadCount).toBe(1);
   });
 });

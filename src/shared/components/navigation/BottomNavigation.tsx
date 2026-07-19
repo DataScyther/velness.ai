@@ -17,9 +17,9 @@ const TAB_CONFIGS: Record<TabName, { label: string; hint: string }> = {
     label: 'Chat',
     hint: 'Opens your AI wellness chat conversations',
   },
-  journey: {
-    label: 'Journey',
-    hint: 'Opens your wellness journey and exercises',
+  reflection: {
+    label: 'Reflection',
+    hint: 'Opens your private reflection and journaling space',
   },
   profile: {
     label: 'Profile',

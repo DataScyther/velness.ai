@@ -15,11 +15,6 @@ import React, { useCallback, useState } from 'react';
 import { View, StyleSheet, Pressable, Share } from 'react-native';
 import * as ExpoClipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '@/hooks/useTheme';
 import { BaseMessageBubble } from './BaseMessageBubble';
@@ -51,12 +46,6 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const showTimestamp = !isGrouped || isLast;
 
-  const pressScale = useSharedValue(1);
-
-  const pressAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pressScale.value }],
-  }));
-
   const handleCopy = useCallback(async () => {
     if (!message.content) return;
     try {
@@ -76,9 +65,6 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
 
   const handleLongPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    pressScale.value = withTiming(0.96, { duration: 80 }, () => {
-      pressScale.value = withTiming(1, { duration: 150 });
-    });
     setActionSheetVisible(true);
   }, []);
 
@@ -97,11 +83,10 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
       containerStyle={[styles.outerRow, { marginBottom }]}
     >
       <View style={[styles.wrapper, { maxWidth: chat.bubble.maxWidthUser }]}>
-        <Pressable
-          onLongPress={handleLongPress}
-          accessibilityHint="Long press for more options"
-        >
-          <Animated.View style={pressAnimStyle}>
+          <Pressable
+            onLongPress={handleLongPress}
+            accessibilityHint="Long press for more options"
+          >
             <View
               style={[
                 styles.bubble,
@@ -125,8 +110,7 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
               </Svg>
               <MessageContent message={message} />
             </View>
-          </Animated.View>
-        </Pressable>
+          </Pressable>
 
         {showTimestamp && (
           <MessageTimestamp date={message.createdAt} style={styles.timestamp} />

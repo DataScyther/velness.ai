@@ -33,13 +33,6 @@ import {
 } from './ProfileRepository';
 
 import {
-  JourneyRepository,
-  journeyRepository,
-  type JourneyInput,
-  type JourneyPatch,
-} from './JourneyRepository';
-
-import {
   MoodRepository,
   moodRepository,
   type MoodInput,
@@ -188,10 +181,6 @@ export {
   ProfileRepository,
   profileRepository,
   type ProfilePatch,
-  JourneyRepository,
-  journeyRepository,
-  type JourneyInput,
-  type JourneyPatch,
   MoodRepository,
   moodRepository,
   type MoodInput,
@@ -272,7 +261,6 @@ export {
 export const repositories = {
   auth: authRepository,
   profile: profileRepository,
-  journey: journeyRepository,
   mood: moodRepository,
   session: sessionRepository,
   recommendation: recommendationRepository,

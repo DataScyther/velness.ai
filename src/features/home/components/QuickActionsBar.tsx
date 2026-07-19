@@ -11,7 +11,7 @@
 //   • 13px medium-weight labels
 //   • 16px gap between buttons, 8px icon-to-label
 //
-// Press:  scale → 0.96, shadow reduces, icon rotates 2°, 150ms spring
+// Press:  no scale/shadow/rotation on press — instant, crisp tap response
 // Selected: soft purple outline ring (not solid fill)
 //
 // Icons (rendered via react-native-svg so they work on both web + native —
@@ -23,13 +23,10 @@
 //   Sleep    → GiNightSleep      (Indigo)  — react-icons/gi
 //   AI Chat  → RiChatAi3Fill     (Emerald) — react-icons/ri
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   FadeInDown,
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
 } from 'react-native-reanimated';
 import Svg, { Path, Circle } from 'react-native-svg';
 
@@ -150,42 +147,15 @@ interface QuickActionsBarProps {
 
 function QuickActionButton({
   action,
-  index,
   labelColor,
   surfaceColor,
   borderColor,
 }: {
   action: QuickAction;
-  index: number;
   labelColor: string;
   surfaceColor: string;
   borderColor: string;
 }) {
-  const scale = useSharedValue(1);
-  const shadowOpacity = useSharedValue(0.05);
-  const iconRotate = useSharedValue(0);
-
-  const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    shadowOpacity: shadowOpacity.value,
-  }));
-
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${iconRotate.value}deg` }],
-  }));
-
-  const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.96, { damping: 14, stiffness: 350 });
-    shadowOpacity.value = withSpring(0.02, { damping: 14, stiffness: 350 });
-    iconRotate.value = withSpring(2, { damping: 14, stiffness: 350 });
-  }, [scale, shadowOpacity, iconRotate]);
-
-  const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 300 });
-    shadowOpacity.value = withSpring(0.05, { damping: 12, stiffness: 300 });
-    iconRotate.value = withSpring(0, { damping: 12, stiffness: 300 });
-  }, [scale, shadowOpacity, iconRotate]);
-
   return (
     <Animated.View
       entering={FadeInDown.duration(350)}
@@ -198,13 +168,10 @@ function QuickActionButton({
           {
             shadowColor: '#000',
           },
-          containerStyle,
         ]}
       >
         <Pressable
           onPress={action.onPress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
           style={[
             styles.circle,
             {
@@ -215,9 +182,7 @@ function QuickActionButton({
           accessibilityRole="button"
           accessibilityLabel={action.label}
         >
-          <Animated.View style={iconStyle}>
-            <GlyphIcon glyph={action.glyph} size={24} color={action.color} />
-          </Animated.View>
+          <GlyphIcon glyph={action.glyph} size={24} color={action.color} />
         </Pressable>
       </Animated.View>
 
@@ -250,14 +215,14 @@ export function QuickActionsBar({
       id: 'breathing',
       label: 'Breathe',
       glyph: 'leaf',
-      color: '#06B6D4',     // Cyan
+      color: colors.brand.secondary,   // Brand secondary
       onPress: onBreathe ?? (() => {}),
     },
     {
       id: 'journal',
       label: 'Journal',
       glyph: 'journal',
-      color: '#8B5CF6',     // Violet
+      color: colors.brand.primary,   // Brand violet
       onPress: onOpenJournal ?? (() => {}),
     },
     {
@@ -289,7 +254,6 @@ export function QuickActionsBar({
         <QuickActionButton
           key={action.id}
           action={action}
-          index={index}
           labelColor={colors.text.secondary}
           surfaceColor={colors.surface.primary}
           borderColor={colors.border.default}

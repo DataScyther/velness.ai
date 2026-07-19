@@ -7,7 +7,6 @@
 import type { NarrativeMoment, AdaptiveContent } from './HomeViewModel';
 import type { Mood } from '@/shared/types';
 
-import type { JourneyProgress } from '@/features/journey/types/JourneyProgress';
 import type { RecommendationRow } from '../../../../backend/services/RecommendationService';
 import type { ProgressRow } from '../../../../backend/services/ProgressService';
 import type { NotificationRow } from '../../../../backend/services/NotificationService';
@@ -80,7 +79,6 @@ export interface NotificationsSection {
 export interface HomeState {
   greeting: GreetingSection;
   todaysMission: TodaysMissionSection | null;
-  journey: JourneyProgress | null;
   reflection: ReflectionSection;
   mood: MoodSection;
   recommendation: RecommendationSection;

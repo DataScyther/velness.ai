@@ -59,7 +59,7 @@ function toMissionSection(row: MissionRow | null, journals: JournalRow[]): Today
     (j) => new Date(j.created_at).toDateString() === new Date().toDateString()
   );
 
-  let reason = '• Complete the next lesson in your active journey.';
+  let reason = '• Complete today\'s reflection activity.';
   let estimatedTime = '10 minutes';
 
   const titleLower = row.title.toLowerCase();
@@ -159,7 +159,6 @@ function summarizeProgress(
 function generateSmartRecommendation(
   moodEntries: Mood[],
   journals: JournalRow[],
-  journey: any,
   recentEvents: any[]
 ): { recommendation: RecommendationItem, reason: string } {
   const now = new Date();
@@ -231,21 +230,7 @@ function generateSmartRecommendation(
     };
   }
 
-  // 5. Default Progress-based recommendation
-  if (journey) {
-    return {
-      recommendation: {
-        id: 'rec_journey_progress',
-        title: `Continue ${journey.title}`,
-        description: `Complete the next step in your active journey.`,
-        type: 'cbt',
-        source: 'Journey',
-        reason: 'Keep your momentum',
-      },
-      reason: `Based on your active study of ${journey.title}`,
-    };
-  }
-
+  // 5. Default recommendation
   return {
     recommendation: {
       id: 'rec_default_breathe',
@@ -277,7 +262,6 @@ class HomeService {
     const smartRec = generateSmartRecommendation(
       base.moodEntries,
       journals,
-      base.journey,
       base.recentEvents
     );
 
@@ -290,7 +274,6 @@ class HomeService {
         intention: base.intention,
       },
       todaysMission: toMissionSection(todaysMission, journals),
-      journey: base.journey,
       reflection: deriveReflection(journals),
       mood: {
         today: base.todayMood,

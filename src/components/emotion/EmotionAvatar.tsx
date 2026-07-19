@@ -138,15 +138,6 @@ function EmotionAvatarComponent({
     onPress();
   }, [onPress, pressed]);
 
-  const pressStyle = useAnimatedStyle(() => {
-    if (!pressed.value) return {};
-    return {
-      transform: [
-        { scale: withSpring(pressed.value === 0 ? 1 : 0.95, { damping: 12 }) },
-      ],
-    };
-  });
-
   const glowScale = useAnimatedStyle(() => {
     if (!selected) return {};
     return {
@@ -219,11 +210,8 @@ function EmotionAvatarComponent({
         accessibilityLabel={label}
         accessibilityState={{ selected }}
         hitSlop={4}
-        style={({ pressed: isPressed }) => isPressed ? { transform: [{ scale: 0.95 }] } : undefined}
       >
-        <Animated.View style={pressStyle}>
-          {content}
-        </Animated.View>
+        {content}
       </Pressable>
     );
   }
