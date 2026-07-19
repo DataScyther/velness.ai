@@ -3,13 +3,8 @@ import { View, Text, Dimensions, Image, Pressable, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { 
-  FadeInDown, 
-  FadeInUp, 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withSpring 
+import Animated, {
+  FadeInDown,
 } from 'react-native-reanimated';
 import { User, Shield, Info } from 'lucide-react-native';
 import { useTheme } from '@/hooks/useTheme';
@@ -19,7 +14,6 @@ import { analyticsService } from '@/services/analytics';
 import { spacing, typography } from '@/theme/tokens';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface ScaleButtonProps {
   onPress: () => void;
@@ -28,34 +22,14 @@ interface ScaleButtonProps {
 }
 
 function ScaleButton({ onPress, children, style }: ScaleButtonProps) {
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-    opacity.value = withTiming(0.9, { duration: 150 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-    opacity.value = withTiming(1, { duration: 150 });
-  };
-
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[style, animatedStyle]}
+      style={style}
       accessibilityRole="button"
     >
       {children}
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 
@@ -101,7 +75,7 @@ export function WelcomeScreen() {
         />
         {/* Vertical blending gradient overlay */}
         <LinearGradient
-          colors={['rgba(10, 5, 22, 0)', 'rgba(10, 5, 22, 0.3)', 'rgba(10, 5, 22, 0.75)', 'rgba(10, 5, 22, 1)']}
+          colors={['rgba(26, 19, 39, 0)', 'rgba(26, 19, 39, 0.3)', 'rgba(26, 19, 39, 0.75)', 'rgba(26, 19, 39, 1)']}
           style={StyleSheet.absoluteFillObject}
         />
         
@@ -126,7 +100,13 @@ export function WelcomeScreen() {
             entering={FadeInDown.delay(100).duration(600).springify()} 
             style={styles.brandSection}
           >
-            <View style={styles.logoRing}>
+            <View style={[styles.logoRing, {
+              shadowColor: themeColors.brand.primary,
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
+            }]}>
               <Image
                 source={require('@/shared/assets/velness-logo.jpg')}
                 style={styles.logoImage}
@@ -143,7 +123,7 @@ export function WelcomeScreen() {
           >
             {/* Primary Email Sign In */}
             <ScaleButton style={styles.signInButton} onPress={handleSignIn}>
-              <Text style={styles.signInButtonText}>Sign In</Text>
+              <Text style={[styles.signInButtonText, { color: themeColors.text.primary }]}>Sign In</Text>
             </ScaleButton>
 
             {/* Secondary Create Account */}
@@ -180,7 +160,7 @@ export function WelcomeScreen() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#0A0516', // Core brand dark background
+    backgroundColor: '#1A1327', // Deep lavender night (brand dark)
   },
   imageContainer: {
     width: '100%',
@@ -236,11 +216,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
   },
   logoImage: {
     width: 60,
@@ -281,7 +256,6 @@ const styles = StyleSheet.create({
   signInButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0A0516',
     letterSpacing: -0.3,
   },
   signUpButton: {

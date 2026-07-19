@@ -115,10 +115,10 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
               rx="90%"
               ry="75%"
             >
-              <Stop offset="0%" stopColor={isDark ? "#818CF8" : "#EEF2FF"} stopOpacity={isDark ? 0.35 : 0.9} />
-              <Stop offset="40%" stopColor={isDark ? "#4F46E5" : "#E0E7FF"} stopOpacity={isDark ? 0.2 : 0.55} />
-              <Stop offset="75%" stopColor={isDark ? "#0A0516" : "#F8FAFC"} stopOpacity={isDark ? 0.95 : 1} />
-              <Stop offset="100%" stopColor={isDark ? "#080410" : "#F1F5F9"} stopOpacity={1} />
+              <Stop offset="0%" stopColor={isDark ? colors.brand.primary : colors.brand.subtle} stopOpacity={isDark ? 0.35 : 0.9} />
+              <Stop offset="40%" stopColor={isDark ? colors.brand.secondary : colors.brand.subtle} stopOpacity={isDark ? 0.2 : 0.55} />
+              <Stop offset="75%" stopColor={colors.background.primary} stopOpacity={isDark ? 0.95 : 1} />
+              <Stop offset="100%" stopColor={colors.background.secondary} stopOpacity={1} />
             </RadialGradient>
           </Defs>
           <Rect width="100%" height="100%" fill="url(#splashGlow)" />
@@ -130,12 +130,17 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           {/* Animated Circular Logo & Pulsating Glow Ring */}
           <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
             {/* Outer Pulsating Glow */}
-            <Animated.View style={[styles.pulsatingGlow, logoGlowStyle, { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.16)' : 'rgba(99, 102, 241, 0.08)' }]} />
+            <Animated.View style={[styles.pulsatingGlow, logoGlowStyle, { backgroundColor: isDark ? colors.brand.primary + '29' : colors.brand.primary + '14' }]} />
             
             {/* Premium Glass Ring */}
-            <View style={[styles.glowRing, { 
+            <View style={[styles.glowRing, {
               backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.75)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(99, 102, 241, 0.18)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : colors.brand.primary + '2E',
+              shadowColor: colors.brand.primary,
+              shadowOffset: { width: 0, height: 16 },
+              shadowOpacity: 0.15,
+              shadowRadius: 28,
+              elevation: 20,
             }]}>
               <Image
                 source={require('@/shared/assets/velness-logo.jpg')}
@@ -157,9 +162,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
 
         {/* Loading Spinner */}
         <View style={styles.loaderContainer}>
-          {!initialized && (
-            <LoadingSpinner size={26} color={isDark ? '#818CF8' : '#4F46E5'} />
-          )}
+            {!initialized && (
+              <LoadingSpinner size={26} color={isDark ? colors.brand.primary : colors.brand.secondary} />
+            )}
         </View>
       </SafeAreaView>
     </View>
@@ -197,11 +202,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.15,
-    shadowRadius: 28,
-    elevation: 20,
   },
   logoImage: {
     width: 120,

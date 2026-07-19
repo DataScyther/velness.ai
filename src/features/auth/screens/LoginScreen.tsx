@@ -153,7 +153,7 @@ export function LoginScreen() {
               <View
                 className="w-12 h-12 rounded-full bg-surface-primary items-center justify-center border border-border-default shadow-sm"
                 style={{
-                  shadowColor: '#000',
+                  shadowColor: themeColors.brand.primary,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.05,
                   shadowRadius: 3,
@@ -262,7 +262,7 @@ export function LoginScreen() {
               className="w-full mt-2"
               style={{
                 backgroundColor: themeColors.brand.primary,
-                shadowColor: '#000',
+                shadowColor: themeColors.brand.primary,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.15,
                 shadowRadius: 6,
@@ -292,13 +292,13 @@ export function LoginScreen() {
               style={{
                 borderRadius: borderRadius.md,
                 borderWidth: 1.5,
-                borderColor: 'rgba(99, 102, 241, 0.5)',
-                backgroundColor: 'rgba(99, 102, 241, 0.07)',
+                borderColor: themeColors.brand.primary + '80',
+                backgroundColor: themeColors.brand.primary + '12',
               }}
               accessibilityRole="button"
               accessibilityLabel="Explore as Guest"
             >
-              <User color="#6366F1" size={18} strokeWidth={2.2} />
+              <User color={themeColors.brand.primary} size={18} strokeWidth={2.2} />
               <Text className="text-brand-primary text-body font-semibold ml-2">
                 Explore as Guest
               </Text>

@@ -55,7 +55,7 @@ export function OnboardingScreen() {
             marginTop: 24,
           }}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+          <Text style={{ color: colors.brand.contrastText, fontSize: 16, fontWeight: '600' }}>
             Get Started
           </Text>
         </Pressable>

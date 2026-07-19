@@ -17,14 +17,6 @@ import { MoodCalendar } from '../components/MoodCalendar';
 import { type Mood, type MoodRating, MOOD_MAP } from '@/shared/types';
 import { spacing, shadows } from '@/core/theme';
 
-const MOOD_COLORS: Record<number, string> = {
-  1: '#FF453A', // Awful (Red)
-  2: '#FF9F0A', // Not Good (Orange)
-  3: '#8E8E93', // Okay (Gray)
-  4: '#5AC8FA', // Good (Blue)
-  5: '#30D158', // Great (Green)
-};
-
 const SHORT_DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -329,11 +321,11 @@ export function MoodTimelineScreen() {
           emoji: MOOD_MAP[rateNum].emoji,
           label: MOOD_MAP[rateNum].label,
           percentage: pct,
-          color: MOOD_COLORS[rateNum],
+          color: colors.moodScale[rateNum],
         };
       })
       .sort((a, b) => b.percentage - a.percentage);
-  }, [moodEntries]);
+  }, [moodEntries, colors]);
 
   // ── Calculations: AI Mood Insights (MODULE 4) ────────────────────────────────
   const moodInsights = useMemo(() => {
@@ -385,7 +377,7 @@ export function MoodTimelineScreen() {
         text: 'You often feel stress after 7 PM.',
         why: 'Demands accumulate through the day with no wind-down, so tension peaks in the evening.',
         icon: Brain,
-        color: '#FF9F0A',
+        color: colors.warning,
       });
     }
 
@@ -408,7 +400,7 @@ export function MoodTimelineScreen() {
         text: 'Short sleep tracks with lower mood.',
         why: 'Poor rest depletes emotional regulation, making low ratings more likely the next day.',
         icon: BookOpen,
-        color: '#6366F1',
+        color: colors.info,
       });
     }
 
@@ -420,7 +412,7 @@ export function MoodTimelineScreen() {
         text: 'Journaling steadies your mood.',
         why: 'Naming feelings externalizes them, which takes the edge off their intensity.',
         icon: Heart,
-        color: '#10B981',
+        color: colors.success,
       });
     }
 

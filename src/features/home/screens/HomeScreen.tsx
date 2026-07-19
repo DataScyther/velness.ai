@@ -55,6 +55,7 @@ import { SectionHeader } from '@/shared/components/SectionHeader';
 import { spacing, typography, borderRadius } from '@/core/theme';
 import { useSyncRefresh } from '@/shared/hooks/useSyncRefresh';
 import { useSyncStore } from '@/core/store/useSyncStore';
+import { useAppStore } from '@/core/store/useAppStore';
 import { ReflectionInput } from '../components/ReflectionInput';
 import { GradientButton } from '@/shared/components/GradientButton';
 import { useTheme } from '@/hooks/useTheme';
@@ -67,10 +68,6 @@ import { HomeSkeleton } from '../components/HomeSkeleton';
 import { CheckInPanel } from '../components/CheckInPanel';
 import { HeroCard } from '../components/HeroCard';
 import { QuickActionsBar } from '../components/QuickActionsBar';
-import {
-  resolveQuickActionRoute,
-  type QuickActionFeature,
-} from '../services/quickActionResolver';
 import { WeeklyHistoryCard } from '../components/WeeklyHistoryCard';
 import { SmartRecommendationCard } from '../components/SmartRecommendationCard';
 
@@ -157,11 +154,12 @@ export function HomeScreen() {
   // Tracks whether the user dismissed the auto check-in prompt without
   // checking in, so we don't re-pop it on every render/refetch.
   const [dismissedAutoCheckIn, setDismissedAutoCheckIn] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const moodSubmittingRef = useRef(false);
   const [reflectionNote, setReflectionNote] = useState('');
   const [isSavingReflection, setIsSavingReflection] = useState(false);
   const [reflectionSaved, setReflectionSaved] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const addToast = useAppStore((s) => s.addToast);
 
   // Auto-check-in prompt: when a (new) user opens the app and hasn't checked
   // in today, pop the mood check-in panel automatically between the quick
@@ -215,18 +213,19 @@ export function HomeScreen() {
 
   const saveBtnStyle = useAnimatedStyle(() => {
     'worklet';
+    // Instant shadow removal when button is hidden to prevent smudge artifacts
+    const hasShadow = saveBtnVis.value > 0.5;
     return {
       opacity: saveBtnVis.value,
       transform: [{ translateY: interpolate(saveBtnVis.value, [0, 1], [8, 0]) }],
       pointerEvents: saveBtnVis.value > 0.1 ? 'auto' : 'none',
-      // Ensure shadow is completely eliminated when button is hidden
-      shadowOpacity: saveBtnVis.value * 0.35,
-      shadowRadius: saveBtnVis.value * 18,
+      shadowOpacity: hasShadow ? 0.35 : 0,
+      shadowRadius: hasShadow ? 18 : 0,
       shadowOffset: {
         width: 0,
-        height: saveBtnVis.value * 8,
+        height: hasShadow ? 8 : 0,
       },
-      elevation: saveBtnVis.value * 8,
+      elevation: hasShadow ? 8 : 0,
     };
   });
 
@@ -245,7 +244,9 @@ export function HomeScreen() {
   const handleSelectMood = useCallback((value: MoodRating) => setSelectedMood(value), []);
 
   const handleSubmitMood = useCallback(async () => {
+    if (moodSubmittingRef.current) return;          // idempotency guard
     if (selectedMood === null || !uid) return;
+    moodSubmittingRef.current = true;               // lock before async
     const entry: Mood = {
       id: `mood-${Date.now()}`,
       rating: selectedMood,
@@ -260,15 +261,22 @@ export function HomeScreen() {
         emoji: getMoodEmoji(selectedMood),
         timestamp: new Date().toISOString(),
       });
-      setIsSuccess(true);
       setShowSelector(false);
       setReflectionNote('');
       void queryClient.invalidateQueries({ queryKey: HOME_STATE_QUERY_KEY });
-      setTimeout(() => setIsSuccess(false), 2500);
+
+      addToast({
+        type: 'success',
+        message: `${getMoodEmoji(selectedMood)} Checked in — feeling ${getMoodLabel(selectedMood)}`,
+      });
     } catch (err) {
       console.error('[HomeScreen] Check-in save error:', err);
+      // Defensive only: save-mood is offline-first and rarely rejects here.
+      addToast({ type: 'error', message: 'Check-in failed. Try again.' });
+    } finally {
+      moodSubmittingRef.current = false;            // unlock
     }
-  }, [selectedMood, reflectionNote, uid, saveMoodMutation, queryClient]);
+  }, [selectedMood, reflectionNote, uid, saveMoodMutation, queryClient, addToast]);
 
   const handleSaveReflection = useCallback(async () => {
     const note = reflectionNote.trim();
@@ -284,6 +292,7 @@ export function HomeScreen() {
       setReflectionSaved(true);
       void queryClient.invalidateQueries({ queryKey: HOME_STATE_QUERY_KEY });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      addToast({ type: 'success', message: 'Reflection saved' });
       setTimeout(() => setReflectionSaved(false), 2000);
     } catch (err) {
       console.error('[HomeScreen] Reflection save error:', err);
@@ -319,22 +328,10 @@ export function HomeScreen() {
     console.log('[HomeScreen] Navigate to notification center');
   }, []);
 
-  // ── Quick Actions (MODULE 2) ────────────────────────────────────────────────
-  // Each handler routes to (or resumes) the relevant feature. Resume logic lives
-  // in `resolveQuickActionRoute` (reads recent analytics events, falls back to
-  // the feature index route).
-
-  const openFeature = useCallback((feature: QuickActionFeature) => {
-    void resolveQuickActionRoute(feature)
-      .then((route) => {
-        router.push(route as never);
-      })
-      .catch((err) => console.warn('[HomeScreen] quick action route failed:', err));
-  }, [router]);
-
-  const handleBreathe = useCallback(() => openFeature('breathing'), [openFeature]);
-  const handleMeditate = useCallback(() => openFeature('meditation'), [openFeature]);
-  const handleSleep = useCallback(() => openFeature('sleep'), [openFeature]);
+  // ── Quick Actions ────────────────────────────────────────────────────────
+  const handleBreathe = useCallback(() => {}, []);
+  const handleMeditate = useCallback(() => {}, []);
+  const handleSleep = useCallback(() => {}, []);
 
   // AI Chat: navigate to the Chat tab and pass a prefill prompt via route param.
   // ChatScreen reads `prefill` and feeds it into the composer (see ChatScreen.tsx).
@@ -367,9 +364,9 @@ export function HomeScreen() {
           <Svg width={BG_ORB} height={BG_ORB}>
             <Defs>
               <RadialGradient id="bgPurple" cx="50%" cy="50%" r="50%">
-                <Stop offset="0%" stopColor="#94A3B8" stopOpacity={0.05} />
-                <Stop offset="60%" stopColor="#94A3B8" stopOpacity={0.01} />
-                <Stop offset="100%" stopColor="#94A3B8" stopOpacity={0} />
+                <Stop offset="0%" stopColor={colors.brand.primary} stopOpacity={0.05} />
+                <Stop offset="60%" stopColor={colors.brand.primary} stopOpacity={0.01} />
+                <Stop offset="100%" stopColor={colors.brand.primary} stopOpacity={0} />
               </RadialGradient>
             </Defs>
             <Rect width="100%" height="100%" fill="url(#bgPurple)" />
@@ -379,9 +376,9 @@ export function HomeScreen() {
           <Svg width={BG_ORB} height={BG_ORB}>
             <Defs>
               <RadialGradient id="bgCyan" cx="50%" cy="50%" r="50%">
-                <Stop offset="0%" stopColor="#06B6D4" stopOpacity={0.03} />
-                <Stop offset="60%" stopColor="#06B6D4" stopOpacity={0.01} />
-                <Stop offset="100%" stopColor="#06B6D4" stopOpacity={0} />
+                <Stop offset="0%" stopColor={colors.brand.secondary} stopOpacity={0.03} />
+                <Stop offset="60%" stopColor={colors.brand.secondary} stopOpacity={0.01} />
+                <Stop offset="100%" stopColor={colors.brand.secondary} stopOpacity={0} />
               </RadialGradient>
             </Defs>
             <Rect width="100%" height="100%" fill="url(#bgCyan)" />
@@ -494,22 +491,6 @@ export function HomeScreen() {
             setDismissedAutoCheckIn(true);
           }}
         />
-        {/* Success confirmation renders as a separate, stable node (never
-           replaces the panel) so a save-tap can't unmount/mount a host view
-           mid-responder and null the Fabric handle. */}
-        {isSuccess && (
-          <Animated.View
-            entering={FadeInDown.duration(300)}
-            style={[
-              styles.successCard,
-              { backgroundColor: `${colors.success}1A`, borderColor: `${colors.success}33` },
-            ]}
-          >
-            <Text style={[styles.successText, { color: colors.success }]}>
-              ✓ Checked in — {getMoodLabel(selectedMood as MoodRating)} work today.
-            </Text>
-          </Animated.View>
-        )}
 
         {/* ── 5. Reflection (Journal) ─────────────────────────────────────── */}
         <Animated.View
@@ -568,7 +549,7 @@ export function HomeScreen() {
           <WeeklyHistoryCard
             moodEntries={mood?.entries ?? []}
             onCheckIn={handleCheckIn}
-            onPress={() => router.push(ROUTES.JOURNEY.MOOD_TIMELINE as any)}
+            onPress={() => {}}
           />
         </View>
 
@@ -625,7 +606,6 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0B12',
   },
   scrollView: {
     flex: 1,
@@ -749,18 +729,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  // Success
-  successCard: {
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    marginTop: 12,
-  },
-  successText: {
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
   reflectionHeader: {
     marginBottom: spacing.md,
   },
